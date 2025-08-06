@@ -1,0 +1,10 @@
+#ignore automatically generated python files
+__pycache__/
+.ipynb_checkpoints/
+.virtual_documents/
+build/
+dist/
+docs/_build
+*.egg-info/
+*.tif
+*.png
