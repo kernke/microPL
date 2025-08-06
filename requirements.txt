@@ -1,0 +1,6 @@
+numpy
+h5py
+PyQt5
+pyqtgraph
+pylablib
+git+https://github.com/MSLNZ/msl-equipment/releases/download/v0.2.0/msl_equipment-0.2.0-py3-none-any.whl
