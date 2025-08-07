@@ -1,3 +1,5 @@
+[![Python package](https://github.com/kernke/microPL/actions/workflows/python-package.yml/badge.svg)](https://github.com/kernke/microPL/actions/workflows/python-package.yml)
+
 # microPL
 Setup to control several devices, execute measurement sequences and preliminary show the data 
 
