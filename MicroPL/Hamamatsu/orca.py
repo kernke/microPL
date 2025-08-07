@@ -1,7 +1,7 @@
 from pylablib.devices import DCAM
 
 class Orca():
-    def __init__():
+    def __init__(self):
         self.cam = DCAM.DCAMCamera(idx=0)
 
     def set_exposure(self,exposure_time):
