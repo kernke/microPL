@@ -8,4 +8,4 @@ msl-loadlib
 pyserial
 pyzmq
 xlrd
--e git+git://github.com/MSLNZ/msl-equipment/releases/download/v0.2.0/msl_equipment-0.2.0-py3-none-any.whl
+-e git://github.com/MSLNZ/msl-equipment/releases/download/v0.2.0/msl_equipment-0.2.0-py3-none-any.whl
