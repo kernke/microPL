@@ -5,7 +5,7 @@ import pprint
 import numpy as np
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QFileDialog,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QCheckBox
 
 import datetime
 
@@ -195,13 +195,14 @@ class Pixis():
             self.timer=QTimer()
             self.timer.timeout.connect(self.acquire_clicked_spectral)
             self.live_mode_running=True
-            if self.app.orca.live_mode_running_s:
-                self.app.orca.timer_s.stop()
-                other_timer=self.app.orca.acqtime_spatial*1000+self.app.orca.live_mode_latency_s
-                timer_time_s=int(other_timer+self.live_mode_latency+700)
-                self.app.orca.timer_s.start(timer_time_s)
+            if self.app.orca.live_mode_running:
+                self.app.orca.timer.stop()
+                other_timer=self.app.orca.acqtime_spatial*1000+self.app.orca.live_mode_latency
+                timer_time=int(other_timer+self.live_mode_latency+700)
+                self.app.orca.timer.start(timer_time)
+
                 this_timer=self.acqtime_spectral*1000+self.live_mode_latency
-                timer_time=int(this_timer+self.app.orca.live_mode_latency_s+700)
+                timer_time=int(this_timer+self.app.orca.live_mode_latency+700)
                 self.timer.start(timer_time)
             else:
                 self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))#200
@@ -227,8 +228,8 @@ class Pixis():
         if s:
             self.acqtime_spectral=np.double(s)
             if self.live_mode_running and self.acqtime_spectral>0.0001:
-                if self.app.orca.live_mode_running_s:
-                    latency=self.live_mode_latency+self.app.orca.live_mode_latency_s+700
+                if self.app.orca.live_mode_running:
+                    latency=self.live_mode_latency+self.app.orca.live_mode_latency+700
                 else:
                     latency=self.live_mode_latency
                 self.timer.stop()

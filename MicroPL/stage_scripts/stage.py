@@ -2,13 +2,13 @@
 # =====================================================================
 # Example how to use Tango DLL in conjunction with Python version 3.10.5
 # =====================================================================
-import ctypes
+#import ctypes
 import sys
-import re
+#import re
 from ctypes import *  # import ctypes (used to call DLL functions)
 
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel
 
 
 class Stage:

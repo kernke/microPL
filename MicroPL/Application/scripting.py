@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QFileDialog,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication
 from PyQt5.QtCore import QTimer
 import numpy as np
 
@@ -16,16 +16,11 @@ class Scripting:
 
     def script_ui(self,layoutright):
 
-        #labelbox=QHBoxLayout()
         self.app.heading_label(layoutright,"Scripts") #################################################
-        #labelbox.addStretch()
 
         self.labelscr = QLabel("")
         self.labelscr.setStyleSheet("color:white")
         self.labelscr.setFixedWidth(100)
-        #labelbox.addWidget(self.labelscr)
-        
-        #layoutright.addLayout(labelbox)
         
         widget = QComboBox()
         self.script_selected=0
@@ -80,13 +75,13 @@ class Scripting:
                 print("no script selected to execute")
                 
             elif self.script_selected==1:
-                if self.script_execution==False and self.script_index is None:
+                if not self.script_execution and self.script_index is None:
                     self.script_from_txt()
                 else:
                     self.script_end()
 
             else:# self.script_selected==2:
-                if self.script_execution==False and self.script_index is None:
+                if not self.script_execution and self.script_index is None:
                     self.entry_window_script_grid()
                 else:
                     self.script_end()
@@ -209,7 +204,7 @@ class Scripting:
                         self.app.stage.stage_goto()
 
                         QApplication.processEvents()
-                        if self.script_execution==False:
+                        if not self.script_execution:
                             return None            
                         
                         self.app.pixis.acquire_clicked_spectral()
@@ -222,7 +217,7 @@ class Scripting:
                         self.app.stage.stage_goto()
 
                         QApplication.processEvents()
-                        if self.script_execution==False:
+                        if not self.script_execution:
                             return None            
 
                         self.app.orca.acquire_clicked_spatial()
@@ -233,7 +228,7 @@ class Scripting:
                     self.labelscr.setText(str(i+1)+"/"+str(number_of_points))
                     
                     QApplication.processEvents()
-                    if self.script_execution==False:
+                    if not self.script_execution:
                         return None
                     
                 self.script_end()
@@ -265,7 +260,7 @@ class Scripting:
                 print("check position: "+str(xcheck)+","+str(ycheck))
                 
                 QApplication.processEvents()
-                if self.script_execution==False:
+                if not self.script_execution:
                     return None
                 
                 if self.script_selected==2:
@@ -282,7 +277,7 @@ class Scripting:
                 print(str(i+1)+" from "+str(number_of_points))
                 self.labelscr.setText(str(i+1)+"/"+str(number_of_points))
                 QApplication.processEvents()
-                if self.script_execution==False:
+                if not self.script_execution:
                     return None
                     
             self.script_end()

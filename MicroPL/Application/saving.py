@@ -2,8 +2,7 @@ import h5py
 import numpy as np
 import os
 
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QFileDialog,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
-
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QFileDialog,QLabel
 
 
 class Saving:

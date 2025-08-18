@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-from PyQt5.QtCore import QThreadPool#,QChecked,QTimer,
-#QSize,QThread, QObject, pyqtSignal, pyqtSlot ,QRunnable
-#from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QFileDialog,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
-#,QDesktopWidget,QDialog
+from PyQt5.QtCore import QThreadPool   
+# from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel
 
-from .Application.gui_utility import *
+from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button
 from .Application.saving import Saving
 from .Application.scripting import Scripting
 from .Pixis.cam import Pixis
@@ -22,7 +20,6 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        #global roi,roiplot,device,h5saving,metadata_spatial,metadata_spectral
         self.setWindowTitle("MicroPL App")
         self.setStyleSheet("background-color: black;")#black 
         self.move(400,32)
@@ -45,7 +42,6 @@ class MainWindow(QMainWindow):
         self.monochromator=SCT320(self)
         self.pixis = Pixis(self)
         self.orca = Orca(self)
-
         
         self.metadata_spatial=dict()
         self.metadata_spatial["unsaved"]=True
@@ -89,7 +85,7 @@ class MainWindow(QMainWindow):
         layoutlim.addWidget(label)
 
         layoutlim.addStretch()
-        normal_button(layoutlim,"<- Switch ->",self.power_switch)        
+        self.normal_button(layoutlim,"<- Switch ->",self.power_switch)        
         #btn.setFixedWidth(80)
         layoutlim.addStretch()
 

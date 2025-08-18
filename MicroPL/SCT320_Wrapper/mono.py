@@ -4,9 +4,9 @@ https://msl-equipment.readthedocs.io/en/latest/index.html
 https://msl-equipment.readthedocs.io/en/latest/_api/msl.equipment.resources.princeton_instruments.arc_instrument.html
 """
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox
 
-import pprint
+#import pprint
 from msl.equipment import (
     EquipmentRecord,
     ConnectionRecord,
