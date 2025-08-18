@@ -13,3 +13,19 @@ When installing the first time, change into the directory containing setup.py an
 For updating the package, it's just
 
     pip install . 
+
+# Usage
+Can be started from jupyter with the following two cells:
+
+    import MicroPL as MPL
+    from PyQt5.QtCore import QCoreApplication
+    %gui qt
+
+The first cell covers the imports and sets the kernel to an interactive mode.
+
+    app = QCoreApplication.instance()
+    window = MPL.MainWindow()
+    window.show()
+    app.exec()
+
+The second cell actually starts the interface.
