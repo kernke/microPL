@@ -7,8 +7,13 @@ import sys
 import re
 from ctypes import *  # import ctypes (used to call DLL functions)
 
-class Stage():
-    def __init__(self):
+import numpy as np
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+
+
+class Stage:
+    def __init__(self,app):
+
         self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL_package\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
 
         if self.m_Tango == 0:
@@ -48,6 +53,17 @@ class Stage():
             sys.exit(0)
 
         print("TANGO is now successfully connected to DLL")
+
+
+        self.connected=True
+        
+        self.app=app
+        self.xlimit=[0.,50.]
+        self.ylimit=[0.,50.]
+        self.xpos,self.ypos=self.get_position()
+        
+
+
 
         # some c-type variables (general purpose usage)
         #dx = c_double()
@@ -145,4 +161,105 @@ class Stage():
             print("Error: SendString " + str(error))
         else:
             print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
+
+
+    def stage_ui(self,layoutright):
+        self.app.heading_label(layoutright,"Stage")####################################################
+    
         
+        layoutstage=QHBoxLayout()
+
+        self.widgetx = QLineEdit()
+        self.widgetx.setStyleSheet("background-color: lightGray")
+        self.widgetx.setMaxLength(7)
+        self.widgetx.setFixedWidth(self.app.standard_width)
+        self.widgetx.setText(str(self.xpos))
+        self.widgetx.textEdited.connect(self.stage_update_x)
+        layoutstage.addWidget(self.widgetx)
+        
+        label = QLabel("X (mm)")
+        label.setStyleSheet("color:white")
+        layoutstage.addWidget(label)
+        
+
+        layoutstage.addStretch()
+
+        self.widgety = QLineEdit()
+        self.widgety.setStyleSheet("background-color: lightGray")
+        self.widgety.setMaxLength(7)
+        self.widgety.setFixedWidth(self.app.standard_width)
+        self.widgety.setText(str(self.ypos))
+        self.widgety.textEdited.connect(self.stage_update_y)
+        
+        label = QLabel("Y (mm)")
+        label.setStyleSheet("color:white")
+        layoutstage.addWidget(label)
+
+        layoutstage.addWidget(self.widgety)       
+
+        layoutright.addLayout(layoutstage)
+
+        layoutstagebuttons=QHBoxLayout()
+        btn=self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
+
+        layoutstagebuttons.addStretch()
+
+        btn=self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
+
+        layoutright.addLayout(layoutstagebuttons)
+
+
+        layoutstagebuttons2=QHBoxLayout()
+        btn=self.app.normal_button(layoutstagebuttons2,"Home",self.stage_home)
+
+        layoutstagebuttons2.addStretch()
+
+        btn=self.app.normal_button(layoutstagebuttons2,"Limits",self.entry_window_limits)        
+
+        layoutright.addLayout(layoutstagebuttons2)
+        layoutright.addStretch()
+
+
+    # stage ui  methods ##########################################################
+    def entry_window_limits(self):
+        self.w = self.app.entrymask4(False,self.app)#device,roi
+        self.w.setHeading("Stage safety limits (position in mm)")
+        self.w.location_on_the_screen()
+        self.w.show()
+        
+    def stage_actual(self):
+        self.xpos,self.ypos=self.get_position()
+        self.widgety.setText(str(self.ypos))
+        self.widgetx.setText(str(self.xpos))
+        self.widgetx.setStyleSheet("background-color: lightGray;color: black")
+        self.widgety.setStyleSheet("background-color: lightGray;color: black")
+
+        
+    def stage_goto(self):
+        cond1=self.xpos > self.xlimit[0]
+        cond2=self.xpos < self.xlimit[1]
+        cond3=self.ypos > self.ylimit[0]
+        cond4=self.ypos < self.ylimit[1]
+
+        if cond1*cond2*cond3*cond4:        
+            self.set_position(self.xpos,self.ypos)    
+            self.stage_actual()
+            print("arrived")
+        else:
+            print("move aborted")
+            print("point outside stage limits")
+        
+    def stage_update_x(self,s):
+        if s:
+            self.xpos=np.double(s)
+            self.widgetx.setStyleSheet("background-color: lightGray;color: red")
+
+    def stage_update_y(self,s):
+        if s:
+            self.ypos=np.double(s)
+            self.widgety.setStyleSheet("background-color: lightGray;color: red")
+
+    def stage_home(self):
+        self.home_all()    
+        self.stage_actual()
+        print("stage homed")

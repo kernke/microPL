@@ -1,0 +1,231 @@
+import h5py
+import numpy as np
+import os
+
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QFileDialog,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+
+
+
+class Saving:
+    def __init__(self,app):
+        self.save_on_acquire_bool=False
+        self.app=app
+
+        self.acq_number=0
+        #defaults start
+        self.acq_name_prefix="acq_" 
+        self.group="measurement" 
+        self.file_name=r'microPL_' 
+        self.save_folder=r"C:\Users\user\Documents\Data\test" 
+        #defaults end
+        self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
+        self.h5struc=self.group+"/"+self.acq_name
+        allfiles=os.listdir(self.save_folder)
+        filenumbers=[-1]
+        for i in allfiles:
+            if "microPL_" == i[:8]:
+                if i[8:-3].isnumeric():
+                    filenumbers.append(int(i[8:-3]))
+        newnumber=int(np.max(filenumbers)+1)
+        self.file_name+=str(newnumber)        
+        self.filepath=os.path.join(self.save_folder, self.file_name+".h5")
+
+    def write_to_h5(self,data):
+        if self.group=="":
+            print("empty group not valid, saved as:")
+            self.group="measurement"
+            print(self.group)   
+            self.widgeth5group.setText(self.group)
+        if self.acq_name=="":
+            print("empty name not valid, saved as:")
+            self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
+            print(self.acq_name)            
+        self.h5struc=self.group+"/"+self.acq_name#+str(self.acq_number).zfill(5)
+        with h5py.File(self.filepath, 'a') as hf:
+            for i in data:
+                if i == "unsaved":
+                    data[i]=False
+                else:
+                    hf[self.h5struc+"/"+i]=data[i]
+            
+        self.acq_number+=1
+        self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
+        self.h5struc=self.group+"/"+self.acq_name#+str(self.acq_number).zfill(5)
+        self.widgeth5name.setText(self.acq_name)
+        print("saved")
+
+    def check_h5(self):
+        check=True
+        with h5py.File(self.filepath, 'a') as hf:    
+            if self.h5struc in hf:
+                self.app.save_warning()
+                check=False
+        return check
+
+
+    def save_to_h5_spectral(self):
+        if self.app.metadata_spectral["unsaved"]==False:
+            print("already saved before")
+        else:
+            if self.check_h5():
+                profile = self.app.pixis.roi.getArrayRegion(self.app.pixis.img.image, img=self.app.pixis.img)
+                self.app.metadata_spectral["intensity"]=profile.mean(axis=-1)
+                self.app.metadata_spectral["wavelength"]=self.app.monochromator.spectrum_x_axis
+                if self.app.pixis.save_full_image:
+                    self.app.metadata_spectral["image"]=self.app.pixis.img_data#.image
+
+                self.write_to_h5(self.app.metadata_spectral)
+                self.app.metadata_spatial["comment"]=""
+                self.app.metadata_spectral["comment"]=""
+                self.widgetcomment.setText("")
+
+
+
+    def save_to_h5_spatial(self):
+        if self.app.metadata_spatial["unsaved"]==False:
+            print("already saved before")
+        else:
+            if self.check_h5():
+                self.app.metadata_spatial["image"]=self.app.orca.img_s_data#.image
+                self.write_to_h5(self.app.metadata_spatial)
+                self.app.metadata_spatial["comment"]=""
+                self.app.metadata_spectral["comment"]=""
+                self.widgetcomment.setText("")
+
+    # saving methods ######################################################
+    def save_comment(self):
+        if self.check_h5():
+            self.app.metadata_spectral["mode"]="comment"
+            self.write_to_h5(self.app.metadata_spectral)
+            self.app.metadata_spectral["unsaved"]=True
+            self.app.metadata_spatial["comment"]=""
+            self.app.metadata_spectral["comment"]=""
+            self.widgetcomment.setText("")
+
+
+    
+    def save_on_acquire(self):
+        self.save_on_acquire_bool=not self.save_on_acquire_bool
+        if self.save_on_acquire_bool:
+            self.app.pixis.btnacq_spectral.setStyleSheet("background-color: green")
+            self.app.orca.btnacq_spatial.setStyleSheet("background-color: green")
+            
+            self.btnsaveacq.setStyleSheet("background-color: green")
+            self.btnsaveacq.setText("Stop Save on Acq./Live")
+            self.app.pixis.btnsave_spectral.setStyleSheet("background-color: red")
+            self.app.orca.btnsave_spatial.setStyleSheet("background-color: red")
+
+        else:
+            self.app.pixis.btnacq_spectral.setStyleSheet("background-color: lightGray")
+            self.app.orca.btnacq_spatial.setStyleSheet("background-color: lightGray")
+            
+            self.btnsaveacq.setStyleSheet("background-color: lightGray")
+            self.btnsaveacq.setText("Save on Acquire/Live")
+            self.app.pixis.btnsave_spectral.setStyleSheet("background-color: lightGray")
+            self.app.orca.btnsave_spatial.setStyleSheet("background-color: lightGray")
+            
+
+
+
+    def h5group_edited(self,s):
+        self.group=s
+
+    def h5name_edited(self,s):
+        self.acq_name=s
+
+
+    def save_warning(self):
+        self.w = self.app.warnwindow()#    WarnWindow()
+        self.w.setWarnText("This h5-path already exists")
+        self.w.location_on_the_screen()
+        self.w.show()
+     
+    def set_filepath(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save spectrum", self.filepath, "spectra (*.h5)",
+            options=QFileDialog.DontConfirmOverwrite
+        )
+        if filename:
+            self.filepath=filename
+            self.labelsave.setText("..."+self.filepath[-32:])
+
+    def comment_edited(self,s):
+        if s:
+            self.app.metadata_spatial["comment"]=s
+            self.app.metadata_spectral["comment"]=s
+
+    def save_ui(self,layoutright):
+        self.app.heading_label(layoutright,"Saving")#################################################
+        
+
+        layoutcomment=QHBoxLayout()
+        self.widgetcomment = QLineEdit()
+        self.widgetcomment.setStyleSheet("background-color: lightGray")
+        self.widgetcomment.setText("")
+        layoutcomment.addWidget(self.widgetcomment)
+        self.widgetcomment.textEdited.connect(self.comment_edited) 
+
+        label = QLabel("comment")
+        label.setStyleSheet("color:white")
+        layoutcomment.addWidget(label)
+        layoutright.addLayout(layoutcomment)
+
+        layoutsavebuttons=QHBoxLayout()
+
+        self.btnsaveacq=self.app.normal_button(layoutsavebuttons,"Save on Acquire/Live",self.save_on_acquire)
+        self.btnsaveacq.setFixedWidth(120)
+        layoutsavebuttons.addStretch()
+        self.btnsavecomment=self.app.normal_button(layoutsavebuttons,"Save Comment only",self.save_comment)
+        self.btnsavecomment.setFixedWidth(120)
+
+        layoutright.addLayout(layoutsavebuttons) 
+
+        layoutsavelabels=QHBoxLayout()
+
+        label = QLabel("Heading/Group")
+        label.setStyleSheet("color:white")
+        layoutsavelabels.addWidget(label)
+        layoutsavelabels.addStretch()
+        label = QLabel("Acq. Name (default recommended)")
+        label.setStyleSheet("color:white")
+        layoutsavelabels.addWidget(label)
+
+        label = QLabel(" ")
+        label.setStyleSheet("color:white;font-size: 5pt")
+        layoutright.addWidget(label)
+
+        layoutright.addLayout(layoutsavelabels)
+
+        layoutsaveh5=QHBoxLayout()        
+        self.widgeth5group = QLineEdit()
+        self.widgeth5group.setStyleSheet("background-color: lightGray")
+        self.widgeth5group.setText(self.group)
+        layoutsaveh5.addWidget(self.widgeth5group)
+        self.widgeth5group.textEdited.connect(self.h5group_edited)
+
+        layoutsaveh5.addStretch()
+        label = QLabel("         ")
+        layoutsaveh5.addWidget(label)
+        layoutsaveh5.addStretch()
+
+        self.widgeth5name = QLineEdit()
+        self.widgeth5name.setStyleSheet("background-color: lightGray")
+        self.widgeth5name.setText(self.acq_name)
+        layoutsaveh5.addWidget(self.widgeth5name)
+        self.widgeth5name.textEdited.connect(self.h5name_edited)
+
+        layoutright.addLayout(layoutsaveh5)
+
+
+        layoutsavetext=QHBoxLayout()
+        labelsave = QPushButton()
+        labelsave.setStyleSheet("background-color: lightGray; text-align: left")
+        labelsave.setText(" ..."+self.filepath[-38:])
+        labelsave.clicked.connect(self.set_filepath)
+        self.labelsave=labelsave
+        layoutsavetext.addWidget(labelsave)
+
+        label = QLabel("file path")
+        label.setStyleSheet("color:white")
+        layoutsavetext.addWidget(label)
+        layoutright.addLayout(layoutsavetext)

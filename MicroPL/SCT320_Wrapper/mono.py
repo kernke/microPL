@@ -3,16 +3,19 @@ Example showing how to communicate with a SCT320 monochromator from Princeton In
 https://msl-equipment.readthedocs.io/en/latest/index.html
 https://msl-equipment.readthedocs.io/en/latest/_api/msl.equipment.resources.princeton_instruments.arc_instrument.html
 """
+import numpy as np
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QGridLayout,QComboBox,QApplication,QCheckBox
+
 import pprint
 from msl.equipment import (
     EquipmentRecord,
     ConnectionRecord,
     Backend,
 )
-from msl.equipment.exceptions import PrincetonInstrumentsError
+#from msl.equipment.exceptions import PrincetonInstrumentsError
 
 class SCT320():
-    def __init__(self):
+    def __init__(self,app):
         record = EquipmentRecord(
             manufacturer='Princeton Instruments',
             model='SCT320',  # update for your device
@@ -28,28 +31,30 @@ class SCT320():
         # Connect to the monochromator
         self.mono = record.connect()
 
+        self.connected=True
         self.focal_length_mm= 327
         self.pixel_width_microns=26
         self.alignment_delta=0
 
+        print("mono connected")
 
 
-        #pprint.pp(dir(self.mono))
+        self.app=app
+        # monochromator
+        self.wavelength=self.get_wavelength()
 
-        # Print some information about the monochromator
-        print('Model: {}'.format(self.mono.get_mono_model()))
-        print('Serial: {}'.format(self.mono.get_mono_serial()))
-        #print('Focal length: {}'.format(self.mono.get_mono_focal_length()))
-        #print('Half angle: {}'.format(self.mono.get_mono_half_angle()))
-        #print('Detector angle: {}'.format(self.mono.get_mono_detector_angle()))
-        #print('Is double Monochromator? {}'.format(self.mono.get_mono_double()))
-        #print('Is subtractive double Monochromator? {}'.format(self.mono.get_mono_double_subtractive()))
-        #print('Turret: {}'.format(self.mono.get_mono_turret()))
-        #print('Max number of Turrets: {}'.format(self.mono.get_mono_turret_max()))
-        #print('Grating: {}'.format(self.mono.get_mono_grating()))
-        #print('Max number of Gratings: {}'.format(self.mono.get_mono_grating_max()))
-        # Grating information
-        #print('Turret gratings: {}'.format(self.mono.get_mono_turret_gratings()))
+        self.grating_idx,self.densities,self.blazes=self.gratings()
+        self.grating_list=[]
+        self.grating_pos=self.get_grating()[0]
+        for i in range(len(self.grating_idx)):
+            s=str(self.grating_idx[i])
+            s+=" - density : "+str(self.densities[i])
+            s+=" - blaze : "+str(self.blazes[i])
+            self.grating_list.append(s)
+        self.grating_actual=self.grating_list[int(self.grating_pos-1)]
+        
+        self.spectrum_x_axis= self.grating_wavelength()
+
         
     def disconnect(self):
         self.mono.disconnect()
@@ -98,7 +103,117 @@ class SCT320():
         blaze = self.mono.get_mono_grating_blaze(index)
         print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
         return index,density,blaze
+
+
+    def mono_ui(self,layoutright):
+        self.app.heading_label(layoutright,"Monochromator")###########################################
+        
+        layoutwavelength=QHBoxLayout()
+        self.widgetwave = QLineEdit()
+        self.widgetwave.setStyleSheet("background-color: lightGray")
+        self.widgetwave.setMaxLength(7)
+        self.widgetwave.setFixedWidth(60)
+        self.widgetwave.setText(str(self.wavelength))
+        self.widgetwave.textEdited.connect(self.wavelength_updated)
+        self.widgetwave.returnPressed.connect(self.wavelength_edited)
+        layoutwavelength.addWidget(self.widgetwave)
+
+        label = QLabel("wavelength (nm)\n(confirm with enter)")
+        label.setWordWrap(True) 
+        label.setStyleSheet("color:white")
+        layoutwavelength.addWidget(label)
+        layoutright.addLayout(layoutwavelength)
+        
+        layoutgrating=QHBoxLayout()
+        widget = QComboBox()
+        widget.addItems(self.grating_list)
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setFixedHeight(25)
+        widget.setCurrentIndex(int(self.grating_pos-1))
+        widget.currentIndexChanged.connect(self.grating_changed )
+        layoutgrating.addWidget(widget)
+
+        
+        label = QLabel("grating")
+        label.setStyleSheet("color:white")
+        layoutgrating.addWidget(label)
+
+        layoutright.addLayout(layoutgrating)
+        layoutright.addStretch()
+
+
+
+    # monochromator methods #############################################
+    def wavelength_updated(self,s):
+        if s:
+            self.wavelength=np.double(s)
+            self.widgetwave.setStyleSheet("background-color: lightGray;color: red")
     
+    def wavelength_edited(self):
+        self.set_wavelength(self.wavelength)
+        self.wavelength=self.get_wavelength()
+        self.spectrum_x_axis=self.grating_wavelength(self.app.pixis.roi)
+        self.widgetwave.setText(str(self.wavelength))
+        self.widgetwave.setStyleSheet("background-color: lightGray;color: black")
+
+    def grating_changed(self, i): # i is an int
+        self.set_grating(int(i+1))
+        self.grating_pos=self.get_grating()[0]    
+        self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
+        self.grating_actual=self.grating_list[int(self.grating_pos-1)]
+
+
+
+
+    def grating_wavelength(self,roi=None, f_mm = 327, x_microns = 26.0, delta = 0,m = 1):
+        """
+        Computes the wavelengths corresponding to the pixels of the spectral camera(pixis)
+        Parameters:
+        - f_mm: focal length
+        - x_microns: CCD pixel width/mm
+        - delta: alignment angle (radians)
+        - m: diffractive order, here m = 1  
+        """
+        if roi is None:
+            # xvalues is the distance to the center of the chip in units of pixels
+            xvalues = np.arange(-511.5, 512, 1)
+        else:
+            rect=roi.getState()
+            # xvalues is the distance to the center of the chip in units of pixels
+            xvalues=np.arange(rect["size"][0])-511.5+rect["pos"][0]
+        # Conversions
+        d_mm = 1 / self.densities[int(self.grating_pos-1)] #d_mm: distance between grooves (mm)
+        lamda_mm = self.wavelength / 1E6 #nm to mm conversion of center wavelength
+        x_mm = x_microns / 1E3 # microns to mm
+        # Compute psi (grating angle)
+        gamma = 0.310737  # radians (angle between mirrors and grating)
+        psi = np.arcsin((m * lamda_mm) / (2 * d_mm  * np.cos(gamma / 2)) )
+        # Compute ksi angle
+        xi = np.arctan((x_mm * xvalues * np.cos(delta)) / (f_mm + xvalues * x_mm * np.sin(delta)))
+        # Step 3: Compute new wavelength using psi and epsilon
+        new_lamda = (d_mm / m) * (np.sin(psi - gamma / 2) + np.sin(psi + gamma / 2 + xi))
+        new_lamda=new_lamda*1E6 #convert from mm to nm
+        return new_lamda
+
+
+#pprint.pp(dir(self.mono))
+
+# Print some information about the monochromator
+#print('Model: {}'.format(self.mono.get_mono_model()))
+#print('Serial: {}'.format(self.mono.get_mono_serial()))
+#print('Focal length: {}'.format(self.mono.get_mono_focal_length()))
+#print('Half angle: {}'.format(self.mono.get_mono_half_angle()))
+#print('Detector angle: {}'.format(self.mono.get_mono_detector_angle()))
+#print('Is double Monochromator? {}'.format(self.mono.get_mono_double()))
+#print('Is subtractive double Monochromator? {}'.format(self.mono.get_mono_double_subtractive()))
+#print('Turret: {}'.format(self.mono.get_mono_turret()))
+#print('Max number of Turrets: {}'.format(self.mono.get_mono_turret_max()))
+#print('Grating: {}'.format(self.mono.get_mono_grating()))
+#print('Max number of Gratings: {}'.format(self.mono.get_mono_grating_max()))
+# Grating information
+#print('Turret gratings: {}'.format(self.mono.get_mono_turret_gratings()))
+
+
     #def get_dispersion(self):
     #    det_range = self.mono.get_det_range(0)
     #    print(det_range)
