@@ -10,6 +10,7 @@ from .Pixis.cam import Pixis
 from .stage_scripts.stage import Stage
 from .SCT320_Wrapper.mono import SCT320
 from .Hamamatsu.orca import Orca
+from .Keysight.power_supply import Keysight
 
 #color_text_on_dark="white"
 #color_text_on_bright="black"
@@ -42,6 +43,7 @@ class MainWindow(QMainWindow):
         self.monochromator=SCT320(self)
         self.pixis = Pixis(self)
         self.orca = Orca(self)
+        self.keysight=Keysight(self)
         
         self.metadata_spatial=dict()
         self.metadata_spatial["unsaved"]=True
@@ -49,6 +51,9 @@ class MainWindow(QMainWindow):
         self.metadata_spectral=dict()
         self.metadata_spectral["unsaved"]=True
         
+        self.metadata_electrical=dict()
+        self.metadata_electrical["unsaved"]=True
+
         layoutmain = QHBoxLayout() # whole window
         layoutright = QVBoxLayout() # right side containing image,colorbar and 1D-roi-plot
         layoutleft = QVBoxLayout() # left side containing all the buttons
@@ -75,50 +80,7 @@ class MainWindow(QMainWindow):
 
         self.stage.stage_ui(layoutright)
 
-
-
-        self.heading_label(layoutright,"LED Power Supply")####################################################
-
-        layoutlim=QHBoxLayout()
-        label = QLabel("Set        ")
-        label.setStyleSheet("color:white")
-        layoutlim.addWidget(label)
-
-        layoutlim.addStretch()
-        self.normal_button(layoutlim,"<- Switch ->",self.power_switch)        
-        #btn.setFixedWidth(80)
-        layoutlim.addStretch()
-
-        label = QLabel("Limit (max)")
-        label.setStyleSheet("color:white")
-        layoutlim.addWidget(label)
-
-        layoutright.addLayout(layoutlim)
-
-        layoutset=QHBoxLayout()
-        voltwidget = QLineEdit()
-        voltwidget.setStyleSheet("background-color: lightGray")
-        voltwidget.setMaxLength(7)
-        voltwidget.setFixedWidth(self.standard_width)
-        voltwidget.setText(str(0.0))
-        label = QLabel("Voltage (V)")
-        label.setStyleSheet("color:white")
-        layoutset.addWidget(voltwidget)
-        layoutset.addWidget(label)
-        layoutset.addStretch()
-        currentwidget = QLineEdit()
-        currentwidget.setStyleSheet("background-color: lightGray")
-        currentwidget.setMaxLength(7)
-        currentwidget.setFixedWidth(self.standard_width)
-        currentwidget.setText(str(0.0))
-        label = QLabel("Current (mA)")
-        label.setStyleSheet("color:white")
-        layoutset.addWidget(label)
-        layoutset.addWidget(currentwidget)
-        
-        layoutright.addLayout(layoutset)
-        layoutright.addStretch()
-
+        self.keysight.power_ui(layoutright)
 
         self.scripting.script_ui(layoutright)
 
@@ -151,10 +113,6 @@ class MainWindow(QMainWindow):
         label.setStyleSheet("color:white;font-size: 11pt")
         layout.addWidget(label)
 
-
-
-    def power_switch(self):
-        pass
 
 
 

@@ -83,7 +83,7 @@ class Orca():
             layoutacqbutton.addStretch()
 
             
-            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode_s)
+            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
 
             layoutright.addLayout(layoutacqbutton)
             layoutright.addStretch()
