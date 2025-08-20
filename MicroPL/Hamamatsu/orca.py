@@ -193,7 +193,7 @@ class Orca():
         if s:
             self.acqtime_spatial=np.double(s)
             if self.live_mode_running and self.acqtime_spatial>0.001: #
-                if self.app.pixis.live_mode_running:
+                if self.app.pixis.live_mode_running and False:
                     latency=self.app.pixis.live_mode_latency+self.live_mode_latency+700
                 else:
                     latency=self.live_mode_latency
@@ -205,7 +205,7 @@ class Orca():
             self.timer=QTimer()
             self.timer.timeout.connect(self.acquire_clicked_spatial)
             self.live_mode_running=True
-            if self.app.pixis.live_mode_running:
+            if self.app.pixis.live_mode_running and False:
                 self.app.pixis.timer.stop()
                 other_timer=self.app.pixis.acqtime_spectral*1000+self.app.pixis.live_mode_latency
                 timer_time=int(other_timer+self.live_mode_latency+700)

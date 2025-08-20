@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         self.entrymask6=EntryMask6
 
         self.threadpool = QThreadPool()
-        self.threadpool.setMaxThreadCount(1)
+        #self.threadpool.setMaxThreadCount(1)
  
         
         self.h5saving=Saving(self)

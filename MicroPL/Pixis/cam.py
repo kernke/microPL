@@ -55,7 +55,7 @@ class Pixis():
 
         
         self.acqtime_spectral=1
-        self.live_mode_latency=200
+        self.live_mode_latency=300
         self.save_full_image=True
         self.live_mode_running=False
         #pprint.pp(dir(cam))
@@ -77,9 +77,9 @@ class Pixis():
         self.cam.stop_acquisition()
         
         
-        pprint.pp(np.shape(img))
-        if show:
-            pg.image(img)
+        #pprint.pp(np.shape(img))
+        #if show:
+        #    pg.image(img)
         return img
         
     def chip_temp(self):
@@ -200,7 +200,9 @@ class Pixis():
         layoutacqbutton.addStretch()
 
         self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
-        
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.acquire_clicked_spectral)
+
 
         self.dropdown.addLayout(layoutacqbutton)
 
@@ -216,10 +218,10 @@ class Pixis():
 
     def live_mode(self):
         if not self.live_mode_running:
-            self.timer=QTimer()
-            self.timer.timeout.connect(self.acquire_clicked_spectral)
+            #self.timer=QTimer()
+            #self.timer.timeout.connect(self.acquire_clicked_spectral)
             self.live_mode_running=True
-            if self.app.orca.live_mode_running:
+            if self.app.orca.live_mode_running and False:
                 self.app.orca.timer.stop()
                 other_timer=self.app.orca.acqtime_spatial*1000+self.app.orca.live_mode_latency
                 timer_time=int(other_timer+self.live_mode_latency+700)
@@ -252,7 +254,7 @@ class Pixis():
         if s:
             self.acqtime_spectral=np.double(s)
             if self.live_mode_running and self.acqtime_spectral>0.0001:
-                if self.app.orca.live_mode_running:
+                if self.app.orca.live_mode_running and False:
                     latency=self.live_mode_latency+self.app.orca.live_mode_latency+700
                 else:
                     latency=self.live_mode_latency
