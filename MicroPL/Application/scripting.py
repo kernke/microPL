@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication
+from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication,QVBoxLayout
 from PyQt5.QtCore import QTimer
 import numpy as np
 
@@ -13,10 +13,19 @@ class Scripting:
         self.script_index=None
 
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
     def script_ui(self,layoutright):
+        self.expanded=False
+        self.app.heading_label(layoutright,"Scripts",self.expand) #################################################
 
-        self.app.heading_label(layoutright,"Scripts") #################################################
+        self.dropdown=QVBoxLayout()
 
         self.labelscr = QLabel("")
         self.labelscr.setStyleSheet("color:white")
@@ -28,7 +37,7 @@ class Scripting:
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.currentIndexChanged.connect(self.script_changed )        
-        layoutright.addWidget(widget)
+        self.dropdown.addWidget(widget)
 
         layoutscriptbuttons=QHBoxLayout()
 
@@ -43,9 +52,13 @@ class Scripting:
         
         self.btnpause = self.app.normal_button(layoutscriptbuttons,"Pause",self.script_button_pause)
         
-        layoutright.addLayout(layoutscriptbuttons)
-
-        layoutright.addStretch()
+        self.dropdown.addLayout(layoutscriptbuttons)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
 
 
     def script_button_pause(self):
@@ -68,7 +81,7 @@ class Scripting:
         self.labelscr.setText("")
     
     def script_button_execute(self):
-        if self.app.pixis.live_mode_running or self.app.orca.live_mode_running_s:
+        if self.app.pixis.live_mode_running or self.app.orca.live_mode_running:
             print("Live mode needs to be stopped before executing scripts")
         else:
             if self.script_selected==0:

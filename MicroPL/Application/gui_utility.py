@@ -16,6 +16,25 @@ def normal_button(layout,text,function):
     layout.addWidget(button)
     return button
 
+def set_layout_visible(layout, visible):
+    """Recursively hide or show all widgets in a layout (handles nested layouts)."""
+    for i in range(layout.count()):
+        item = layout.itemAt(i)
+        if item.widget():  # direct widget
+            item.widget().setVisible(visible)
+        elif item.layout():  # nested layout
+            set_layout_visible(item.layout(), visible)
+
+def heading_label(layout,heading_string,func_connect):
+
+    layoutheading=QHBoxLayout()
+    button = QPushButton("▽ "+heading_string)
+    button.setStyleSheet("background-color: black;color:white;font-size: 11pt")
+    button.clicked.connect(func_connect)
+    layoutheading.addWidget(button)
+    layoutheading.addStretch()
+    layout.addLayout(layoutheading)
+
 
 class WarnWindow(QWidget):
     def __init__(self):

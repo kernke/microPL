@@ -1,16 +1,22 @@
 import pyvisa
 import time
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 
 class Keysight:
     def __init__(self,app):
         self.model_name="E36105B"
         self.resource_str="USB0::0x2A8D::0x1802::MY61001772::0::INSTR"
-        rm = pyvisa.ResourceManager()
-        self.psu = rm.open_resource(self.resource_str)
-
-        print("Keysight connected")
+        try:
+            # needs the existence of a driver like 'C:\WINDOWS\system32\visa32.dll' or similar
+            rm = pyvisa.ResourceManager()
+            self.psu = rm.open_resource(self.resource_str)
+            print("Keysight connected")
+            self.connected=True
+        except:
+            self.connected=False
+            self.psu = "dummy"
+            print("dummy mode for keysight")
 
         self.app=app
         self.voltage=0
@@ -58,9 +64,20 @@ class Keysight:
 
         self.off()
 
-    def power_ui(self,layoutright):
-        self.app.heading_label(layoutright,"LED Power Supply")####################################################
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
+    def power_ui(self,layoutright):
+        self.expanded=False
+        self.app.heading_label(layoutright,"LED Power Supply",self.expand)####################################################
+
+        self.dropdown=QVBoxLayout()
+        
         layoutlim=QHBoxLayout()
         label = QLabel("Set        ")
         label.setStyleSheet("color:white")
@@ -75,7 +92,7 @@ class Keysight:
         label.setStyleSheet("color:white")
         layoutlim.addWidget(label)
 
-        layoutright.addLayout(layoutlim)
+        self.dropdown.addLayout(layoutlim)
 
         layoutset=QHBoxLayout()
         voltwidget = QLineEdit()
@@ -98,8 +115,14 @@ class Keysight:
         layoutset.addWidget(label)
         layoutset.addWidget(currentwidget)
         
-        layoutright.addLayout(layoutset)
-        layoutright.addStretch()
+        self.dropdown.addLayout(layoutset)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+
 
     def power_switch(self):
         pass

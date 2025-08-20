@@ -4,7 +4,7 @@ https://msl-equipment.readthedocs.io/en/latest/index.html
 https://msl-equipment.readthedocs.io/en/latest/_api/msl.equipment.resources.princeton_instruments.arc_instrument.html
 """
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox,QVBoxLayout
 
 #import pprint
 from msl.equipment import (
@@ -28,24 +28,31 @@ class SCT320():
             )
         )
 
-        # Connect to the monochromator
-        self.mono = record.connect()
+        try:
+            # Connect to the monochromator
+            self.mono = record.connect()
+            print("mono connected")
+            self.connected=True
+            self.wavelength=self.get_wavelength()
+            self.grating_pos=self.get_grating()[0]
+            self.grating_idx,self.densities,self.blazes=self.gratings()
 
-        self.connected=True
+        except:
+            print("monochromator dummy mode")
+            self.connected=False
+            self.wavelength=0
+            self.grating_pos=1
+            self.grating_idx,self.densities,self.blazes=[1],[200],[0]
+
         self.focal_length_mm= 327
         self.pixel_width_microns=26
         self.alignment_delta=0
 
-        print("mono connected")
-
 
         self.app=app
-        # monochromator
-        self.wavelength=self.get_wavelength()
 
-        self.grating_idx,self.densities,self.blazes=self.gratings()
+        # monochromator
         self.grating_list=[]
-        self.grating_pos=self.get_grating()[0]
         for i in range(len(self.grating_idx)):
             s=str(self.grating_idx[i])
             s+=" - density : "+str(self.densities[i])
@@ -104,10 +111,20 @@ class SCT320():
         print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
         return index,density,blaze
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
     def mono_ui(self,layoutright):
-        self.app.heading_label(layoutright,"Monochromator")###########################################
-        
+        self.expanded=False
+        self.app.heading_label(layoutright,"Monochromator",self.expand)###########################################
+
+        self.dropdown=QVBoxLayout()
+
         layoutwavelength=QHBoxLayout()
         self.widgetwave = QLineEdit()
         self.widgetwave.setStyleSheet("background-color: lightGray")
@@ -122,7 +139,7 @@ class SCT320():
         label.setWordWrap(True) 
         label.setStyleSheet("color:white")
         layoutwavelength.addWidget(label)
-        layoutright.addLayout(layoutwavelength)
+        self.dropdown.addLayout(layoutwavelength)
         
         layoutgrating=QHBoxLayout()
         widget = QComboBox()
@@ -138,8 +155,13 @@ class SCT320():
         label.setStyleSheet("color:white")
         layoutgrating.addWidget(label)
 
-        layoutright.addLayout(layoutgrating)
-        layoutright.addStretch()
+        self.dropdown.addLayout(layoutgrating)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
 
 
 

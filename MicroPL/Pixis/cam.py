@@ -5,7 +5,7 @@ import pprint
 import numpy as np
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QCheckBox
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QCheckBox,QVBoxLayout
 
 import datetime
 
@@ -37,14 +37,18 @@ class CameraHandler_spectral(QRunnable):
 
 class Pixis():
     def __init__(self,app):
-        pll.par["devices/dlls/picam"] = r"C:\Program Files\Common Files\Princeton Instruments\Picam\Runtime"
-        cameras = PrincetonInstruments.list_cameras()
-        print('Camera found:', cameras)
+        try:
+            pll.par["devices/dlls/picam"] = r"C:\Program Files\Common Files\Princeton Instruments\Picam\Runtime"
+            cameras = PrincetonInstruments.list_cameras()
+            print('Camera found:', cameras)
 
-        self.cam = PrincetonInstruments.PicamCamera('09166914')
-        self.cam.setup_acquisition(mode='snap') # mode= [snap, sequence], [nframes = X]
+            self.cam = PrincetonInstruments.PicamCamera('09166914')
+            self.cam.setup_acquisition(mode='snap') # mode= [snap, sequence], [nframes = X]
 
-        self.connected=True
+            self.connected=True
+        except:
+            self.connected=False
+            print("pixis dummy mode")
 
         self.app=app
         self.acqtime_spectral=1
@@ -105,7 +109,7 @@ class Pixis():
         cw.setLayout(layout)
         layout.setSpacing(0)
         view = pg.GraphicsView()
-        view.setFixedSize(512,128)
+        #view.setFixedSize(512,128)
         vb = pg.ViewBox()
         #vb.setAspectLocked()
         view.setCentralItem(vb)
@@ -129,7 +133,7 @@ class Pixis():
         vb.addItem(self.roi)
         
         # image view window end########################################################
-        layoutleft.addWidget(cw)    
+        layoutleft.addWidget(cw,1)    
         # 1D spectrum view start ###################################################
         roiplot = pg.PlotWidget()
 
@@ -137,24 +141,34 @@ class Pixis():
         roiplot.setLabel('left', 'Intensity ( 0 - 65535 )', units='')
         roiplot.getAxis("left").enableAutoSIPrefix(True)
 
-        roiplot.setFixedHeight(350)
+        #roiplot.setFixedHeight(350)
         self.roi.sigRegionChanged.connect(self.updateRoi)
         data = self.roi.getArrayRegion(self.img.image, img=self.img)
         
         yvalues=data.mean(axis=-1)
         self.roi.curve=roiplot.plot(self.app.monochromator.spectrum_x_axis,yvalues )        
         # 1D spectrum view end  ###################################################
-        layoutleft.addWidget(roiplot)
+        layoutleft.addWidget(roiplot,2)
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
-    def spectral_camera_ui(self,layoutright):    
-        self.app.heading_label(layoutright,"Spectral Camera")######################################################
-        
+    def spectral_camera_ui(self,layoutright):   
+        self.expanded=False 
+        self.app.heading_label(layoutright,"Spectral Camera",self.expand)######################################################
+
+        self.dropdown=QVBoxLayout()
+       
         self.checkbox = QCheckBox('save full chip image', self.app)
         self.checkbox.setStyleSheet("color:white")
         self.checkbox.setChecked(True)
         self.checkbox.stateChanged.connect(self.checkbox_full_saving)
-        layoutright.addWidget(self.checkbox)
+        self.dropdown.addWidget(self.checkbox)
 
         layoutacqtime_spectral=QHBoxLayout()
         widget = QLineEdit()
@@ -172,7 +186,7 @@ class Pixis():
         self.btnsave_spectral =self.app.normal_button(layoutacqtime_spectral,"Save",self.app.h5saving.save_to_h5_spectral)
         
 
-        layoutright.addLayout(layoutacqtime_spectral)
+        self.dropdown.addLayout(layoutacqtime_spectral)
 
         layoutacqbutton=QHBoxLayout()
         self.btnacq_spectral = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spectral)
@@ -185,8 +199,15 @@ class Pixis():
         self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
         
 
-        layoutright.addLayout(layoutacqbutton)
-        layoutright.addStretch()
+        self.dropdown.addLayout(layoutacqbutton)
+
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
 
 
 

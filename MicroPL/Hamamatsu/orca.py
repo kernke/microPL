@@ -1,6 +1,6 @@
 from pylablib.devices import DCAM
 
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout
+from PyQt5.QtWidgets import QHBoxLayout,QVBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QPushButton
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
 
@@ -27,12 +27,15 @@ class CameraHandler_spatial(QRunnable):
 
 class Orca():
     def __init__(self,app):
+        try:
+            self.cam = DCAM.DCAMCamera(idx=0)
+            self.cam.setup_acquisition(mode="snap")
+            print("orca connected")
 
-        self.cam = DCAM.DCAMCamera(idx=0)
-        self.cam.setup_acquisition(mode="snap")
-        print("orca connected")
-
-        self.connected=True
+            self.connected=True
+        except:
+            self.connected=False
+            print("orca dummy mode")
 
         self.app=app
         self.acqtime_spatial=1
@@ -53,40 +56,68 @@ class Orca():
         self.cam.close()
         print("orca disconnected")
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
 
     def spatial_camera_ui(self,layoutright):
-            self.app.heading_label(layoutright,"Spatial Camera")######################################################
+        self.expanded=False
+        self.app.heading_label(layoutright,"Spatial Camera",self.expand)
+        #layoutheading=QHBoxLayout()
+        #button = QPushButton("▽ Spatial Camera")
+        #button.setStyleSheet("background-color: black;color:white;font-size: 11pt")
+        #button.clicked.connect(self.expand)
+        #self.layoutheading.addWidget(button)
+        #self.layoutheading.addStretch()
+        #layoutright.addLayout(self.layoutheading)
+        #self.app.heading_label(layoutright,"Spatial Camera")######################################################
 
-            layoutacqtime_spatial=QHBoxLayout()
-            widget = QLineEdit()
-            widget.setStyleSheet("background-color: lightGray")
-            widget.setMaxLength(7)
-            widget.setFixedWidth(self.app.standard_width)
-            widget.setText(str(self.acqtime_spatial))
-            layoutacqtime_spatial.addWidget(widget)
-            widget.textEdited.connect(self.acqtime_spatial_edited)
+        self.dropdown=QVBoxLayout()
 
-            label = QLabel("acquisition time (s)")
-            label.setStyleSheet("color:white")
-            layoutacqtime_spatial.addWidget(label)
-            self.btnsave_spatial =self.app.normal_button(layoutacqtime_spatial,"Save",self.app.h5saving.save_to_h5_spatial)
+        layoutacqtime_spatial=QHBoxLayout()
+        widget = QLineEdit()
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(7)
+        widget.setFixedWidth(self.app.standard_width)
+        widget.setText(str(self.acqtime_spatial))
+        layoutacqtime_spatial.addWidget(widget)
+        widget.textEdited.connect(self.acqtime_spatial_edited)
+
+        label = QLabel("acquisition time (s)")
+        label.setStyleSheet("color:white")
+        layoutacqtime_spatial.addWidget(label)
+        self.btnsave_spatial =self.app.normal_button(layoutacqtime_spatial,"Save",self.app.h5saving.save_to_h5_spatial)
+
+        self.dropdown.addLayout(layoutacqtime_spatial)
 
 
+        layoutacqbutton=QHBoxLayout()
+        self.btnacq_spatial = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spatial)
+        layoutacqbutton.addStretch()
+        self.app.normal_button(layoutacqbutton,"Crosshair",self.overlay_crosshair)
+        layoutacqbutton.addStretch()
 
-            layoutright.addLayout(layoutacqtime_spatial)
+        
+        self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
 
-            layoutacqbutton=QHBoxLayout()
-            self.btnacq_spatial = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spatial)
-            layoutacqbutton.addStretch()
-            self.app.normal_button(layoutacqbutton,"Crosshair",self.overlay_crosshair)
-            layoutacqbutton.addStretch()
+        self.dropdown.addLayout(layoutacqbutton)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
 
-            
-            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
+        #self.expand()
+        #layoutright.addLayout(layoutacqbutton)
 
-            layoutright.addLayout(layoutacqbutton)
-            layoutright.addStretch()
+
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+
 
     def spatial_camera_show(self,layoutleft):
 
@@ -104,7 +135,7 @@ class Orca():
         view = pg.GraphicsView()
         vb = pg.ViewBox()
         vb.setAspectLocked()
-        view.setFixedSize(512,512)
+        #view.setFixedSize(512,512)
         view.setCentralItem(vb)
 
         layout.addWidget(view, 0, 0)#,4, 0)
@@ -124,7 +155,7 @@ class Orca():
         hist.setImageItem(self.img)
         
         # image view window end########################################################
-        layoutleft.addWidget(cw)    
+        layoutleft.addWidget(cw,4)    
 
 
 

@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import os
 
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QFileDialog,QLabel
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QLineEdit, QFileDialog,QLabel,QVBoxLayout
 
 
 class Saving:
@@ -19,7 +19,11 @@ class Saving:
         #defaults end
         self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
         self.h5struc=self.group+"/"+self.acq_name
-        allfiles=os.listdir(self.save_folder)
+        try:
+            allfiles=os.listdir(self.save_folder)
+        except:
+            print("save dummy mode")
+            allfiles=["just_one_file"]
         filenumbers=[-1]
         for i in allfiles:
             if "microPL_" == i[:8]:
@@ -153,9 +157,19 @@ class Saving:
             self.app.metadata_spatial["comment"]=s
             self.app.metadata_spectral["comment"]=s
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
+
     def save_ui(self,layoutright):
-        self.app.heading_label(layoutright,"Saving")#################################################
+        self.expanded=False
+        self.app.heading_label(layoutright,"Saving",self.expand)#################################################
         
+        self.dropdown=QVBoxLayout()
 
         layoutcomment=QHBoxLayout()
         self.widgetcomment = QLineEdit()
@@ -167,7 +181,7 @@ class Saving:
         label = QLabel("comment")
         label.setStyleSheet("color:white")
         layoutcomment.addWidget(label)
-        layoutright.addLayout(layoutcomment)
+        self.dropdown.addLayout(layoutcomment)
 
         layoutsavebuttons=QHBoxLayout()
 
@@ -177,7 +191,7 @@ class Saving:
         self.btnsavecomment=self.app.normal_button(layoutsavebuttons,"Save Comment only",self.save_comment)
         self.btnsavecomment.setFixedWidth(120)
 
-        layoutright.addLayout(layoutsavebuttons) 
+        self.dropdown.addLayout(layoutsavebuttons) 
 
         layoutsavelabels=QHBoxLayout()
 
@@ -191,9 +205,9 @@ class Saving:
 
         label = QLabel(" ")
         label.setStyleSheet("color:white;font-size: 5pt")
-        layoutright.addWidget(label)
+        self.dropdown.addWidget(label)
 
-        layoutright.addLayout(layoutsavelabels)
+        self.dropdown.addLayout(layoutsavelabels)
 
         layoutsaveh5=QHBoxLayout()        
         self.widgeth5group = QLineEdit()
@@ -213,7 +227,7 @@ class Saving:
         layoutsaveh5.addWidget(self.widgeth5name)
         self.widgeth5name.textEdited.connect(self.h5name_edited)
 
-        layoutright.addLayout(layoutsaveh5)
+        self.dropdown.addLayout(layoutsaveh5)
 
 
         layoutsavetext=QHBoxLayout()
@@ -227,4 +241,7 @@ class Saving:
         label = QLabel("file path")
         label.setStyleSheet("color:white")
         layoutsavetext.addWidget(label)
-        layoutright.addLayout(layoutsavetext)
+        self.dropdown.addLayout(layoutsavetext)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        layoutright.addStretch()

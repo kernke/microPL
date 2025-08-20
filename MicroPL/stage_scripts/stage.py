@@ -8,59 +8,65 @@ import sys
 from ctypes import *  # import ctypes (used to call DLL functions)
 
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 
 
 class Stage:
     def __init__(self,app):
+        try:
+            self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
 
-        self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
+            if self.m_Tango == 0:
+                print("Error: failed to load DLL")
+                sys.exit(0)
 
-        if self.m_Tango == 0:
-            print("Error: failed to load DLL")
-            sys.exit(0)
+            # Tango_DLL.dll loaded successfully
 
-        # Tango_DLL.dll loaded successfully
+            if self.m_Tango.LSX_CreateLSID == 0:
+                print("unexpected error. required DLL function CreateLSID() missing")
+                sys.exit(0)
+            
+            # continue only if required function exists
 
-        if self.m_Tango.LSX_CreateLSID == 0:
-            print("unexpected error. required DLL function CreateLSID() missing")
-            sys.exit(0)
-        
-        # continue only if required function exists
+            self.LSID = c_int()
+            error = int  # value is either DLL or Tango error number if not zero
+            error = self.m_Tango.LSX_CreateLSID(byref(self.LSID))
+            if error > 0:
+                print("Error: " + str(error))
+                sys.exit(0)
 
-        self.LSID = c_int()
-        error = int  # value is either DLL or Tango error number if not zero
-        error = self.m_Tango.LSX_CreateLSID(byref(self.LSID))
-        if error > 0:
-            print("Error: " + str(error))
-            sys.exit(0)
+            # OK: got communication ID from DLL (usually 1. may vary with multiple connections)
+            # keep this LSID in mind during the whole session
 
-        # OK: got communication ID from DLL (usually 1. may vary with multiple connections)
-        # keep this LSID in mind during the whole session
+            if self.m_Tango.LSX_ConnectSimple == 0:
+                print("unexepcted error. required DLL function ConnectSimple() missing")
+                sys.exit(0)
+            # continue only if required function exists
 
-        if self.m_Tango.LSX_ConnectSimple == 0:
-            print("unexepcted error. required DLL function ConnectSimple() missing")
-            sys.exit(0)
-        # continue only if required function exists
+            # set your COM Port accordingly, in this example we use COM5
+            # comPort = c_char_p("COM5".encode("utf-8"))
+            # error = m_Tango.LSX_ConnectSimple(LSID,2,comPort,57600,0)
+            # following combination of -1,"" works only for USB and PCI-E but not for RS232 connections 
+            error = self.m_Tango.LSX_ConnectSimple(self.LSID, -1, "", 57600, 0)
+            if error > 0:
+                print("Error: LSX_ConnectSimple " + str(error))
+                sys.exit(0)
 
-        # set your COM Port accordingly, in this example we use COM5
-        # comPort = c_char_p("COM5".encode("utf-8"))
-        # error = m_Tango.LSX_ConnectSimple(LSID,2,comPort,57600,0)
-        # following combination of -1,"" works only for USB and PCI-E but not for RS232 connections 
-        error = self.m_Tango.LSX_ConnectSimple(self.LSID, -1, "", 57600, 0)
-        if error > 0:
-            print("Error: LSX_ConnectSimple " + str(error))
-            sys.exit(0)
+            print("TANGO is now successfully connected to DLL")
 
-        print("TANGO is now successfully connected to DLL")
+            self.connected=True
 
+            self.xpos,self.ypos=self.get_position()
 
-        self.connected=True
+        except:
+            self.connected=False
+            self.xpos,self.ypos=0,0
+            print("stage dummy mode")
+
         
         self.app=app
         self.xlimit=[0.,50.]
         self.ylimit=[0.,50.]
-        self.xpos,self.ypos=self.get_position()
         
 
 
@@ -162,10 +168,19 @@ class Stage:
         else:
             print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
 
+    def expand(self):
+        if not self.expanded:
+            self.expanded=True
+            self.app.set_layout_visible(self.dropdown,True)
+        else:
+            self.expanded=False
+            self.app.set_layout_visible(self.dropdown,False)
 
     def stage_ui(self,layoutright):
-        self.app.heading_label(layoutright,"Stage")####################################################
+        self.expanded=False
+        self.app.heading_label(layoutright,"Stage",self.expand)####################################################
     
+        self.dropdown=QVBoxLayout()
         
         layoutstage=QHBoxLayout()
 
@@ -197,7 +212,7 @@ class Stage:
 
         layoutstage.addWidget(self.widgety)       
 
-        layoutright.addLayout(layoutstage)
+        self.dropdown.addLayout(layoutstage)
 
         layoutstagebuttons=QHBoxLayout()
         btn=self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
@@ -206,7 +221,7 @@ class Stage:
 
         btn=self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
 
-        layoutright.addLayout(layoutstagebuttons)
+        self.dropdown.addLayout(layoutstagebuttons)
 
 
         layoutstagebuttons2=QHBoxLayout()
@@ -216,8 +231,14 @@ class Stage:
 
         btn=self.app.normal_button(layoutstagebuttons2,"Limits",self.entry_window_limits)        
 
-        layoutright.addLayout(layoutstagebuttons2)
-        layoutright.addStretch()
+        self.dropdown.addLayout(layoutstagebuttons2)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+
+        label = QLabel(" ")
+        layoutright.addWidget(label)
+        label = QLabel(" ")
+        layoutright.addWidget(label)
 
 
     # stage ui  methods ##########################################################

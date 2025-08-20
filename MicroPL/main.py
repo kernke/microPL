@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QThreadPool   
 # from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel,QScrollArea
 
-from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button
+from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button,set_layout_visible,heading_label
 from .Application.saving import Saving
 from .Application.scripting import Scripting
 from .Pixis.cam import Pixis
@@ -23,10 +23,13 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MicroPL App")
         self.setStyleSheet("background-color: black;")#black 
-        self.move(400,32)
+        self.move(160,32)
+        self.resize(1536,900)
                
         self.standard_width=55
         self.normal_button=normal_button
+        self.set_layout_visible=set_layout_visible
+        self.heading_label=heading_label
 
         self.warnwindow=WarnWindow
         self.entrymask4=EntryMask4
@@ -68,6 +71,8 @@ class MainWindow(QMainWindow):
         layoutmain.addLayout( layoutleft )
 
         # user interface buttons 
+        scroll = QScrollArea()
+        scroll.setFixedWidth(330)
         ui= QWidget() 
         ui.setFixedWidth(300)
         ui.setLayout(layoutright)
@@ -86,7 +91,11 @@ class MainWindow(QMainWindow):
 
         self.h5saving.save_ui(layoutright)
         
-        layoutmain.addWidget(ui)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(ui)
+
+
+        layoutmain.addWidget(scroll)#ui
         widget = QWidget()
         widget.setLayout(layoutmain) 
         self.setCentralWidget(widget)
@@ -108,10 +117,7 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
-    def heading_label(self,layout,heading_string):
-        label = QLabel(heading_string)
-        label.setStyleSheet("color:white;font-size: 11pt")
-        layout.addWidget(label)
+        
 
 
 
