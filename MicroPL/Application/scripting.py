@@ -23,7 +23,7 @@ class Scripting:
 
     def script_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"Scripts",self.expand) #################################################
+        self.app.heading_label(layoutright,"Scripts",self.expand)
 
         self.dropdown=QVBoxLayout()
 

@@ -160,7 +160,7 @@ class Pixis():
 
     def spectral_camera_ui(self,layoutright):   
         self.expanded=False 
-        self.app.heading_label(layoutright,"Spectral Camera",self.expand)######################################################
+        self.app.heading_label(layoutright,"Spectral Camera",self.expand)
 
         self.dropdown=QVBoxLayout()
        

@@ -68,14 +68,6 @@ class Orca():
     def spatial_camera_ui(self,layoutright):
         self.expanded=False
         self.app.heading_label(layoutright,"Spatial Camera",self.expand)
-        #layoutheading=QHBoxLayout()
-        #button = QPushButton("▽ Spatial Camera")
-        #button.setStyleSheet("background-color: black;color:white;font-size: 11pt")
-        #button.clicked.connect(self.expand)
-        #self.layoutheading.addWidget(button)
-        #self.layoutheading.addStretch()
-        #layoutright.addLayout(self.layoutheading)
-        #self.app.heading_label(layoutright,"Spatial Camera")######################################################
 
         self.dropdown=QVBoxLayout()
 

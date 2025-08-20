@@ -74,7 +74,7 @@ class Keysight:
 
     def power_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"LED Power Supply",self.expand)####################################################
+        self.app.heading_label(layoutright,"LED Power Supply",self.expand)
 
         self.dropdown=QVBoxLayout()
         

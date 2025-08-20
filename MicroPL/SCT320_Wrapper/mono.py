@@ -121,7 +121,7 @@ class SCT320():
 
     def mono_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"Monochromator",self.expand)###########################################
+        self.app.heading_label(layoutright,"Monochromator",self.expand)
 
         self.dropdown=QVBoxLayout()
 
@@ -160,7 +160,7 @@ class SCT320():
         self.app.set_layout_visible(self.dropdown,False)
         label = QLabel(" ")
         layoutright.addWidget(label)
-        label = QLabel(" ")
+        label = QLabel("")
         layoutright.addWidget(label)
 
 

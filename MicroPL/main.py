@@ -60,14 +60,20 @@ class MainWindow(QMainWindow):
         layoutmain = QHBoxLayout() # whole window
         layoutright = QVBoxLayout() # right side containing image,colorbar and 1D-roi-plot
         layoutleft = QVBoxLayout() # left side containing all the buttons
+        layoutlefth1=QHBoxLayout()
+        layoutlefth2=QHBoxLayout() 
+
 
         # graphics show
-        self.orca.spatial_camera_show(layoutleft)
+        self.orca.spatial_camera_show(layoutlefth1)
         #image and colorbar
 
-        self.pixis.spectral_camera_show(layoutleft)
+        self.pixis.spectral_camera_show(layoutlefth2)
         #image, colorbar and 1D-profile plot
-        
+
+        layoutleft.addLayout(layoutlefth1,4)
+        layoutleft.addLayout(layoutlefth2,3)
+
         layoutmain.addLayout( layoutleft )
 
         # user interface buttons 

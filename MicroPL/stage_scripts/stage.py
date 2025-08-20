@@ -5,10 +5,10 @@
 #import ctypes
 import sys
 #import re
-from ctypes import *  # import ctypes (used to call DLL functions)
+from ctypes import cdll,c_int,byref,create_string_buffer,c_double,c_char_p  # import ctypes (used to call DLL functions)
 
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton
 
 
 class Stage:
@@ -178,7 +178,7 @@ class Stage:
 
     def stage_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"Stage",self.expand)####################################################
+        self.app.heading_label(layoutright,"Stage     ",self.expand)
     
         self.dropdown=QVBoxLayout()
         
