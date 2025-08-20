@@ -27,17 +27,18 @@ class CameraHandler_spatial(QRunnable):
 
 class Orca():
     def __init__(self,app):
+        self.app=app
         try:
             self.cam = DCAM.DCAMCamera(idx=0)
             self.cam.setup_acquisition(mode="snap")
             print("orca connected")
-
+            self.app.add_log("orca connected")
             self.connected=True
         except:
             self.connected=False
             print("orca dummy mode")
+            self.app.add_log("orca dummy mode")
 
-        self.app=app
         self.acqtime_spatial=1
         self.crosshair=False
         self.live_mode_running=False

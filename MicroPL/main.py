@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from PyQt5.QtCore import QThreadPool   
+from PyQt5.QtCore import QThreadPool,QStringListModel 
 # from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel,QScrollArea
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel,QScrollArea,QListView
 
 from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button,set_layout_visible,heading_label
 from .Application.saving import Saving
@@ -23,9 +23,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MicroPL App")
         self.setStyleSheet("background-color: black;")#black 
-        self.move(160,32)
-        self.resize(1536,900)
-               
+        self.move(85,32)
+        self.resize(1750,1000)
+
+        self.logging_list=[]      
+        self.logging_model = QStringListModel()
+        self.logging_model.setStringList(self.logging_list) 
         self.standard_width=55
         self.normal_button=normal_button
         self.set_layout_visible=set_layout_visible
@@ -58,23 +61,62 @@ class MainWindow(QMainWindow):
         self.metadata_electrical["unsaved"]=True
 
         layoutmain = QHBoxLayout() # whole window
-        layoutright = QVBoxLayout() # right side containing image,colorbar and 1D-roi-plot
-        layoutleft = QVBoxLayout() # left side containing all the buttons
-        layoutlefth1=QHBoxLayout()
-        layoutlefth2=QHBoxLayout() 
+        layoutright = QVBoxLayout() # right side containing all the buttons
+        layoutmiddle = QVBoxLayout() # middle containing image,colorbar and 1D-roi-plot
+        layoutleft=QVBoxLayout() # left containing info and log
+
+        layoutmiddleh=QHBoxLayout()
+        layoutmiddlev=QVBoxLayout()
+
+        layoutstatus=QVBoxLayout()
+        label = QLabel("Status")
+        label.setStyleSheet("background-color: black;color:white;font-size: 15pt")
+
+        layoutstatus.addWidget(label)
+        layoutstatus.addStretch()
+        layoutleft.addLayout(layoutstatus,1)
+        layoutlog=QVBoxLayout()
+
+        layoutlog.addWidget(label)
+        label = QLabel("Logging")
+        label.setStyleSheet("background-color: black;color:white;font-size: 11pt")
+
+        layoutlog.addWidget(label)
+
+        list_view = QListView()
+        list_view.setFixedWidth(260)
+        list_view.setModel(self.logging_model)
+        list_view.setStyleSheet("""
+            QListView {
+                background-color: #1e1e1e;   /* Dark background */
+                color: white;               /* Default text color */
+                font-family: Consolas;
+                font-size: 10pt;
+            }
+            QListView::item:selected {
+                background-color: #0078d7;  /* Highlight color */
+                color: white;
+            }
+        """)
 
 
+
+        layoutlog.addWidget(list_view)
+        layoutleft.addLayout(layoutlog,1)
         # graphics show
-        self.orca.spatial_camera_show(layoutlefth1)
+        self.orca.spatial_camera_show(layoutmiddle)
         #image and colorbar
 
-        self.pixis.spectral_camera_show(layoutlefth2)
+        self.pixis.spectral_camera_show(layoutmiddlev)
         #image, colorbar and 1D-profile plot
 
-        layoutleft.addLayout(layoutlefth1,4)
-        layoutleft.addLayout(layoutlefth2,3)
+        #layoutmiddleh.addLayout(layoutIV)
+        layoutmiddleh.addLayout(layoutmiddlev)
+        layoutmiddle.addLayout(layoutmiddleh,3)
+
 
         layoutmain.addLayout( layoutleft )
+        layoutmain.addLayout( layoutmiddle )
 
         # user interface buttons 
         scroll = QScrollArea()
@@ -124,7 +166,9 @@ class MainWindow(QMainWindow):
             event.ignore()
 
         
-
+    def add_log(self,logstring):
+        self.logging_list.insert(0, logstring)
+        self.logging_model.setStringList(self.logging_list)
 
 
 

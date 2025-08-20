@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 
 class Keysight:
     def __init__(self,app):
+        self.app=app
         self.model_name="E36105B"
         self.resource_str="USB0::0x2A8D::0x1802::MY61001772::0::INSTR"
         try:
@@ -13,12 +14,14 @@ class Keysight:
             self.psu = rm.open_resource(self.resource_str)
             print("Keysight connected")
             self.connected=True
+            self.app.add_log("LED power supply connected")
         except:
             self.connected=False
-            self.psu = "dummy"
+            #self.psu = "dummy"
             print("dummy mode for keysight")
+            self.app.add_log("LED power supply dummy mode")
 
-        self.app=app
+
         self.voltage=0
         self.current=0
 

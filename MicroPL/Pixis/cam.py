@@ -37,6 +37,7 @@ class CameraHandler_spectral(QRunnable):
 
 class Pixis():
     def __init__(self,app):
+        self.app=app
         try:
             pll.par["devices/dlls/picam"] = r"C:\Program Files\Common Files\Princeton Instruments\Picam\Runtime"
             cameras = PrincetonInstruments.list_cameras()
@@ -46,11 +47,13 @@ class Pixis():
             self.cam.setup_acquisition(mode='snap') # mode= [snap, sequence], [nframes = X]
 
             self.connected=True
+            self.app.add_log("pixis connected")
         except:
             self.connected=False
             print("pixis dummy mode")
+            self.app.add_log("pixis dummy mode")
 
-        self.app=app
+        
         self.acqtime_spectral=1
         self.live_mode_latency=200
         self.save_full_image=True

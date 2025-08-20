@@ -16,6 +16,7 @@ from msl.equipment import (
 
 class SCT320():
     def __init__(self,app):
+        self.app=app
         record = EquipmentRecord(
             manufacturer='Princeton Instruments',
             model='SCT320',  # update for your device
@@ -32,6 +33,7 @@ class SCT320():
             # Connect to the monochromator
             self.mono = record.connect()
             print("mono connected")
+            self.app.add_log("monochromator connected")
             self.connected=True
             self.wavelength=self.get_wavelength()
             self.grating_pos=self.get_grating()[0]
@@ -39,6 +41,7 @@ class SCT320():
 
         except:
             print("monochromator dummy mode")
+            self.app.add_log("monochromator dummy mode")
             self.connected=False
             self.wavelength=0
             self.grating_pos=1
@@ -48,8 +51,6 @@ class SCT320():
         self.pixel_width_microns=26
         self.alignment_delta=0
 
-
-        self.app=app
 
         # monochromator
         self.grating_list=[]

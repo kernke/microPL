@@ -12,7 +12,8 @@ from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButt
 
 
 class Stage:
-    def __init__(self,app):
+    def __init__(self,app)
+        self.app=app:
         try:
             self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
 
@@ -53,7 +54,7 @@ class Stage:
                 sys.exit(0)
 
             print("TANGO is now successfully connected to DLL")
-
+            self.app.add_log("stage connected")
             self.connected=True
 
             self.xpos,self.ypos=self.get_position()
@@ -61,10 +62,11 @@ class Stage:
         except:
             self.connected=False
             self.xpos,self.ypos=0,0
+            self.app.add_log("stage dummy mode")
             print("stage dummy mode")
 
         
-        self.app=app
+
         self.xlimit=[0.,50.]
         self.ylimit=[0.,50.]
         
