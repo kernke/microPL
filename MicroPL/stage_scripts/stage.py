@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButt
 
 
 class Stage:
-    def __init__(self,app)
-        self.app=app:
+    def __init__(self,app):
+        self.app=app
         try:
             self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
 
