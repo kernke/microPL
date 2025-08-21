@@ -102,22 +102,22 @@ class MainWindow(QMainWindow):
         
         layoutstatus.addItem(smallvspace)
 
-        self.status_orca_max = QLabel("Spatial Max: 0")
+        self.status_orca_max = QLabel("Spatial Max: ")
         self.status_orca_max.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_orca_max)
 
-        self.status_orca_mean = QLabel("Spatial Mean: 0")
+        self.status_orca_mean = QLabel("Spatial Mean: ")
         self.status_orca_mean.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_orca_mean)
 
 
         layoutstatus.addItem(smallvspace)
 
-        self.status_pixis = QLabel("Spectral Max: "+str(self.stage.ypos))
+        self.status_pixis = QLabel("Spectral Max: ")
         self.status_pixis.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis)
 
-        self.status_pixis_nm = QLabel("Max at: "+str(self.stage.ypos)+ "nm")
+        self.status_pixis_nm = QLabel("ROI Max at: ")
         self.status_pixis_nm.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis_nm)
 
@@ -167,6 +167,7 @@ class MainWindow(QMainWindow):
         self.pixis.spectral_camera_show(layoutmiddlev)
         #image, colorbar and 1D-profile plot
 
+        self.keysight.power_graphics_show(self.layoutmiddleh)
         #layoutmiddleh.addLayout(layoutIV)
         self.layoutmiddleh.addLayout(layoutmiddlev)
         layoutmiddle.addLayout(self.layoutmiddleh,3)

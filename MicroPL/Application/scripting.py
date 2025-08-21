@@ -251,7 +251,7 @@ class Scripting:
             
     def entry_window_script_grid(self):
         if self.script_index is None:
-            self.w = self.app.entrymask6(self.app.stage)
+            self.w = self.app.entrymask6(self.app)
             self.w.location_on_the_screen()
             self.w.exec()
 
@@ -267,7 +267,7 @@ class Scripting:
                 self.app.stage.xpos=self.script_positions_x[i]
                 self.app.stage.ypos=self.script_positions_y[i]
                 self.app.stage.stage_goto()      
-                xcheck,ycheck=self.stage.get_position()
+                xcheck,ycheck=self.app.stage.get_position()
                 print("check position: "+str(xcheck)+","+str(ycheck))
                 
                 QApplication.processEvents()

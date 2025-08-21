@@ -151,7 +151,7 @@ class Orca():
         hist.setImageItem(self.img)
         
         # image view window end########################################################
-        layoutleft.addWidget(self.cw,4)    
+        layoutleft.addWidget(self.cw,3)    
 
 
     def maximize(self):
@@ -178,19 +178,19 @@ class Orca():
 
 
     def image_from_thread_spatial(self,cimg):
-        self.img_data=cimg
+        self.img_data=cimg.T[:,::-1]
         imgmax=np.max(cimg)
         imgmean=np.mean(cimg)
-        self.app.orca_status_max.setText("Spatial Max: "+str(int(imgmax)))
-        self.app.orca_status_mean.setText("Spatial Mean: "+str(int(imgmean)))
+        self.app.status_orca_max.setText("Spatial Max: "+str(int(imgmax)))
+        self.app.status_orca_mean.setText("Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
-            crosshaired_img=np.copy(cimg)
+            crosshaired_img=np.copy(cimg.T[:,::-1])
             crosshaired_img[1021:1027,:]=imgmax
             crosshaired_img[:,1021:1027]=imgmax
             self.img.setImage(crosshaired_img)
 
         else: 
-            self.img.setImage(cimg)
+            self.img.setImage(cimg.T[:,::-1])
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 
@@ -223,17 +223,7 @@ class Orca():
             self.timer=QTimer()
             self.timer.timeout.connect(self.acquire_clicked_spatial)
             self.live_mode_running=True
-            if self.app.pixis.live_mode_running and False:
-                self.app.pixis.timer.stop()
-                other_timer=self.app.pixis.acqtime_spectral*1000+self.app.pixis.live_mode_latency
-                timer_time=int(other_timer+self.live_mode_latency+700)
-                self.app.pixis.timer.start(timer_time)
-
-                this_timer=self.acqtime_spatial*1000+self.live_mode_latency
-                timer_time=int(this_timer+self.app.pixis.live_mode_latency+700)
-                self.timer.start(timer_time)
-            else:
-                self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
+            self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
         else:

@@ -91,7 +91,7 @@ class Saving:
             self.app.add_log("already saved before")
         else:
             if self.check_h5():
-                self.app.metadata_spatial["image"]=self.app.orca.img_s_data#.image
+                self.app.metadata_spatial["image"]=self.app.orca.img_data#.image
                 self.write_to_h5(self.app.metadata_spatial)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""

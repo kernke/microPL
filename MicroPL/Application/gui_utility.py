@@ -189,29 +189,29 @@ class EntryMask4(QWidget):
 
 class EntryMask6(QDialog):
 
-    def __init__(self,device):
+    def __init__(self,app):
         super().__init__()
-        self.device=device
+        self.app=app
         self.setWindowTitle("Enter Values")
         self.setStyleSheet("background-color: black;") 
         self.setFixedSize(QSize(350, 300))
 
-        if device.script_x_entries is None:
+        if self.app.scripting.script_x_entries is None:
             self.tempo_xmin=0.
             self.tempo_ymin=0.
             self.tempo_xmax=50.
             self.tempo_ymax=50.
             self.tempo_xnum=10
             self.tempo_ynum=10
-            device.script_x_entries=[self.tempo_xmin,self.tempo_xmax,int(self.tempo_xnum)]
-            device.script_y_entries=[self.tempo_ymin,self.tempo_ymax,int(self.tempo_ynum)]
+            self.app.scripting.script_x_entries=[self.tempo_xmin,self.tempo_xmax,int(self.tempo_xnum)]
+            self.app.scripting.script_y_entries=[self.tempo_ymin,self.tempo_ymax,int(self.tempo_ynum)]
         else:
-            self.tempo_xmin=device.script_x_entries[0]
-            self.tempo_ymin=device.script_y_entries[0]
-            self.tempo_xmax=device.script_x_entries[1]
-            self.tempo_ymax=device.script_y_entries[1]
-            self.tempo_xnum=device.script_x_entries[2]
-            self.tempo_ynum=device.script_y_entries[2]
+            self.tempo_xmin=self.app.scripting.script_x_entries[0]
+            self.tempo_ymin=self.app.scripting.script_y_entries[0]
+            self.tempo_xmax=self.app.scripting.script_x_entries[1]
+            self.tempo_ymax=self.app.scripting.script_y_entries[1]
+            self.tempo_xnum=self.app.scripting.script_x_entries[2]
+            self.tempo_ynum=self.app.scripting.script_y_entries[2]
         
 
         layout = QVBoxLayout()
@@ -320,32 +320,32 @@ class EntryMask6(QDialog):
     def temporary_xmin(self,s):
         if s:
             self.tempo_xmin=np.double(s)
-            self.device.script_x_entries[0]=self.tempo_xmin
+            self.app.scripting.script_x_entries[0]=self.tempo_xmin
         
     def temporary_ymin(self,s):
         if s:
             self.tempo_ymin=np.double(s)
-            self.device.script_y_entries[0]=self.tempo_ymin
+            self.app.scripting.script_y_entries[0]=self.tempo_ymin
 
     def temporary_xmax(self,s):
         if s:
             self.tempo_xmax=np.double(s)
-            self.device.script_x_entries[1]=self.tempo_xmax
+            self.app.scripting.script_x_entries[1]=self.tempo_xmax
 
     def temporary_ymax(self,s):
         if s:
             self.tempo_ymax=np.double(s)
-            self.device.script_y_entries[1]=self.tempo_ymax
+            self.app.scripting.script_y_entries[1]=self.tempo_ymax
 
     def temporary_xnum(self,s):
         if s:
             self.tempo_xnum=int(s)
-            self.device.script_x_entries[2]=self.tempo_xnum
+            self.app.scripting.script_x_entries[2]=self.tempo_xnum
 
     def temporary_ynum(self,s):
         if s:
             self.tempo_ynum=int(s)
-            self.device.script_y_entries[2]=self.tempo_ynum
+            self.app.scripting.script_y_entries[2]=self.tempo_ynum
 
             
     def confirm_and_close(self):
@@ -368,7 +368,7 @@ class EntryMask6(QDialog):
                 newy[counter]=yy[i,jnum]
                 counter+=1
         
-        self.device.script_positions_x=newx
-        self.device.script_positions_y=newy  
-        self.device.script_execution=True
+        self.app.scripting.script_positions_x=newx
+        self.app.scripting.script_positions_y=newy  
+        self.app.scripting.script_execution=True
         self.close()

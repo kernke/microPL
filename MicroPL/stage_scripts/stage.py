@@ -178,6 +178,16 @@ class Stage:
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def refreshrate_edited(self,s):
+        if s:
+            if self.live_mode_running:
+                self.refresh_rate=np.double(s)
+                self.timer.stop()
+                self.timer.start(int(1000*self.refresh_rate))
+            else:
+                self.refresh_rate=np.double(s)
+
+
     def stage_ui(self,layoutright):
         self.expanded=False
         self.app.heading_label(layoutright,"Stage     ",self.expand)

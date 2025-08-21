@@ -1,7 +1,30 @@
 import pyvisa
 #import time
 import numpy as np
+import time
+import pyqtgraph as pg
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer,QRunnable,pyqtSlot
+
+class WorkerThread(QThread):
+    update_signal = pyqtSignal(str)
+
+    def run(self):
+        counter = 0
+        while True:
+            time.sleep(1)
+            counter += 1
+            self.update_signal.emit(f"Updated: {counter} second(s)")
+
+class Status_update(QRunnable):
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.app.keysight.measure_electric()
 
 class Keysight:
     def __init__(self,app):
@@ -26,9 +49,12 @@ class Keysight:
         self.current=0
         self.output_on=False
 
-        self.voltages_set = []
-        self.voltages_measured = []
-        self.currents_measured = []
+
+
+
+        #self.voltages_set = []
+        #self.voltages_measured = []
+        #self.currents_measured = []
 
     def on(self):
         self.psu.write ("OUTP ON")
@@ -36,21 +62,27 @@ class Keysight:
     def off(self):
         self.psu.write ("OUTP OFF")
 
-    def set_voltage(self, voltage):
-        self.psu.write(f"SOUR:VOLT {voltage}")
+    #def set_voltage(self, voltage):
+    #    self.psu.write(f"SOUR:VOLT {voltage}")
         #time.sleep(1.01)
 
-    def set_current(self, current):
-        self.psu.write(f"SOUR:CURR {current}")
-        #time.sleep(1.01)
+    #def set_current(self, current):
+    #    self.psu.write(f"SOUR:CURR {current}")
+    #    #time.sleep(1.01)
 
-    def measure_voltage(self):
-        return float(self.psu.query("MEAS:VOLT?").strip())
+    def thread_task(self):
+        self.worker=Status_update(self.app)
+        self.app.threadpool.start(self.worker)
 
-    def measure_current(self):
-        return float(self.psu.query("MEAS:CURR?").strip())
+    def measure_electric(self):
+        self.voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
+        self.app.status_voltage.setText("Voltage: "+str(np.round(self.voltage_actual,3))+" V")
+        print("sdf")
+        self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+        self.app.status_current.setText("Current: "+str(np.round(self.currentA_actual*1000,2))+" mA")
+    
 
-    def measure(self, voltage_step, max_voltage):
+    def measure_IV(self, voltage_step, max_voltage):
         print("Starting measurement...")
         self.on()
 
@@ -76,14 +108,41 @@ class Keysight:
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def setvoltage_edited(self,s):
+        if s:
+            self.voltage=np.double(s)
+            self.psu.write(f"SOUR:VOLT {self.voltage}")
+
+    def setcurrent_edited(self,s):
+        if s:
+            self.current=np.double(s)
+            self.psu.write(f"SOUR:CURR {self.current/1000}")
+
+    def refreshrate_edited(self,s):
+        if s:
+            if self.live_mode_running:
+                self.refresh_rate=np.double(s)
+                self.timer.stop()
+                self.timer.start(int(1000*self.refresh_rate))
+            else:
+                self.refresh_rate=np.double(s)
+
+
+
     def power_ui(self,layoutright):
+        self.measure_electric()
+        self.refresh_rate=1.
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.thread_task)
+
+
         self.expanded=False
         self.app.heading_label(layoutright,"LED Power Supply",self.expand)
 
         self.dropdown=QVBoxLayout()
         
         layoutoutput=QHBoxLayout()
-        self.app.normal_button(layoutoutput,"Output",self.power_on)
+        self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
         label = QLabel("grey   -> off\ngreen -> on")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
@@ -97,7 +156,9 @@ class Keysight:
         voltwidget.setStyleSheet("background-color: lightGray")
         voltwidget.setMaxLength(7)
         voltwidget.setFixedWidth(self.app.standard_width)
-        voltwidget.setText(str(0.0))
+        voltwidget.setText(str(np.round(self.voltage_actual,3)))
+
+        voltwidget.textEdited.connect(self.setvoltage_edited)
         label = QLabel("voltage (V)")
         label.setStyleSheet("color:white")
         layoutset.addWidget(voltwidget)
@@ -107,7 +168,8 @@ class Keysight:
         currentwidget.setStyleSheet("background-color: lightGray")
         currentwidget.setMaxLength(7)
         currentwidget.setFixedWidth(self.app.standard_width)
-        currentwidget.setText(str(0.0))
+        currentwidget.setText(str(np.round(self.currentA_actual*1000,1)))
+        currentwidget.textEdited.connect(self.setcurrent_edited)
         label = QLabel("current (mA)")
         label.setStyleSheet("color:white")
         layoutset.addWidget(label)
@@ -119,14 +181,15 @@ class Keysight:
         freshwidget.setStyleSheet("background-color: lightGray")
         freshwidget.setMaxLength(7)
         freshwidget.setFixedWidth(self.app.standard_width)
-        freshwidget.setText(str(1.0))
+        freshwidget.setText(str(self.refresh_rate))
+        freshwidget.textEdited.connect(self.refreshrate_edited)
         label = QLabel("refresh interval (s)")
         label.setStyleSheet("color:white")
         layoutfresh.addWidget(freshwidget)
         layoutfresh.addWidget(label)
         layoutfresh.addStretch()
 
-        self.app.normal_button(layoutfresh,"Live",self.live_mode)
+        self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
 
         self.dropdown.addLayout(layoutfresh)
         layoutmax=QHBoxLayout()
@@ -135,24 +198,62 @@ class Keysight:
         layoutmax.addStretch()
         self.dropdown.addLayout(layoutmax)
 
+        #layoutread=QHBoxLayout()
+        #btn=self.app.normal_button(layoutread,"Measure",self.measure_electric)
+        #layoutread.addStretch()
+
+        #self.dropdown.addLayout(layoutread)
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)
 
 
+        self.live_mode_running=False
+        self.live_mode()
+
+    def power_graphics_show(self,layout):
+        plot = pg.PlotWidget()
+
+        plot.setLabel('bottom', 'time', units='s')
+        plot.setLabel('left', 'Voltage', units='V')
+        plot.getAxis("left").enableAutoSIPrefix(True)
+
+        yvalues=np.ones(100)#data.mean(axis=-1)
+        xvalues=np.arange(100)
+        self.volt_curve=plot.plot(xvalues,yvalues )        
+        # 1D spectrum view end  ###################################################
+        layout.addWidget(plot)
+
+
+
     def power_on(self):
         if self.output_on:
-            self.output_on=True
-            self.psu.write ("OUTP OFF")
-        else:
+            print("turning off")
             self.output_on=False
-            self.psu.write ("OUTP ON")
+            self.psu.write("OUTP OFF")
+            self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
+        else:
+            print("turning on")
+            self.output_on=True
+            self.psu.write("OUTP ON")
+            self.powerbtn.setStyleSheet("background-color: green;color: black")
 
     def maximize(self):
         pass
 
     def live_mode(self):
-        pass
+        if not self.live_mode_running:
+            self.live_mode_running=True
+            self.timer.start(int(self.refresh_rate))
+            #self.btnlive.setText("Status Live")
+            self.btnlive.setStyleSheet("background-color: green;color: black")
+        else:
+
+            self.live_mode_running=False
+            self.timer.stop()
+            #self.btnlive.setText("StatLive")
+            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
     """
     def plot_iv_detailed(self, zoom_voltage=1):
         plt.figure()

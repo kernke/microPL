@@ -223,20 +223,8 @@ class Pixis():
 
     def live_mode(self):
         if not self.live_mode_running:
-            #self.timer=QTimer()
-            #self.timer.timeout.connect(self.acquire_clicked_spectral)
             self.live_mode_running=True
-            if self.app.orca.live_mode_running and False:
-                self.app.orca.timer.stop()
-                other_timer=self.app.orca.acqtime_spatial*1000+self.app.orca.live_mode_latency
-                timer_time=int(other_timer+self.live_mode_latency+700)
-                self.app.orca.timer.start(timer_time)
-
-                this_timer=self.acqtime_spectral*1000+self.live_mode_latency
-                timer_time=int(this_timer+self.app.orca.live_mode_latency+700)
-                self.timer.start(timer_time)
-            else:
-                self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))#200
+            self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
@@ -273,7 +261,10 @@ class Pixis():
             return
         data = self.roi.getArrayRegion(self.img.image, img=self.img)
         self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
-        self.roi.curve.setData(self.app.monochromator.spectrum_x_axis, data.mean(axis=-1))
+        spectrum_y_axis=data.mean(axis=-1)
+        self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
+        max_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
+        self.app.status_pixis_nm.setText("ROI Max at: "+str(np.round(max_wavelength,2))+" nm")
 
     def entry_window_roi(self):
         self.w = self.app.entrymask4(True,self.app)
@@ -303,7 +294,11 @@ class Pixis():
     def image_from_thread_spectral(self,cimg):
         self.img.setImage(cimg.T[::-1])
         self.img_data=cimg.T[::-1]
+        imgmax=np.max(cimg)
+        self.app.status_pixis.setText("Spectral Max: "+str(int(imgmax)))
+        
         self.updateRoi()
+        #self.app.status_orca_mean.setText("Spatial Mean: "+str(int(imgmean)))
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spectral()
 
