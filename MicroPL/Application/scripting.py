@@ -55,10 +55,8 @@ class Scripting:
         self.dropdown.addLayout(layoutscriptbuttons)
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
+
 
 
     def script_button_pause(self):

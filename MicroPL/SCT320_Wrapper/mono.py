@@ -33,7 +33,7 @@ class SCT320():
             # Connect to the monochromator
             self.mono = record.connect()
             print("mono connected")
-            self.app.add_log("monochromator connected")
+            self.app.add_log("SCT320 connected")
             self.connected=True
             self.wavelength=self.get_wavelength()
             self.grating_pos=self.get_grating()[0]
@@ -41,7 +41,7 @@ class SCT320():
 
         except:
             print("monochromator dummy mode")
-            self.app.add_log("monochromator dummy mode")
+            self.app.add_log("SCT320 dummy mode")
             self.connected=False
             self.wavelength=0
             self.grating_pos=1
@@ -159,10 +159,7 @@ class SCT320():
         self.dropdown.addLayout(layoutgrating)
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel("")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
 
 
 

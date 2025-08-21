@@ -55,6 +55,7 @@ class Saving:
         self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
         self.h5struc=self.group+"/"+self.acq_name#+str(self.acq_number).zfill(5)
         self.widgeth5name.setText(self.acq_name)
+        self.app.add_log(self.acq_name+" saved")
         print("saved")
 
     def check_h5(self):
@@ -87,6 +88,7 @@ class Saving:
     def save_to_h5_spatial(self):
         if self.app.metadata_spatial["unsaved"]==False:
             print("already saved before")
+            self.app.add_log("already saved before")
         else:
             if self.check_h5():
                 self.app.metadata_spatial["image"]=self.app.orca.img_s_data#.image
@@ -186,10 +188,10 @@ class Saving:
         layoutsavebuttons=QHBoxLayout()
 
         self.btnsaveacq=self.app.normal_button(layoutsavebuttons,"Save on Acquire/Live",self.save_on_acquire)
-        self.btnsaveacq.setFixedWidth(120)
+        self.btnsaveacq.setFixedWidth(130)
         layoutsavebuttons.addStretch()
         self.btnsavecomment=self.app.normal_button(layoutsavebuttons,"Save Comment only",self.save_comment)
-        self.btnsavecomment.setFixedWidth(120)
+        self.btnsavecomment.setFixedWidth(130)
 
         self.dropdown.addLayout(layoutsavebuttons) 
 
@@ -199,7 +201,7 @@ class Saving:
         label.setStyleSheet("color:white")
         layoutsavelabels.addWidget(label)
         layoutsavelabels.addStretch()
-        label = QLabel("Acq. Name (default recommended)")
+        label = QLabel("Acquisition Name")
         label.setStyleSheet("color:white")
         layoutsavelabels.addWidget(label)
 
@@ -233,7 +235,7 @@ class Saving:
         layoutsavetext=QHBoxLayout()
         labelsave = QPushButton()
         labelsave.setStyleSheet("background-color: lightGray; text-align: left")
-        labelsave.setText(" ..."+self.filepath[-38:])
+        labelsave.setText("  ..."+self.filepath[-32:]+" ")
         labelsave.clicked.connect(self.set_filepath)
         self.labelsave=labelsave
         layoutsavetext.addWidget(labelsave)

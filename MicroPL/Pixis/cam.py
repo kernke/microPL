@@ -47,11 +47,11 @@ class Pixis():
             self.cam.setup_acquisition(mode='snap') # mode= [snap, sequence], [nframes = X]
 
             self.connected=True
-            self.app.add_log("pixis connected")
+            self.app.add_log("Pixis connected")
         except:
             self.connected=False
             print("pixis dummy mode")
-            self.app.add_log("pixis dummy mode")
+            self.app.add_log("Pixis dummy mode")
 
         
         self.acqtime_spectral=1
@@ -206,15 +206,20 @@ class Pixis():
 
         self.dropdown.addLayout(layoutacqbutton)
 
+        layoutmax=QHBoxLayout()
+        btn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        btn.setFixedWidth(110)
+        layoutmax.addStretch()
+        self.dropdown.addLayout(layoutmax)
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
 
 
+    def maximize(self):
+        pass
 
     def live_mode(self):
         if not self.live_mode_running:
@@ -288,6 +293,7 @@ class Pixis():
         self.app.metadata_spectral["stage_y"]=yacq
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
         self.app.metadata_spectral["unsaved"]=True
+        self.app.add_log("spectral img acquired")
         self.camera_handler =CameraHandler_spectral(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spectral)
         self.app.threadpool.start(self.camera_handler)

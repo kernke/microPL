@@ -32,17 +32,18 @@ class Orca():
             self.cam = DCAM.DCAMCamera(idx=0)
             self.cam.setup_acquisition(mode="snap")
             print("orca connected")
-            self.app.add_log("orca connected")
+            self.app.add_log("Orca connected")
             self.connected=True
         except:
             self.connected=False
             print("orca dummy mode")
-            self.app.add_log("orca dummy mode")
+            self.app.add_log("Orca dummy mode")
 
         self.acqtime_spatial=1
         self.crosshair=False
         self.live_mode_running=False
         self.live_mode_latency=400
+        self.maximized=False
         
 
     def acquire(self,exposure_time):
@@ -98,18 +99,20 @@ class Orca():
         
         self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
 
+
         self.dropdown.addLayout(layoutacqbutton)
+        
+        layoutmax=QHBoxLayout()
+        self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        self.maxbtn.setFixedWidth(110)
+        layoutmax.addStretch()
+        self.dropdown.addLayout(layoutmax)
+
         layoutright.addLayout(self.dropdown)
+
         self.app.set_layout_visible(self.dropdown,False)
 
-        #self.expand()
-        #layoutright.addLayout(layoutacqbutton)
-
-
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
 
 
     def spatial_camera_show(self,layoutleft):
@@ -121,9 +124,9 @@ class Orca():
         cimg[-5:,:]=65535
         
         # image view window start########################################################
-        cw = QWidget() 
+        self.cw = QWidget() 
         layout= QGridLayout()
-        cw.setLayout(layout)
+        self.cw.setLayout(layout)
         layout.setSpacing(0)
         view = pg.GraphicsView()
         vb = pg.ViewBox()
@@ -148,8 +151,18 @@ class Orca():
         hist.setImageItem(self.img)
         
         # image view window end########################################################
-        layoutleft.addWidget(cw,4)    
+        layoutleft.addWidget(self.cw,4)    
 
+
+    def maximize(self):
+        if self.maximized:
+            self.maximized=False
+            self.app.set_layout_visible(self.app.layoutmiddleh,True)
+            self.maxbtn.setText("Maximize View")
+        else:
+            self.maximized=True
+            self.app.set_layout_visible(self.app.layoutmiddleh,False)
+            self.maxbtn.setText("Minimize View")
 
 
     def overlay_crosshair(self):
@@ -166,10 +179,14 @@ class Orca():
 
     def image_from_thread_spatial(self,cimg):
         self.img_data=cimg
+        imgmax=np.max(cimg)
+        imgmean=np.mean(cimg)
+        self.app.orca_status_max.setText("Spatial Max: "+str(int(imgmax)))
+        self.app.orca_status_mean.setText("Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
             crosshaired_img=np.copy(cimg)
-            crosshaired_img[1021:1027,:]=np.max(cimg)
-            crosshaired_img[:,1021:1027]=np.max(cimg)
+            crosshaired_img[1021:1027,:]=imgmax
+            crosshaired_img[:,1021:1027]=imgmax
             self.img.setImage(crosshaired_img)
 
         else: 
@@ -185,6 +202,7 @@ class Orca():
         self.app.metadata_spatial["stage_x"]=xacq
         self.app.metadata_spatial["stage_y"]=yacq
         self.app.metadata_spatial["unsaved"]=True
+        self.app.add_log("spatial img acquired")
         self.camera_handler =CameraHandler_spatial(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spatial)
         self.app.threadpool.start(self.camera_handler)

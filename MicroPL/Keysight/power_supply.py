@@ -1,5 +1,5 @@
 import pyvisa
-import time
+#import time
 import numpy as np
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 
@@ -14,16 +14,17 @@ class Keysight:
             self.psu = rm.open_resource(self.resource_str)
             print("Keysight connected")
             self.connected=True
-            self.app.add_log("LED power supply connected")
+            self.app.add_log("Keysight connected")
         except:
             self.connected=False
             #self.psu = "dummy"
             print("dummy mode for keysight")
-            self.app.add_log("LED power supply dummy mode")
+            self.app.add_log("Keysight dummy mode")
 
 
         self.voltage=0
         self.current=0
+        self.output_on=False
 
         self.voltages_set = []
         self.voltages_measured = []
@@ -37,11 +38,11 @@ class Keysight:
 
     def set_voltage(self, voltage):
         self.psu.write(f"SOUR:VOLT {voltage}")
-        time.sleep(1.01)
+        #time.sleep(1.01)
 
     def set_current(self, current):
         self.psu.write(f"SOUR:CURR {current}")
-        time.sleep(1.01)
+        #time.sleep(1.01)
 
     def measure_voltage(self):
         return float(self.psu.query("MEAS:VOLT?").strip())
@@ -81,22 +82,16 @@ class Keysight:
 
         self.dropdown=QVBoxLayout()
         
-        layoutlim=QHBoxLayout()
-        #label = QLabel("Set        ")
-        #label.setStyleSheet("color:white")
-        #layoutlim.addWidget(label)
+        layoutoutput=QHBoxLayout()
+        self.app.normal_button(layoutoutput,"Output",self.power_on)
+        label = QLabel("grey   -> off\ngreen -> on")
+        label.setStyleSheet("color:white")
+        label.setWordWrap(True)
+        layoutoutput.addWidget(label)
+        layoutoutput.addStretch()
 
-        #layoutlim.addStretch()
-        #self.app.normal_button(layoutlim,"<- Switch ->",self.power_switch)        
-        #btn.setFixedWidth(80)
-        #layoutlim.addStretch()
-
-        #label = QLabel("Limit (max)")
-        #label.setStyleSheet("color:white")
-        #layoutlim.addWidget(label)
-
-        #self.dropdown.addLayout(layoutlim)
-
+        
+        self.dropdown.addLayout(layoutoutput)
         layoutset=QHBoxLayout()
         voltwidget = QLineEdit()
         voltwidget.setStyleSheet("background-color: lightGray")
@@ -119,18 +114,45 @@ class Keysight:
         layoutset.addWidget(currentwidget)
         
         self.dropdown.addLayout(layoutset)
+        layoutfresh=QHBoxLayout()
+        freshwidget = QLineEdit()
+        freshwidget.setStyleSheet("background-color: lightGray")
+        freshwidget.setMaxLength(7)
+        freshwidget.setFixedWidth(self.app.standard_width)
+        freshwidget.setText(str(1.0))
+        label = QLabel("refresh interval (s)")
+        label.setStyleSheet("color:white")
+        layoutfresh.addWidget(freshwidget)
+        layoutfresh.addWidget(label)
+        layoutfresh.addStretch()
+
+        self.app.normal_button(layoutfresh,"Live",self.live_mode)
+
+        self.dropdown.addLayout(layoutfresh)
+        layoutmax=QHBoxLayout()
+        btn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        btn.setFixedWidth(110)
+        layoutmax.addStretch()
+        self.dropdown.addLayout(layoutmax)
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
 
 
-    def power_switch(self):
+    def power_on(self):
+        if self.output_on:
+            self.output_on=True
+            self.psu.write ("OUTP OFF")
+        else:
+            self.output_on=False
+            self.psu.write ("OUTP ON")
+
+    def maximize(self):
         pass
 
-
+    def live_mode(self):
+        pass
     """
     def plot_iv_detailed(self, zoom_voltage=1):
         plt.figure()

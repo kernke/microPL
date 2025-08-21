@@ -54,7 +54,7 @@ class Stage:
                 sys.exit(0)
 
             print("TANGO is now successfully connected to DLL")
-            self.app.add_log("stage connected")
+            self.app.add_log("Tango connected")
             self.connected=True
 
             self.xpos,self.ypos=self.get_position()
@@ -62,7 +62,7 @@ class Stage:
         except:
             self.connected=False
             self.xpos,self.ypos=0,0
-            self.app.add_log("stage dummy mode")
+            self.app.add_log("Tango dummy mode")
             print("stage dummy mode")
 
         
@@ -217,30 +217,30 @@ class Stage:
         self.dropdown.addLayout(layoutstage)
 
         layoutstagebuttons=QHBoxLayout()
-        btn=self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
+        self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
 
         layoutstagebuttons.addStretch()
 
-        btn=self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
+        self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
+
+        layoutstagebuttons.addStretch()
+
+        self.app.normal_button(layoutstagebuttons,"Home",self.stage_home)
 
         self.dropdown.addLayout(layoutstagebuttons)
 
-
         layoutstagebuttons2=QHBoxLayout()
-        btn=self.app.normal_button(layoutstagebuttons2,"Home",self.stage_home)
-
+        
+        
+        btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)        
+        btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
-
-        btn=self.app.normal_button(layoutstagebuttons2,"Limits",self.entry_window_limits)        
 
         self.dropdown.addLayout(layoutstagebuttons2)
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
 
-        label = QLabel(" ")
-        layoutright.addWidget(label)
-        label = QLabel(" ")
-        layoutright.addWidget(label)
+        layoutright.addItem(self.app.vspace)
 
 
     # stage ui  methods ##########################################################
