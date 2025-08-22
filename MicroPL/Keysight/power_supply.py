@@ -16,14 +16,21 @@ class WorkerThread(QThread):
             counter += 1
             self.update_signal.emit(f"Updated: {counter} second(s)")
 
+class Update_Signal(QObject):
+
+    string_update = pyqtSignal(object)   
+
 class Status_update(QRunnable):
 
-    def __init__(self, app):
+    def __init__(self, psu):
         super().__init__()
-        self.app = app
+        self.psu = psu
+        self.signals=Update_Signal()
 
     @pyqtSlot()
     def run(self): # A slot takes no params
+        voltage_actual= float(psu.query("MEAS:VOLT?").strip())
+        
         self.app.keysight.measure_electric()
 
 class Keysight:
