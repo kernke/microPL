@@ -92,6 +92,9 @@ class Pixis():
 
 
     def close(self):
+        if self.live_mode_running:
+            self.live_mode_running=False
+            self.timer.stop()
         self.cam.close()
         print("Camera disconnected")
         
@@ -113,6 +116,7 @@ class Pixis():
         layout.setSpacing(0)
         view = pg.GraphicsView()
         #view.setFixedSize(512,128)
+        view.setBackground(None)
         vb = pg.ViewBox()
         #vb.setAspectLocked()
         view.setCentralItem(vb)
@@ -127,6 +131,7 @@ class Pixis():
         vb.autoRange()
         
         hist = pg.HistogramLUTWidget(gradientPosition="left")#,orientation="horizontal")
+        hist.setBackground(None)
         hist.setLevelMode(mode="mono")
         layout.addWidget(hist, 0, 1)
         hist.setImageItem(self.img)
@@ -139,7 +144,7 @@ class Pixis():
         layoutleft.addWidget(cw,1)    
         # 1D spectrum view start ###################################################
         roiplot = pg.PlotWidget()
-
+        roiplot.setBackground(None)
         roiplot.setLabel('bottom', 'Wavelength', units='nm')
         roiplot.setLabel('left', 'Intensity ( 0 - 65535 )', units='')
         roiplot.getAxis("left").enableAutoSIPrefix(True)
@@ -263,9 +268,8 @@ class Pixis():
         self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
         spectrum_y_axis=data.mean(axis=-1)
         self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
-        max_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
-        self.app.status_pixis_nm.setText("ROI Max at: "+str(np.round(max_wavelength,2))+" nm")
-
+        self.max_at_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
+        
     def entry_window_roi(self):
         self.w = self.app.entrymask4(True,self.app)
         self.w.setHeading("ROI in Pixels with chip dimension 1024x256\nY increases from top to bottom\n(entries must be integers)")
@@ -295,10 +299,13 @@ class Pixis():
         self.img.setImage(cimg.T[::-1])
         self.img_data=cimg.T[::-1]
         imgmax=np.max(cimg)
-        self.app.status_pixis.setText("Spectral Max: "+str(int(imgmax)))
+        statustext="Spectral Max: "+str(int(imgmax))+"\n"
         
         self.updateRoi()
-        #self.app.status_orca_mean.setText("Spatial Mean: "+str(int(imgmean)))
+
+        statustext+="ROI Max at: "+str(np.round(self.max_at_wavelength,2))
+        self.app.status_pixis.setText(statustext+" nm")
+
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spectral()
 

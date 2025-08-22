@@ -13,6 +13,7 @@ def normal_button(layout,text,function):
     button.setStyleSheet("background-color: lightGray")
     button.clicked.connect(function)
     button.setFixedWidth(70)
+
     layout.addWidget(button)
     return button
 
@@ -29,8 +30,9 @@ def heading_label(layout,heading_string,func_connect):
 
     layoutheading=QHBoxLayout()
     button = QPushButton("▽ "+heading_string)
-    button.setStyleSheet("background-color: black;color:white;font-size: 11pt")
+    button.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 11pt")
     button.clicked.connect(func_connect)
+    button.setFlat(True)
     layoutheading.addWidget(button)
     layoutheading.addStretch()
     layout.addLayout(layoutheading)
@@ -66,7 +68,7 @@ class EntryMask4(QWidget):
         self.device=app.stage
         self.roi=app.pixis.roi
         self.setWindowTitle("Enter Values")
-        self.setStyleSheet("background-color: black;") 
+        self.setStyleSheet("background-color: #1e1e1e;") 
         self.setFixedSize(QSize(300, 200))
         if check_bool:
             self.tempo_xmin=int(self.roi.pos()[0])
@@ -193,7 +195,7 @@ class EntryMask6(QDialog):
         super().__init__()
         self.app=app
         self.setWindowTitle("Enter Values")
-        self.setStyleSheet("background-color: black;") 
+        self.setStyleSheet("background-color: #1e1e1e;") 
         self.setFixedSize(QSize(350, 300))
 
         if self.app.scripting.script_x_entries is None:

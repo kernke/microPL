@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MicroPL App")
-        self.setStyleSheet("background-color: black;")#black 
+        self.setStyleSheet("background-color: #1e1e1e;")#black 
         self.move(85,32)
         self.resize(1750,1000)
 
@@ -74,53 +74,38 @@ class MainWindow(QMainWindow):
         left_ui.setLayout(layoutleft)
 
         layoutstatus=QVBoxLayout()
-        #layoutstatustitle=QHBoxLayout()
+
         label = QLabel("Status")
-        label.setStyleSheet("background-color: black;color:white;font-size: 15pt")
+        label.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 16pt")
         layoutstatus.addWidget(label)
 
         layoutstatus.addItem(self.vspace)
 
-        status_style_string="background-color: black;color:white;font-size: 13pt"
-        self.status_x = QLabel("Stage X: "+str(self.stage.xpos)+ " mm")
-        self.status_x.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_x)
-
-        self.status_y = QLabel("Stage Y: "+str(self.stage.ypos)+ " mm")
-        self.status_y.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_y)
+        status_style_string="background-color: #1e1e1e;color:white;font-size: 14pt"
+        stage_status_string="Stage X: "+str(self.stage.xpos)+ " mm\n"
+        stage_status_string+="Stage Y: "+str(self.stage.ypos)+ " mm"
+        self.status_stage = QLabel(stage_status_string)
+        self.status_stage.setStyleSheet(status_style_string)
+        layoutstatus.addWidget(self.status_stage)
 
         smallvspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
         layoutstatus.addItem(smallvspace)
-        self.status_voltage = QLabel("Voltage: "+str(self.keysight.voltage)+" V")
-        self.status_voltage.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_voltage)
-
-        self.status_current = QLabel("Current: "+str(self.keysight.current)+" mA")
-        self.status_current.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_current)
+        power_status_string="Voltage: "+str(self.keysight.voltage)+" V\nCurrent: "+str(self.keysight.current)+" mA"
+        self.status_electric = QLabel(power_status_string)
+        self.status_electric.setStyleSheet(status_style_string)
+        layoutstatus.addWidget(self.status_electric)
         
         layoutstatus.addItem(smallvspace)
 
-        self.status_orca_max = QLabel("Spatial Max: ")
-        self.status_orca_max.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_orca_max)
-
-        self.status_orca_mean = QLabel("Spatial Mean: ")
-        self.status_orca_mean.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_orca_mean)
-
+        self.status_orca = QLabel("Spatial Max: \nSpatial Mean: ")
+        self.status_orca.setStyleSheet(status_style_string)
+        layoutstatus.addWidget(self.status_orca)
 
         layoutstatus.addItem(smallvspace)
 
-        self.status_pixis = QLabel("Spectral Max: ")
+        self.status_pixis = QLabel("Spectral Max: \nROI Max at: ")
         self.status_pixis.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis)
-
-        self.status_pixis_nm = QLabel("ROI Max at: ")
-        self.status_pixis_nm.setStyleSheet(status_style_string)
-        layoutstatus.addWidget(self.status_pixis_nm)
-
 
         layoutstatus.addStretch()
         
@@ -137,7 +122,7 @@ class MainWindow(QMainWindow):
 
         layoutlog.addWidget(label)
         label = QLabel("Logging")
-        label.setStyleSheet("background-color: black;color:white;font-size: 11pt")
+        label.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 11pt")
 
         layoutlog.addWidget(label)
 
@@ -216,7 +201,9 @@ class MainWindow(QMainWindow):
             self.monochromator.disconnect()
         if self.orca.connected:
             self.orca.disconnect()
-            
+        if self.keysight.connected:
+            self.keysight.disconnect()    
+        
         can_exit=True
         if can_exit:
             event.accept() # let the window close

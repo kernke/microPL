@@ -4,17 +4,7 @@ import numpy as np
 import time
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer,QRunnable,pyqtSlot
-
-class WorkerThread(QThread):
-    update_signal = pyqtSignal(str)
-
-    def run(self):
-        counter = 0
-        while True:
-            time.sleep(1)
-            counter += 1
-            self.update_signal.emit(f"Updated: {counter} second(s)")
+from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 
 class Update_Signal(QObject):
 
@@ -29,10 +19,13 @@ class Status_update(QRunnable):
 
     @pyqtSlot()
     def run(self): # A slot takes no params
-        voltage_actual= float(psu.query("MEAS:VOLT?").strip())
-        
-        self.app.keysight.measure_electric()
+        voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
+        statusstring="Voltage: "+str(np.round(voltage_actual,3))+" V\n"
+        currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+        statusstring+="Current: "+str(np.round(currentA_actual*1000,2))+" mA"
 
+        self.signals.string_update.emit((statusstring,voltage_actual,currentA_actual))
+ 
 class Keysight:
     def __init__(self,app):
         self.app=app
@@ -47,7 +40,6 @@ class Keysight:
             self.app.add_log("Keysight connected")
         except:
             self.connected=False
-            #self.psu = "dummy"
             print("dummy mode for keysight")
             self.app.add_log("Keysight dummy mode")
 
@@ -56,30 +48,27 @@ class Keysight:
         self.current=0
         self.output_on=False
 
+        self.voltage_actual=0
+        self.currentA_actual=0
 
-
-
-        #self.voltages_set = []
-        #self.voltages_measured = []
-        #self.currents_measured = []
-
-    def on(self):
-        self.psu.write ("OUTP ON")
-
-    def off(self):
-        self.psu.write ("OUTP OFF")
-
-    #def set_voltage(self, voltage):
-    #    self.psu.write(f"SOUR:VOLT {voltage}")
-        #time.sleep(1.01)
-
-    #def set_current(self, current):
-    #    self.psu.write(f"SOUR:CURR {current}")
-    #    #time.sleep(1.01)
+    def disconnect(self):
+        if self.live_mode_running:
+            self.live_mode_running=False
+            self.timer.stop()
+        self.psu.close() 
+        print("Keysight disconnected")
 
     def thread_task(self):
-        self.worker=Status_update(self.app)
+        self.worker=Status_update(self.psu)
+        self.worker.signals.string_update.connect(self.status_update_from_thread)
         self.app.threadpool.start(self.worker)
+
+
+    def status_update_from_thread(self,string_volt_curr_tuple):
+        self.app.status_electric.setText(string_volt_curr_tuple[0])
+        self.voltage_actual=string_volt_curr_tuple[1]
+        self.currentA_actual=string_volt_curr_tuple[2]
+
 
     def measure_electric(self):
         self.voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
@@ -88,6 +77,7 @@ class Keysight:
         self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
         self.app.status_current.setText("Current: "+str(np.round(self.currentA_actual*1000,2))+" mA")
     
+
 
     def measure_IV(self, voltage_step, max_voltage):
         print("Starting measurement...")
@@ -137,7 +127,7 @@ class Keysight:
 
 
     def power_ui(self,layoutright):
-        self.measure_electric()
+        #self.measure_electric()
         self.refresh_rate=1.
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
@@ -217,11 +207,12 @@ class Keysight:
 
 
         self.live_mode_running=False
-        self.live_mode()
+        if self.connected:
+            self.live_mode()
 
     def power_graphics_show(self,layout):
         plot = pg.PlotWidget()
-
+        plot.setBackground(None)
         plot.setLabel('bottom', 'time', units='s')
         plot.setLabel('left', 'Voltage', units='V')
         plot.getAxis("left").enableAutoSIPrefix(True)
@@ -252,7 +243,7 @@ class Keysight:
     def live_mode(self):
         if not self.live_mode_running:
             self.live_mode_running=True
-            self.timer.start(int(self.refresh_rate))
+            self.timer.start(int(self.refresh_rate)*1000)
             #self.btnlive.setText("Status Live")
             self.btnlive.setStyleSheet("background-color: green;color: black")
         else:

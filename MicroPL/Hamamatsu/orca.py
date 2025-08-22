@@ -55,6 +55,9 @@ class Orca():
         return image
 
     def disconnect(self):
+        if self.live_mode_running:
+            self.live_mode_running=False
+            self.timer.stop()
         self.cam.close()
         print("orca disconnected")
 
@@ -129,6 +132,7 @@ class Orca():
         self.cw.setLayout(layout)
         layout.setSpacing(0)
         view = pg.GraphicsView()
+        view.setBackground(None)
         vb = pg.ViewBox()
         vb.setAspectLocked()
         #view.setFixedSize(512,512)
@@ -145,6 +149,7 @@ class Orca():
         
         hist = pg.HistogramLUTWidget(gradientPosition="left")
         hist.setLevelMode(mode="mono")
+        hist.setBackground(None)
         hist.gradient.loadPreset("plasma")
         #hist.gradient.setColorMap(pg.colormap.get('plasma')) 
         layout.addWidget(hist, 0, 1)
@@ -181,8 +186,8 @@ class Orca():
         self.img_data=cimg.T[:,::-1]
         imgmax=np.max(cimg)
         imgmean=np.mean(cimg)
-        self.app.status_orca_max.setText("Spatial Max: "+str(int(imgmax)))
-        self.app.status_orca_mean.setText("Spatial Mean: "+str(int(imgmean)))
+
+        self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
             crosshaired_img=np.copy(cimg.T[:,::-1])
             crosshaired_img[1021:1027,:]=imgmax

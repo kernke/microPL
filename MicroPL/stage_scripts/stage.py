@@ -9,6 +9,27 @@ from ctypes import cdll,c_int,byref,create_string_buffer,c_double,c_char_p  # im
 
 import numpy as np
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton
+from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
+
+class Update_Signal(QObject):
+
+    string_update = pyqtSignal(object)   
+
+class Status_update(QRunnable):
+
+    def __init__(self, stage):
+        super().__init__()
+        self.stage = stage
+        self.signals=Update_Signal()
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        x,y =self.stage.get_position()
+        stage_status_string="Stage X: "+str(x)+ " mm\n"
+        stage_status_string+="Stage Y: "+str(y)+ " mm"
+
+        self.signals.string_update.emit((stage_status_string,x,y))
+ 
 
 
 class Stage:
@@ -84,7 +105,24 @@ class Stage:
         #ia = c_int()
         #ba = c_bool()
 
+
+    def thread_task(self):
+        self.worker=Status_update(self)
+        self.worker.signals.string_update.connect(self.status_update_from_thread)
+        self.app.threadpool.start(self.worker)
+
+
+    def status_update_from_thread(self,string_x_y_tuple):
+        self.app.status_stage.setText(string_x_y_tuple[0])
+        self.xpos=string_x_y_tuple[1]
+        self.ypos=string_x_y_tuple[2]
+
+
     def close(self):
+        if self.live_mode_running:
+            self.live_mode_running=False
+            self.timer.stop()
+            
         self.m_Tango.LSX_Disconnect(self.LSID)
         print("Tango disconnected")
     
@@ -189,6 +227,10 @@ class Stage:
 
 
     def stage_ui(self,layoutright):
+        self.refresh_rate=1.
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.thread_task)
+
         self.expanded=False
         self.app.heading_label(layoutright,"Stage     ",self.expand)
     
@@ -246,11 +288,30 @@ class Stage:
         btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
 
+        self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
+
         self.dropdown.addLayout(layoutstagebuttons2)
+
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
 
         layoutright.addItem(self.app.vspace)
+
+        self.live_mode_running=False
+        if self.connected:
+            self.live_mode()
+
+    def live_mode(self):
+        if not self.live_mode_running:
+            self.live_mode_running=True
+            self.timer.start(int(self.refresh_rate)*1000)
+            self.btnlive.setStyleSheet("background-color: green;color: black")
+        else:
+
+            self.live_mode_running=False
+            self.timer.stop()
+            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
 
 
     # stage ui  methods ##########################################################
