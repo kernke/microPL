@@ -120,7 +120,7 @@ class Orca():
 
     def spatial_camera_show(self,layoutleft):
 
-        cimg=np.zeros([2048,2048],dtype=np.uint16)
+        cimg=np.ones([2048,2048],dtype=np.uint16)
         cimg[:,:5]=65535
         cimg[:,-5:]=65535
         cimg[:5,:]=65535
@@ -147,7 +147,7 @@ class Orca():
         vb.invertY(True)
         vb.autoRange()
         
-        hist = pg.HistogramLUTWidget(gradientPosition="left")
+        hist = pg.HistogramLUTWidget()#gradientPosition="left")
         hist.setLevelMode(mode="mono")
         hist.setBackground(None)
         hist.gradient.loadPreset("plasma")
@@ -162,11 +162,15 @@ class Orca():
     def maximize(self):
         if self.maximized:
             self.maximized=False
-            self.app.set_layout_visible(self.app.layoutmiddleh,True)
+            self.app.pixis.cw.setHidden(False)
+            self.app.pixis.roiplot.setHidden(False)
+            self.app.midleft.setHidden(False)
             self.maxbtn.setText("Maximize View")
         else:
             self.maximized=True
-            self.app.set_layout_visible(self.app.layoutmiddleh,False)
+            self.app.pixis.cw.setHidden(True)
+            self.app.pixis.roiplot.setHidden(True)
+            self.app.midleft.setHidden(True)
             self.maxbtn.setText("Minimize View")
 
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QThreadPool,QStringListModel 
-# from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel,QScrollArea,QListView,QSpacerItem,QSizePolicy
 
 from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button,set_layout_visible,heading_label
@@ -15,14 +14,14 @@ from .Keysight.power_supply import Keysight
 #color_text_on_dark="white"
 #color_text_on_bright="black"
 #color_interactive_stuff="lightGray"
-#color_background="black"
+#color_background="#1e1e1e" #dark gray
           
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MicroPL App")
-        self.setStyleSheet("background-color: #1e1e1e;")#black 
+        self.setStyleSheet("background-color: #1e1e1e;")
         self.move(85,32)
         self.resize(1750,1000)
 
@@ -39,9 +38,7 @@ class MainWindow(QMainWindow):
         self.entrymask6=EntryMask6
         self.vspace = QSpacerItem(0, 40, QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        self.threadpool = QThreadPool()
-        #self.threadpool.setMaxThreadCount(1)
- 
+        self.threadpool = QThreadPool() 
         
         self.h5saving=Saving(self)
         self.scripting=Scripting(self)
@@ -62,12 +59,10 @@ class MainWindow(QMainWindow):
         self.metadata_electrical["unsaved"]=True
 
         layoutmain = QHBoxLayout() # whole window
-        layoutright = QVBoxLayout() # right side containing all the buttons
-        layoutmiddle = QVBoxLayout() # middle containing image,colorbar and 1D-roi-plot
         layoutleft=QVBoxLayout() # left containing info and log
-
-        self.layoutmiddleh=QHBoxLayout()
-        layoutmiddlev=QVBoxLayout()
+        layoutmidleft = QVBoxLayout() # midleft containing navigation and timeline/IV-curve
+        layoutmidright = QVBoxLayout() # midright containing images,colorbars and 1D-roi-plot
+        layoutright = QVBoxLayout() # right side containing all the buttons
 
         left_ui= QWidget() 
         left_ui.setFixedWidth(270)
@@ -76,20 +71,23 @@ class MainWindow(QMainWindow):
         layoutstatus=QVBoxLayout()
 
         label = QLabel("Status")
-        label.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 16pt")
+        label.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 15pt")
         layoutstatus.addWidget(label)
 
-        layoutstatus.addItem(self.vspace)
+        smallvspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        layoutstatus.addItem(smallvspace)
 
-        status_style_string="background-color: #1e1e1e;color:white;font-size: 14pt"
+        #layoutstatus.addItem(self.vspace)
+
+        status_style_string="background-color: #1e1e1e;color:white;font-size: 13pt"
         stage_status_string="Stage X: "+str(self.stage.xpos)+ " mm\n"
         stage_status_string+="Stage Y: "+str(self.stage.ypos)+ " mm"
         self.status_stage = QLabel(stage_status_string)
         self.status_stage.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_stage)
 
-        smallvspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
         layoutstatus.addItem(smallvspace)
+
         power_status_string="Voltage: "+str(self.keysight.voltage)+" V\nCurrent: "+str(self.keysight.current)+" mA"
         self.status_electric = QLabel(power_status_string)
         self.status_electric.setStyleSheet(status_style_string)
@@ -107,6 +105,12 @@ class MainWindow(QMainWindow):
         self.status_pixis.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis)
 
+        #layoutstatus.addItem(smallvspace)
+
+        self.status_mono=QLabel("from: \nto: ")
+        self.status_mono.setStyleSheet(status_style_string)
+        layoutstatus.addWidget(self.status_mono)
+
         layoutstatus.addStretch()
         
         # weird behavior 
@@ -115,8 +119,6 @@ class MainWindow(QMainWindow):
         ################
 
         layoutleft.addLayout(layoutstatus)
-
-
 
         layoutlog=QVBoxLayout()
 
@@ -144,22 +146,28 @@ class MainWindow(QMainWindow):
         layoutlog.addWidget(list_view)
         layoutleft.addLayout(layoutlog)
 
+        layoutmain.addWidget( left_ui )
+
+        self.midleft= QWidget() 
+        self.midleft.setLayout(layoutmidleft)
+
+        self.stage.navigation_graphics_show(layoutmidleft)
+        self.keysight.power_graphics_show(layoutmidleft)
+
+        layoutmain.addWidget(self.midleft,2)
+
+        self.midright= QWidget() 
+        self.midright.setLayout(layoutmidright)
 
         # graphics show
-        self.orca.spatial_camera_show(layoutmiddle)
+        self.orca.spatial_camera_show(layoutmidright)
         #image and colorbar
 
-        self.pixis.spectral_camera_show(layoutmiddlev)
+        self.pixis.spectral_camera_show(layoutmidright)
         #image, colorbar and 1D-profile plot
 
-        self.keysight.power_graphics_show(self.layoutmiddleh)
-        #layoutmiddleh.addLayout(layoutIV)
-        self.layoutmiddleh.addLayout(layoutmiddlev)
-        layoutmiddle.addLayout(self.layoutmiddleh,3)
 
-
-        layoutmain.addWidget( left_ui )
-        layoutmain.addLayout( layoutmiddle )
+        layoutmain.addWidget( self.midright ,3)
 
         # user interface buttons 
         scroll = QScrollArea()
@@ -214,6 +222,8 @@ class MainWindow(QMainWindow):
     def add_log(self,logstring):
         self.logging_list.insert(0, logstring)
         self.logging_model.setStringList(self.logging_list)
+        if len(self.logging_list)>2000:
+            del self.logging_list[-1]
 
 
 

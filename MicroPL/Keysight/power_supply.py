@@ -1,7 +1,7 @@
 import pyvisa
 #import time
 import numpy as np
-import time
+#import time
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
@@ -48,8 +48,11 @@ class Keysight:
         self.current=0
         self.output_on=False
 
+        self.refresh_rate=1.
         self.voltage_actual=0
         self.currentA_actual=0
+
+        self.maximized=False
 
     def disconnect(self):
         if self.live_mode_running:
@@ -128,19 +131,19 @@ class Keysight:
 
     def power_ui(self,layoutright):
         #self.measure_electric()
-        self.refresh_rate=1.
+
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
 
 
         self.expanded=False
-        self.app.heading_label(layoutright,"LED Power Supply",self.expand)
+        self.app.heading_label(layoutright,"Electric Power Supply",self.expand)
 
         self.dropdown=QVBoxLayout()
         
         layoutoutput=QHBoxLayout()
         self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
-        label = QLabel("grey   -> off\ngreen -> on")
+        label = QLabel("grey   -> off\ngreen -> on         cyan -> limited by")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
         layoutoutput.addWidget(label)
@@ -173,25 +176,35 @@ class Keysight:
         layoutset.addWidget(currentwidget)
         
         self.dropdown.addLayout(layoutset)
-        layoutfresh=QHBoxLayout()
-        freshwidget = QLineEdit()
-        freshwidget.setStyleSheet("background-color: lightGray")
-        freshwidget.setMaxLength(7)
-        freshwidget.setFixedWidth(self.app.standard_width)
-        freshwidget.setText(str(self.refresh_rate))
-        freshwidget.textEdited.connect(self.refreshrate_edited)
-        label = QLabel("refresh interval (s)")
-        label.setStyleSheet("color:white")
-        layoutfresh.addWidget(freshwidget)
-        layoutfresh.addWidget(label)
-        layoutfresh.addStretch()
 
-        self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
-
-        self.dropdown.addLayout(layoutfresh)
-        layoutmax=QHBoxLayout()
-        btn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        layoutIV=QHBoxLayout()
+        btn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.measure_IV)
         btn.setFixedWidth(110)
+        layoutIV.addStretch()
+        btn=self.app.normal_button(layoutIV,"Show last I-V",self.measure_IV)
+        btn.setFixedWidth(110)
+
+        self.dropdown.addLayout(layoutIV)
+
+        #layoutfresh=QHBoxLayout()
+        #freshwidget = QLineEdit()
+        #freshwidget.setStyleSheet("background-color: lightGray")
+        #freshwidget.setMaxLength(7)
+        #freshwidget.setFixedWidth(self.app.standard_width)
+        #freshwidget.setText(str(self.refresh_rate))
+        #freshwidget.textEdited.connect(self.refreshrate_edited)
+        #label = QLabel("refresh interval (s)")
+        #label.setStyleSheet("color:white")
+        #layoutfresh.addWidget(freshwidget)
+        #layoutfresh.addWidget(label)
+        #layoutfresh.addStretch()
+
+        #self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
+
+        #self.dropdown.addLayout(layoutfresh)
+        layoutmax=QHBoxLayout()
+        self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
         self.dropdown.addLayout(layoutmax)
 
@@ -210,18 +223,41 @@ class Keysight:
         if self.connected:
             self.live_mode()
 
-    def power_graphics_show(self,layout):
-        plot = pg.PlotWidget()
-        plot.setBackground(None)
-        plot.setLabel('bottom', 'time', units='s')
-        plot.setLabel('left', 'Voltage', units='V')
-        plot.getAxis("left").enableAutoSIPrefix(True)
 
-        yvalues=np.ones(100)#data.mean(axis=-1)
-        xvalues=np.arange(100)
-        self.volt_curve=plot.plot(xvalues,yvalues )        
-        # 1D spectrum view end  ###################################################
-        layout.addWidget(plot)
+    ## Handle view resizing 
+    def updateViews(self):
+        ## view has resized; update auxiliary views to match
+        self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
+        
+        ## need to re-update linked axes since this was called
+        ## incorrectly while views had different shapes.
+        ## (probably this should be handled in ViewBox.resizeEvent)
+        self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
+
+    def power_graphics_show(self,layout):
+        pw = pg.PlotWidget()
+        pw.setTitle("Electrical Power Timeline / I-V-Curve")
+        pw.setBackground(None)
+        self.p1 = pw.plotItem
+        self.p1.setLabel('bottom', 'time', units='s')
+        self.p1.setLabel('left', 'Voltage', units='V')
+        ## create a new ViewBox, link the right axis to its coordinate system
+        self.p2 = pg.ViewBox()
+        self.p1.showAxis('right')
+        self.p1.scene().addItem(self.p2)
+        self.p1.getAxis('right').linkToView(self.p2)
+        self.p2.setXLink(self.p1)
+        self.p1.getAxis('right').setLabel('Current',units="mA", color="#0fef38")
+
+
+        self.updateViews()
+        self.p1.vb.sigResized.connect(self.updateViews)
+
+
+        self.p1.plot([1,2,4,8,16,32])
+        self.p2.addItem(pg.PlotCurveItem([10,20,40,80,40,20], pen="#0fef38"))
+
+        layout.addWidget(pw,2)
 
 
 
@@ -237,8 +273,18 @@ class Keysight:
             self.psu.write("OUTP ON")
             self.powerbtn.setStyleSheet("background-color: green;color: black")
 
+
     def maximize(self):
-        pass
+        if self.maximized:
+            self.maximized=False
+            self.app.stage.plot.setHidden(False)
+            self.app.midright.setHidden(False)
+            self.maxbtn.setText("Maximize View")
+        else:
+            self.maximized=True
+            self.app.stage.plot.setHidden(True)
+            self.app.midright.setHidden(True)
+            self.maxbtn.setText("Minimize View")
 
     def live_mode(self):
         if not self.live_mode_running:

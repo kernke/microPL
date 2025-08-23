@@ -33,7 +33,7 @@ class Scripting:
         
         widget = QComboBox()
         self.script_selected=0
-        widget.addItems(["","from settings txt","grid mapping spatial","grid mapping spectral","grid mapping both"])
+        widget.addItems(["choose script","from settings txt","grid mapping spatial","grid mapping spectral","grid mapping both"])
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.currentIndexChanged.connect(self.script_changed )        

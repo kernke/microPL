@@ -175,12 +175,14 @@ class SCT320():
         self.spectrum_x_axis=self.grating_wavelength(self.app.pixis.roi)
         self.widgetwave.setText(str(self.wavelength))
         self.widgetwave.setStyleSheet("background-color: lightGray;color: black")
+        self.app.add_log("wavelength at "+str(self.wavelength)+" nm")
 
     def grating_changed(self, i): # i is an int
         self.set_grating(int(i+1))
         self.grating_pos=self.get_grating()[0]    
         self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
         self.grating_actual=self.grating_list[int(self.grating_pos-1)]
+        self.app.add_log("grating changed  "+str(self.wavelength)+" nm")
 
 
 
@@ -201,6 +203,7 @@ class SCT320():
             rect=roi.getState()
             # xvalues is the distance to the center of the chip in units of pixels
             xvalues=np.arange(rect["size"][0])-511.5+rect["pos"][0]
+            #print(rect["pos"][0])
         # Conversions
         d_mm = 1 / self.densities[int(self.grating_pos-1)] #d_mm: distance between grooves (mm)
         lamda_mm = self.wavelength / 1E6 #nm to mm conversion of center wavelength

@@ -58,6 +58,7 @@ class Pixis():
         self.live_mode_latency=300
         self.save_full_image=True
         self.live_mode_running=False
+        self.maximized=False
         #pprint.pp(dir(cam))
 
         #def pixelfmt():
@@ -100,9 +101,9 @@ class Pixis():
         
 
 
-    def spectral_camera_show(self,layoutleft):
-
-        cimg=np.zeros([256,1024],dtype=np.uint16)
+    def spectral_camera_show(self,layoutv):
+        #self.layoutv=QVBoxLayout()
+        cimg=np.ones([256,1024],dtype=np.uint16)
         cimg[:,:5]=65535
         cimg[:,-5:]=65535
         cimg[:5,:]=65535
@@ -110,9 +111,9 @@ class Pixis():
 
 
         # image view window start########################################################
-        cw = QWidget() 
+        self.cw = QWidget() 
         layout = QGridLayout()
-        cw.setLayout(layout)
+        self.cw.setLayout(layout)
         layout.setSpacing(0)
         view = pg.GraphicsView()
         #view.setFixedSize(512,128)
@@ -130,33 +131,38 @@ class Pixis():
         vb.invertY(True)
         vb.autoRange()
         
-        hist = pg.HistogramLUTWidget(gradientPosition="left")#,orientation="horizontal")
+        hist = pg.HistogramLUTWidget()#gradientPosition="left")#,orientation="horizontal")
+
         hist.setBackground(None)
         hist.setLevelMode(mode="mono")
         layout.addWidget(hist, 0, 1)
         hist.setImageItem(self.img)
 
         # ROI
-        self.roi=pg.RectROI([0, 100], [1024, 20], pen=(0,9))
+        #max_bounds = pg.QtCore.QRectF(0, 0, 1024, 256)
+        self.roi=pg.RectROI([0, 100], [1024, 20], pen=(0,9))#,maxBounds=max_bounds)
+
         vb.addItem(self.roi)
         
         # image view window end########################################################
-        layoutleft.addWidget(cw,1)    
+        layoutv.addWidget(self.cw,1)    
         # 1D spectrum view start ###################################################
-        roiplot = pg.PlotWidget()
-        roiplot.setBackground(None)
-        roiplot.setLabel('bottom', 'Wavelength', units='nm')
-        roiplot.setLabel('left', 'Intensity ( 0 - 65535 )', units='')
-        roiplot.getAxis("left").enableAutoSIPrefix(True)
+        self.roiplot = pg.PlotWidget()
+        self.roiplot.setBackground(None)
+        self.roiplot.setLabel('bottom', 'Wavelength', units='nm')
+        self.roiplot.setLabel('left', 'Intensity ( 0 - 65535 )', units='')
+        self.roiplot.getAxis("left").enableAutoSIPrefix(True)
 
         #roiplot.setFixedHeight(350)
         self.roi.sigRegionChanged.connect(self.updateRoi)
         data = self.roi.getArrayRegion(self.img.image, img=self.img)
         
         yvalues=data.mean(axis=-1)
-        self.roi.curve=roiplot.plot(self.app.monochromator.spectrum_x_axis,yvalues )        
+        self.roi.curve=self.roiplot.plot(self.app.monochromator.spectrum_x_axis,yvalues )        
         # 1D spectrum view end  ###################################################
-        layoutleft.addWidget(roiplot,2)
+        
+        layoutv.addWidget(self.roiplot,2)
+        #layoutleft.addLayout(self.layoutv,3)
 
     def expand(self):
         if not self.expanded:
@@ -212,8 +218,8 @@ class Pixis():
         self.dropdown.addLayout(layoutacqbutton)
 
         layoutmax=QHBoxLayout()
-        btn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
-        btn.setFixedWidth(110)
+        self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
+        self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
         self.dropdown.addLayout(layoutmax)
 
@@ -224,7 +230,16 @@ class Pixis():
 
 
     def maximize(self):
-        pass
+        if self.maximized:
+            self.maximized=False
+            self.app.orca.cw.setHidden(False)
+            self.app.midleft.setHidden(False)
+            self.maxbtn.setText("Maximize View")
+        else:
+            self.maximized=True
+            self.app.orca.cw.setHidden(True)
+            self.app.midleft.setHidden(True)
+            self.maxbtn.setText("Minimize View")
 
     def live_mode(self):
         if not self.live_mode_running:
@@ -265,9 +280,21 @@ class Pixis():
         if self.roi is None:
             return
         data = self.roi.getArrayRegion(self.img.image, img=self.img)
-        self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
         spectrum_y_axis=data.mean(axis=-1)
-        self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
+        start=next((i for i, x in enumerate(spectrum_y_axis) if x), None) 
+        
+        rect=self.roi.getState()
+        end=int(np.round(rect["size"][0]))-next((i for i, x in enumerate(spectrum_y_axis[::-1]) if x), None)
+        
+        if start is None:
+            start=0
+            end=1024
+        self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
+        
+        #self.app.monochromator.spectrum_x_axis
+        self.roi.curve.setData(self.app.monochromator.spectrum_x_axis[start:end],spectrum_y_axis[start:end] )
+
+        #self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
         self.max_at_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
         
     def entry_window_roi(self):

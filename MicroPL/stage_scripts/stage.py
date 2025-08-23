@@ -6,9 +6,9 @@
 import sys
 #import re
 from ctypes import cdll,c_int,byref,create_string_buffer,c_double,c_char_p  # import ctypes (used to call DLL functions)
-
+import pyqtgraph as pg
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton,QComboBox
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 
 class Update_Signal(QObject):
@@ -82,7 +82,7 @@ class Stage:
 
         except:
             self.connected=False
-            self.xpos,self.ypos=0,0
+            self.xpos,self.ypos=25,25
             self.app.add_log("Tango dummy mode")
             print("stage dummy mode")
 
@@ -225,6 +225,27 @@ class Stage:
             else:
                 self.refresh_rate=np.double(s)
 
+    def navigation_graphics_show(self,layout):
+        self.plot = pg.PlotWidget()
+        self.plot.setBackground(None)
+
+        self.plot.setLabel('bottom', 'x', units='mm')
+        self.plot.setLabel('left', 'y', units='mm')
+        self.plot.setTitle("Navigation")
+        #plot.getAxis("left").enableAutoSIPrefix(True)
+
+        yvalues=[self.ylimit[0],self.ylimit[0],self.ylimit[1],self.ylimit[1],self.ylimit[0]]#np.ones(100)#data.mean(axis=-1)
+        xvalues=[self.xlimit[0],self.xlimit[1],self.xlimit[1],self.xlimit[0],self.xlimit[0]]#np.arange(100)
+        dashed_pen = pg.mkPen( width=2, style=pg.QtCore.Qt.DashLine)
+        self.plot.plot(xvalues,yvalues ,pen=dashed_pen)        
+        # 1D spectrum view end  ###################################################
+        # Button overlayed inside the plot area
+        self.btn_over = QPushButton("Overlay Button", self.plot)
+        self.btn_over.move(100, 100)  # position inside plot area
+        self.btn_over.setStyleSheet("background-color: lightGray")
+        layout.addWidget(self.plot,2)
+
+
 
     def stage_ui(self,layoutright):
         self.refresh_rate=1.
@@ -281,14 +302,53 @@ class Stage:
 
         self.dropdown.addLayout(layoutstagebuttons)
 
+        layoutsavpos=QHBoxLayout()
+
+        self.widgetsavpos = QLineEdit()
+        self.widgetsavpos.setStyleSheet("background-color: lightGray")
+        self.widgetsavpos.setMaxLength(15)
+        self.widgetsavpos.setFixedWidth(160)
+        self.widgetsavpos.setText(str("Position 1"))
+        self.widgetsavpos.textEdited.connect(self.stage_update_x)
+        layoutsavpos.addWidget(self.widgetsavpos)
+        
+        layoutsavpos.addStretch()
+        btn=self.app.normal_button(layoutsavpos,"Save Position",self.entry_window_limits)        
+        btn.setFixedWidth(110)
+
+        
+        self.dropdown.addLayout(layoutsavpos)
+
+
+        layoutchoosepos=QHBoxLayout()
+        widget = QComboBox()
+        self.script_selected=0
+        widget.addItems(["choose Position",""])
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setFixedHeight(25)
+        widget.setFixedWidth(160)
+        widget.currentIndexChanged.connect(self.position_select_changed ) 
+
+        layoutchoosepos.addWidget(widget)
+
+        layoutchoosepos.addStretch()
+        btn=self.app.normal_button(layoutchoosepos,"Delete Position",self.entry_window_limits) 
+        btn.setFixedWidth(110)
+
+        
+        self.dropdown.addLayout(layoutchoosepos)
+
+
+
+
         layoutstagebuttons2=QHBoxLayout()
         
         
-        btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)        
+        btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)  
         btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
 
-        self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
+        #self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
 
         self.dropdown.addLayout(layoutstagebuttons2)
 
@@ -301,6 +361,9 @@ class Stage:
         self.live_mode_running=False
         if self.connected:
             self.live_mode()
+
+    def position_select_changed():
+        pass
 
     def live_mode(self):
         if not self.live_mode_running:
