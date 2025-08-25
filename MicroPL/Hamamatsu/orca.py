@@ -42,7 +42,7 @@ class Orca():
         self.acqtime_spatial=1
         self.crosshair=False
         self.live_mode_running=False
-        self.live_mode_latency=400
+        self.live_mode_latency=300
         self.maximized=False
         
 
@@ -109,8 +109,8 @@ class Orca():
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.maxbtn=self.app.normal_button(layoutmax,"Calibrate (via stage)",self.maximize)
-        self.maxbtn.setFixedWidth(130)
+        self.maxbtn=self.app.normal_button(layoutmax,"Resolution (2048)",self.maximize)
+        self.maxbtn.setFixedWidth(110)
 
 
         self.dropdown.addLayout(layoutmax)
@@ -155,6 +155,7 @@ class Orca():
         vb.autoRange()
         
         hist = pg.HistogramLUTWidget()#gradientPosition="left")
+        #hist.move(-100,100)
         hist.setLevelMode(mode="mono")
         hist.setBackground(None)
         hist.gradient.loadPreset("plasma")
@@ -214,7 +215,9 @@ class Orca():
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
-        xacq,yacq=self.app.stage.get_position()
+        #self.app.stage.timer.stop()
+        xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
+        #self.app.stage.timer.start(int(self.app.stage.refresh_rate*1000))
         self.app.metadata_spatial["stage_x"]=xacq
         self.app.metadata_spatial["stage_y"]=yacq
         self.app.metadata_spatial["unsaved"]=True
@@ -227,10 +230,7 @@ class Orca():
         if s:
             self.acqtime_spatial=np.double(s)
             if self.live_mode_running and self.acqtime_spatial>0.001: #
-                if self.app.pixis.live_mode_running and False:
-                    latency=self.app.pixis.live_mode_latency+self.live_mode_latency+700
-                else:
-                    latency=self.live_mode_latency
+                latency=self.live_mode_latency
                 self.timer.stop()
                 self.timer.start(int(self.acqtime_spatial*1000+latency))
 

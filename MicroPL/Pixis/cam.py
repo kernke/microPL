@@ -314,7 +314,9 @@ class Pixis():
         self.app.metadata_spectral["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         self.app.metadata_spectral["center_wavelength"]=self.app.monochromator.wavelength
-        xacq,yacq=self.app.stage.get_position()
+        #self.app.stage.timer.stop()
+        xacq,yacq=self.app.stage.xpos,self.app.stage.ypos#stage.get_position()
+        #self.app.stage.timer.start(int(self.app.stage.refresh_rate*1000))
         self.app.metadata_spectral["stage_x"]=xacq
         self.app.metadata_spectral["stage_y"]=yacq
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual

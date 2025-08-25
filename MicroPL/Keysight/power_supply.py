@@ -47,17 +47,23 @@ class Keysight:
         self.voltage=0
         self.current=0
         self.output_on=False
+        self.psu.write("OUTP OFF")
 
         self.refresh_rate=1.
         self.voltage_actual=0
         self.currentA_actual=0
 
+        self.voltage_list=[]
+        self.currentA_list=[]
+        self.timeline_list=[]
+        self.timeline_time=0
         self.maximized=False
 
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
             self.timer.stop()
+        self.psu.write("OUTP OFF")
         self.psu.close() 
         print("Keysight disconnected")
 
@@ -71,6 +77,14 @@ class Keysight:
         self.app.status_electric.setText(string_volt_curr_tuple[0])
         self.voltage_actual=string_volt_curr_tuple[1]
         self.currentA_actual=string_volt_curr_tuple[2]
+        self.voltage_list.append(self.voltage_actual)
+        self.currentA_list.append(self.currentA_actual)
+        self.timeline_list.append(self.timeline_time)
+        self.timeline_time += self.refresh_rate
+        self.mAcurve.setData(self.timeline_list,self.currentA_list)
+        self.Vcurve.setData(self.timeline_list,self.voltage_list)
+        self.p1.setXRange(0,self.timeline_time)
+
 
 
     #def measure_electric(self):
@@ -128,24 +142,25 @@ class Keysight:
 
     def refreshrate_edited(self,s):
         if s:
-            if self.live_mode_running:
-                self.refresh_rate=np.double(s)
-                self.timer.stop()
-                self.timer.start(int(1000*self.refresh_rate))
-            else:
-                self.refresh_rate=np.double(s)
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                if np.double(s)<0.5:
+                    self.refresh_rate=0.5
+                else:
+                    self.refresh_rate=np.double(s)
+                    
+                if self.live_mode_running:
+                    self.timer.stop()
+                    self.timer.start(int(1000*self.refresh_rate))
 
 
 
     def power_ui(self,layoutright):
         #self.measure_electric()
-
-        self.timer=QTimer()
-        self.timer.timeout.connect(self.thread_task)
-        self.live_mode_running=False
-        if self.connected:
-            self.live_mode()
-
 
         self.expanded=False
         self.app.heading_label(layoutright,"Electric Power Supply",self.expand)
@@ -218,7 +233,7 @@ class Keysight:
         layoutfresh.addWidget(label)
         layoutfresh.addStretch()
 
-        #self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
+        self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
 
         self.dropdown2.addLayout(layoutfresh)
 
@@ -274,6 +289,12 @@ class Keysight:
         self.app.set_layout_visible(self.dropdown2,False)
         layoutright.addItem(self.app.vspace)
 
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.thread_task)
+        self.live_mode_running=False
+        if self.connected:
+            self.live_mode()
+
 
 
     ## Handle view resizing 
@@ -299,16 +320,19 @@ class Keysight:
         self.p1.scene().addItem(self.p2)
         self.p1.getAxis('right').linkToView(self.p2)
         self.p2.setXLink(self.p1)
-        self.p1.getAxis('right').setLabel('Current',units="mA", color="#0fef38")
-
+        self.p1.getAxis('right').setLabel('Current',units="A", color="#0fef38")
+        self.p1.getAxis("right").enableAutoSIPrefix(True)
 
         self.updateViews()
         self.p1.vb.sigResized.connect(self.updateViews)
 
 
-        self.p1.plot([1,2,4,8,16,32])
-        self.p2.addItem(pg.PlotCurveItem([10,20,40,80,40,20], pen="#0fef38"))
-
+        #self.p1.plot([1,2,4,8,16,32])
+        self.Vcurve=pg.PlotCurveItem([0],[0])#, pen="#0fef38")
+        self.p1.addItem(self.Vcurve)
+        self.mAcurve=pg.PlotCurveItem([0],[0], pen="#0fef38")
+        self.p2.addItem(self.mAcurve)
+        self.p1.setXRange(0,1)#self.timeline_time)
         layout.addWidget(pw,2)
 
 
@@ -343,13 +367,13 @@ class Keysight:
             self.live_mode_running=True
             self.timer.start(int(self.refresh_rate)*1000)
             #self.btnlive.setText("Status Live")
-            #self.btnlive.setStyleSheet("background-color: green;color: black")
+            self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
             #self.btnlive.setText("StatLive")
-            #self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
     """
     def plot_iv_detailed(self, zoom_voltage=1):
         plt.figure()

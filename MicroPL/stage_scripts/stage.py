@@ -225,14 +225,14 @@ class Stage:
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
-    def refreshrate_edited(self,s):
-        if s:
-            if self.live_mode_running:
-                self.refresh_rate=np.double(s)
-                self.timer.stop()
-                self.timer.start(int(1000*self.refresh_rate))
-            else:
-                self.refresh_rate=np.double(s)
+    #def refreshrate_edited(self,s):
+    #    if s:
+    #        if self.live_mode_running:
+    #            self.refresh_rate=np.double(s)
+    #            self.timer.stop()
+    #            self.timer.start(int(1000*self.refresh_rate))
+    #        else:
+    #            self.refresh_rate=np.double(s)
 
     def navigation_graphics_show(self,layout):
         self.plot = pg.PlotWidget()
@@ -258,6 +258,11 @@ class Stage:
         cam_box_x=[xlow,xlow,xhigh,xhigh,xlow]
         cam_box_y=[ylow,yhigh,yhigh,ylow,ylow]
         self.plot.plot(cam_box_x,cam_box_y)
+        
+        text_item = pg.TextItem("Some text",color="white")
+        text_item.setPos(25, 20)
+        self.plot.addItem(text_item)
+        self.plot.plot([self.xpos],[self.ypos],symbol='x')
         # 1D spectrum view end  ###################################################
         # Button overlayed inside the plot area
         bsize=30
@@ -274,14 +279,14 @@ class Stage:
         self.btn_down.setFixedSize(bsize,bsize)
         self.btn_down.clicked.connect(self.clicked_down)
 
-        self.btn_left = QPushButton("\u25B6", self.plot)
-        self.btn_left.move(xshift+bsize, bsize)  # position inside plot area
+        self.btn_left = QPushButton("\u25C0", self.plot)
+        self.btn_left.move(xshift-bsize, bsize)  # position inside plot area
         self.btn_left.setStyleSheet("background-color: lightGray;font-size: 19pt")
         self.btn_left.setFixedSize(bsize,bsize)
         self.btn_left.clicked.connect(self.clicked_left)
 
-        self.btn_right = QPushButton("\u25C0", self.plot)
-        self.btn_right.move(xshift-bsize, bsize)  # position inside plot area
+        self.btn_right = QPushButton("\u25B6", self.plot)
+        self.btn_right.move(xshift+bsize, bsize)  # position inside plot area
         self.btn_right.setStyleSheet("background-color: lightGray;font-size: 19pt")
         self.btn_right.setFixedSize(bsize,bsize)
         self.btn_right.clicked.connect(self.clicked_right)
@@ -454,6 +459,8 @@ class Stage:
         btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)  
         btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
+        btn=self.app.normal_button(layoutstagebuttons2,"Calibrate Spatial Cam",self.entry_window_limits)  
+        btn.setFixedWidth(130)
 
         #self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
 

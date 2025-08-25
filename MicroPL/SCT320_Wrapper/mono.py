@@ -4,7 +4,7 @@ https://msl-equipment.readthedocs.io/en/latest/index.html
 https://msl-equipment.readthedocs.io/en/latest/_api/msl.equipment.resources.princeton_instruments.arc_instrument.html
 """
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox,QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox,QVBoxLayout,QApplication
 
 #import pprint
 from msl.equipment import (
@@ -131,7 +131,7 @@ class SCT320():
         self.widgetwave.setStyleSheet("background-color: lightGray")
         self.widgetwave.setMaxLength(7)
         self.widgetwave.setFixedWidth(60)
-        self.widgetwave.setText(str(self.wavelength))
+        self.widgetwave.setText(str(np.round(self.wavelength,2)))
         self.widgetwave.textEdited.connect(self.wavelength_updated)
         self.widgetwave.returnPressed.connect(self.wavelength_edited)
         layoutwavelength.addWidget(self.widgetwave)
@@ -172,18 +172,22 @@ class SCT320():
     def wavelength_edited(self):
         self.set_wavelength(self.wavelength)
         #check for rounding
-        self.wavelength=self.get_wavelength()
+        self.wavelength=np.round(self.get_wavelength(),2)
         self.spectrum_x_axis=self.grating_wavelength(self.app.pixis.roi)
         self.widgetwave.setText(str(self.wavelength))
         self.widgetwave.setStyleSheet("background-color: lightGray;color: black")
         self.app.add_log("wavelength at "+str(self.wavelength)+" nm")
 
     def grating_changed(self, i): # i is an int
+        self.app.add_log("(wait) start grating change ...")
+        QApplication.processEvents()
+
         self.set_grating(int(i+1))
         self.grating_pos=self.get_grating()[0]    
         self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
         self.grating_actual=self.grating_list[int(self.grating_pos-1)]
-        self.app.add_log("grating changed  "+str(self.wavelength)+" nm")
+        self.app.add_log(self.grating_actual)
+        self.app.add_log("(continue) changed to grating:")#+str(self.grating_actual))
 
 
 
