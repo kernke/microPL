@@ -88,9 +88,15 @@ class Stage:
 
         
 
-        self.xlimit=[0.,50.]
-        self.ylimit=[0.,50.]
+        self.xlimit=[0.,50.] # mm
+        self.ylimit=[0.,50.] # mm 
+        self.step_size=0.05 # mm
         
+        self.step_small_micron=10
+        self.step_medium_micron=50
+        self.step_large_micron=150
+
+        self.cam_size=0.2
 
 
 
@@ -208,6 +214,9 @@ class Stage:
         else:
             print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
 
+        self.stage_actual()
+        print("stage homed")
+
     def expand(self):
         if not self.expanded:
             self.expanded=True
@@ -228,29 +237,129 @@ class Stage:
     def navigation_graphics_show(self,layout):
         self.plot = pg.PlotWidget()
         self.plot.setBackground(None)
+        #self.plot.setXRange(-5,65)
+        self.plot.setAspectLocked(True)
 
         self.plot.setLabel('bottom', 'x', units='mm')
         self.plot.setLabel('left', 'y', units='mm')
         self.plot.setTitle("Navigation")
-        #plot.getAxis("left").enableAutoSIPrefix(True)
 
-        yvalues=[self.ylimit[0],self.ylimit[0],self.ylimit[1],self.ylimit[1],self.ylimit[0]]#np.ones(100)#data.mean(axis=-1)
-        xvalues=[self.xlimit[0],self.xlimit[1],self.xlimit[1],self.xlimit[0],self.xlimit[0]]#np.arange(100)
+
+        yvalues=[self.ylimit[0],self.ylimit[0],self.ylimit[1],self.ylimit[1],self.ylimit[0]]
+        xvalues=[self.xlimit[0],self.xlimit[1],self.xlimit[1],self.xlimit[0],self.xlimit[0]]
         dashed_pen = pg.mkPen( width=2, style=pg.QtCore.Qt.DashLine)
+        self.plot.plot([66],[52])
         self.plot.plot(xvalues,yvalues ,pen=dashed_pen)        
+        
+        xlow=self.xpos-self.cam_size
+        xhigh=self.xpos+self.cam_size
+        ylow=self.ypos-self.cam_size
+        yhigh=self.ypos+self.cam_size
+        cam_box_x=[xlow,xlow,xhigh,xhigh,xlow]
+        cam_box_y=[ylow,yhigh,yhigh,ylow,ylow]
+        self.plot.plot(cam_box_x,cam_box_y)
         # 1D spectrum view end  ###################################################
         # Button overlayed inside the plot area
-        self.btn_over = QPushButton("Overlay Button", self.plot)
-        self.btn_over.move(100, 100)  # position inside plot area
-        self.btn_over.setStyleSheet("background-color: lightGray")
+        bsize=30
+        xshift=480
+        self.btn_up = QPushButton("\u25B2", self.plot)
+        self.btn_up.move(xshift, 0)  # position inside plot area
+        self.btn_up.setStyleSheet("background-color: lightGray;font-size: 13pt")
+        self.btn_up.setFixedSize(bsize,bsize)
+        self.btn_up.clicked.connect(self.clicked_up)
+
+        self.btn_down = QPushButton("\u25BC", self.plot)
+        self.btn_down.move(xshift, 2*bsize)  # position inside plot area
+        self.btn_down.setStyleSheet("background-color: lightGray;font-size: 13pt")
+        self.btn_down.setFixedSize(bsize,bsize)
+        self.btn_down.clicked.connect(self.clicked_down)
+
+        self.btn_left = QPushButton("\u25B6", self.plot)
+        self.btn_left.move(xshift+bsize, bsize)  # position inside plot area
+        self.btn_left.setStyleSheet("background-color: lightGray;font-size: 19pt")
+        self.btn_left.setFixedSize(bsize,bsize)
+        self.btn_left.clicked.connect(self.clicked_left)
+
+        self.btn_right = QPushButton("\u25C0", self.plot)
+        self.btn_right.move(xshift-bsize, bsize)  # position inside plot area
+        self.btn_right.setStyleSheet("background-color: lightGray;font-size: 19pt")
+        self.btn_right.setFixedSize(bsize,bsize)
+        self.btn_right.clicked.connect(self.clicked_right)
+
+        self.btn_step = QPushButton("step size", self.plot)
+        self.btn_step.move(xshift-bsize+10, int(3.5*bsize))  # position inside plot area
+        self.btn_step.setStyleSheet("background-color: lightGray")#;font-size: 18pt")
+        self.btn_step.setFixedWidth(70)
+
+
+        self.btn_small = QPushButton("small", self.plot)
+        self.btn_small.move(xshift-bsize+10, int(4.75*bsize))  # position inside plot area
+        self.btn_small.setStyleSheet("background-color: cyan")#;font-size: 18pt")
+        self.btn_small.setFixedWidth(70)
+        self.btn_small.clicked.connect(self.clicked_small)
+
+        self.btn_medium = QPushButton("medium", self.plot)
+        self.btn_medium.move(xshift-bsize+10, int(6*bsize))  # position inside plot area
+        self.btn_medium.setStyleSheet("background-color: lightGray")#;font-size: 18pt")
+        self.btn_medium.setFixedWidth(70)
+        self.btn_medium.clicked.connect(self.clicked_medium)
+
+        self.btn_large = QPushButton("large", self.plot)
+        self.btn_large.move(xshift-bsize+10, int(7.25*bsize))  # position inside plot area
+        self.btn_large.setStyleSheet("background-color: orange")#;font-size: 18pt")
+        self.btn_large.setFixedWidth(70)
+        self.btn_large.clicked.connect(self.clicked_large)
+
         layout.addWidget(self.plot,2)
 
+    def clicked_small(self):
+        self.step_size=self.step_small_micron/1000
+        self.btn_right.setStyleSheet("background-color: cyan;font-size: 19pt")
+        self.btn_left.setStyleSheet("background-color: cyan;font-size: 19pt")
+        self.btn_down.setStyleSheet("background-color: cyan;font-size: 13pt")
+        self.btn_up.setStyleSheet("background-color: cyan;font-size: 13pt")
+
+
+    def clicked_medium(self):
+        self.step_size=self.step_medium_micron/1000
+        self.btn_right.setStyleSheet("background-color: lightGray;font-size: 19pt")
+        self.btn_left.setStyleSheet("background-color: lightGray;font-size: 19pt")
+        self.btn_down.setStyleSheet("background-color: lightGray;font-size: 13pt")
+        self.btn_up.setStyleSheet("background-color: lightGray;font-size: 13pt")
+
+
+    def clicked_large(self):
+        self.step_size=self.step_large_micron/1000
+        self.btn_right.setStyleSheet("background-color: orange;font-size: 19pt")
+        self.btn_left.setStyleSheet("background-color: orange;font-size: 19pt")
+        self.btn_down.setStyleSheet("background-color: orange;font-size: 13pt")
+        self.btn_up.setStyleSheet("background-color: orange;font-size: 13pt")
+
+    def clicked_left(self):
+        self.xpos=self.xpos-self.step_size
+        self.stage_goto()
+
+    def clicked_right(self):
+        self.xpos=self.xpos+self.step_size
+        self.stage_goto()
+
+    def clicked_up(self):
+        self.ypos=self.ypos+self.step_size
+        self.stage_goto()
+
+    def clicked_down(self):
+        self.ypos=self.ypos-self.step_size
+        self.stage_goto()
 
 
     def stage_ui(self,layoutright):
         self.refresh_rate=1.
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
+        self.live_mode_running=False
+        if self.connected:
+            self.live_mode()
+
 
         self.expanded=False
         self.app.heading_label(layoutright,"Stage     ",self.expand)
@@ -298,7 +407,7 @@ class Stage:
 
         layoutstagebuttons.addStretch()
 
-        self.app.normal_button(layoutstagebuttons,"Home",self.stage_home)
+        self.app.normal_button(layoutstagebuttons,"Home",self.home_all)
 
         self.dropdown.addLayout(layoutstagebuttons)
 
@@ -339,8 +448,6 @@ class Stage:
         self.dropdown.addLayout(layoutchoosepos)
 
 
-
-
         layoutstagebuttons2=QHBoxLayout()
         
         
@@ -358,23 +465,21 @@ class Stage:
 
         layoutright.addItem(self.app.vspace)
 
-        self.live_mode_running=False
-        if self.connected:
-            self.live_mode()
 
-    def position_select_changed():
+
+    def position_select_changed(self):
         pass
 
     def live_mode(self):
         if not self.live_mode_running:
             self.live_mode_running=True
             self.timer.start(int(self.refresh_rate)*1000)
-            self.btnlive.setStyleSheet("background-color: green;color: black")
+            #self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
-            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            #self.btnlive.setStyleSheet("background-color: lightGray;color: black")
 
 
     # stage ui  methods ##########################################################
@@ -416,7 +521,7 @@ class Stage:
             self.ypos=np.double(s)
             self.widgety.setStyleSheet("background-color: lightGray;color: red")
 
-    def stage_home(self):
-        self.home_all()    
-        self.stage_actual()
-        print("stage homed")
+    #def stage_home(self):
+    #    self.home_all()    
+    #    self.stage_actual()
+    #    print("stage homed")

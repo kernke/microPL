@@ -68,8 +68,10 @@ class Pixis():
     
     def acquire(self, t, x0,x1,y0,y1, hbin,vbin,show=True):
         self.cam.set_exposure(t)
-        attr = self.cam.get_exposure()
+        #attr = self.cam.get_exposure()
         #pprint.pp("Exposure time: " + str(attr))
+        
+        #check for potential comment
         self.cam.set_roi(x0, x1, y0, y1, hbin, vbin)
 
         self.cam.start_acquisition()
@@ -292,8 +294,10 @@ class Pixis():
         self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
         
         #self.app.monochromator.spectrum_x_axis
-        self.roi.curve.setData(self.app.monochromator.spectrum_x_axis[start:end],spectrum_y_axis[start:end] )
-
+        x_axis_plot=self.app.monochromator.spectrum_x_axis[start:end]
+        self.roi.curve.setData(x_axis_plot,spectrum_y_axis[start:end] )
+        self.wavelength_min=x_axis_plot[0]
+        self.wavelength_max=x_axis_plot[-1]
         #self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
         self.max_at_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
         
@@ -332,7 +336,8 @@ class Pixis():
 
         statustext+="ROI Max at: "+str(np.round(self.max_at_wavelength,2))
         self.app.status_pixis.setText(statustext+" nm")
-
+        statustext2="from: "+str(np.round(self.wavelength_min,2))+" nm\nto: "+str(np.round(self.wavelength_max,2))+" nm"
+        self.app.status_mono.setText(statustext2)
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spectral()
 

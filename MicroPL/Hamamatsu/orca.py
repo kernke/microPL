@@ -109,6 +109,10 @@ class Orca():
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
+        self.maxbtn=self.app.normal_button(layoutmax,"Calibrate (via stage)",self.maximize)
+        self.maxbtn.setFixedWidth(130)
+
+
         self.dropdown.addLayout(layoutmax)
 
         layoutright.addLayout(self.dropdown)
@@ -128,6 +132,9 @@ class Orca():
         
         # image view window start########################################################
         self.cw = QWidget() 
+        #self.label_up = QLabel("Title", self.cw)
+        #self.label_up.move(100, -10)
+        #self.label_up.setStyleSheet("color: white;font-size: 13pt")
         layout= QGridLayout()
         self.cw.setLayout(layout)
         layout.setSpacing(0)

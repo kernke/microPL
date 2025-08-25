@@ -68,8 +68,9 @@ class Saving:
 
 
     def save_to_h5_spectral(self):
-        if self.app.metadata_spectral["unsaved"]==False:
-            print("already saved before")
+        if not self.app.metadata_spectral["unsaved"]:
+            #print("already saved before")
+            self.app.add_log("already saved before")
         else:
             if self.check_h5():
                 profile = self.app.pixis.roi.getArrayRegion(self.app.pixis.img.image, img=self.app.pixis.img)
@@ -86,8 +87,8 @@ class Saving:
 
 
     def save_to_h5_spatial(self):
-        if self.app.metadata_spatial["unsaved"]==False:
-            print("already saved before")
+        if not self.app.metadata_spatial["unsaved"]:
+            #print("already saved before")
             self.app.add_log("already saved before")
         else:
             if self.check_h5():
@@ -169,31 +170,22 @@ class Saving:
 
     def save_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"Saving",self.expand)#################################################
+        self.app.heading_label(layoutright,"Saving   ",self.expand)#################################################
         
         self.dropdown=QVBoxLayout()
 
-        layoutcomment=QHBoxLayout()
-        self.widgetcomment = QLineEdit()
-        self.widgetcomment.setStyleSheet("background-color: lightGray")
-        self.widgetcomment.setText("")
-        layoutcomment.addWidget(self.widgetcomment)
-        self.widgetcomment.textEdited.connect(self.comment_edited) 
+        layoutsavetext=QHBoxLayout()
+        labelsave = QPushButton()
+        labelsave.setStyleSheet("background-color: lightGray; text-align: left")
+        labelsave.setText("  ..."+self.filepath[-32:]+" ")
+        labelsave.clicked.connect(self.set_filepath)
+        self.labelsave=labelsave
+        layoutsavetext.addWidget(labelsave)
 
-        label = QLabel("comment")
+        label = QLabel("file path")
         label.setStyleSheet("color:white")
-        layoutcomment.addWidget(label)
-        self.dropdown.addLayout(layoutcomment)
-
-        layoutsavebuttons=QHBoxLayout()
-
-        self.btnsaveacq=self.app.normal_button(layoutsavebuttons,"Save on Acquire/Live",self.save_on_acquire)
-        self.btnsaveacq.setFixedWidth(130)
-        layoutsavebuttons.addStretch()
-        self.btnsavecomment=self.app.normal_button(layoutsavebuttons,"Save Comment only",self.save_comment)
-        self.btnsavecomment.setFixedWidth(130)
-
-        self.dropdown.addLayout(layoutsavebuttons) 
+        layoutsavetext.addWidget(label)
+        self.dropdown.addLayout(layoutsavetext)
 
         layoutsavelabels=QHBoxLayout()
 
@@ -205,9 +197,9 @@ class Saving:
         label.setStyleSheet("color:white")
         layoutsavelabels.addWidget(label)
 
-        label = QLabel(" ")
-        label.setStyleSheet("color:white;font-size: 5pt")
-        self.dropdown.addWidget(label)
+        #label = QLabel(" ")
+        #label.setStyleSheet("color:white;font-size: 5pt")
+        #self.dropdown.addWidget(label)
 
         self.dropdown.addLayout(layoutsavelabels)
 
@@ -232,18 +224,32 @@ class Saving:
         self.dropdown.addLayout(layoutsaveh5)
 
 
-        layoutsavetext=QHBoxLayout()
-        labelsave = QPushButton()
-        labelsave.setStyleSheet("background-color: lightGray; text-align: left")
-        labelsave.setText("  ..."+self.filepath[-32:]+" ")
-        labelsave.clicked.connect(self.set_filepath)
-        self.labelsave=labelsave
-        layoutsavetext.addWidget(labelsave)
 
-        label = QLabel("file path")
+
+
+        layoutcomment=QHBoxLayout()
+        self.widgetcomment = QLineEdit()
+        self.widgetcomment.setStyleSheet("background-color: lightGray")
+        self.widgetcomment.setText("")
+        layoutcomment.addWidget(self.widgetcomment)
+        self.widgetcomment.textEdited.connect(self.comment_edited) 
+
+        label = QLabel("comment")
         label.setStyleSheet("color:white")
-        layoutsavetext.addWidget(label)
-        self.dropdown.addLayout(layoutsavetext)
+        layoutcomment.addWidget(label)
+        self.dropdown.addLayout(layoutcomment)
+
+        layoutsavebuttons=QHBoxLayout()
+
+        self.btnsaveacq=self.app.normal_button(layoutsavebuttons,"Save on Acquire/Live",self.save_on_acquire)
+        self.btnsaveacq.setFixedWidth(130)
+        layoutsavebuttons.addStretch()
+        self.btnsavecomment=self.app.normal_button(layoutsavebuttons,"Save Comment only",self.save_comment)
+        self.btnsavecomment.setFixedWidth(130)
+
+        self.dropdown.addLayout(layoutsavebuttons) 
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
-        layoutright.addStretch()
+        layoutright.addItem(self.app.vspace)
+        

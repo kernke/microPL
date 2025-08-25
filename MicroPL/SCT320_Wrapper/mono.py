@@ -171,6 +171,7 @@ class SCT320():
     
     def wavelength_edited(self):
         self.set_wavelength(self.wavelength)
+        #check for rounding
         self.wavelength=self.get_wavelength()
         self.spectrum_x_axis=self.grating_wavelength(self.app.pixis.roi)
         self.widgetwave.setText(str(self.wavelength))

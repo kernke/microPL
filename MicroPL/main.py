@@ -22,8 +22,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("MicroPL App")
         self.setStyleSheet("background-color: #1e1e1e;")
-        self.move(85,32)
-        self.resize(1750,1000)
+        self.move(0,0)
+        self.resize(1920,980)
 
         self.logging_list=[]      
         self.logging_model = QStringListModel()
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.warnwindow=WarnWindow
         self.entrymask4=EntryMask4
         self.entrymask6=EntryMask6
-        self.vspace = QSpacerItem(0, 40, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.vspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.threadpool = QThreadPool() 
         
@@ -74,10 +74,7 @@ class MainWindow(QMainWindow):
         label.setStyleSheet("background-color: #1e1e1e;color:white;font-size: 15pt")
         layoutstatus.addWidget(label)
 
-        smallvspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        layoutstatus.addItem(smallvspace)
-
-        #layoutstatus.addItem(self.vspace)
+        layoutstatus.addItem(self.vspace)
 
         status_style_string="background-color: #1e1e1e;color:white;font-size: 13pt"
         stage_status_string="Stage X: "+str(self.stage.xpos)+ " mm\n"
@@ -86,26 +83,25 @@ class MainWindow(QMainWindow):
         self.status_stage.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_stage)
 
-        layoutstatus.addItem(smallvspace)
+        layoutstatus.addItem(self.vspace)
 
         power_status_string="Voltage: "+str(self.keysight.voltage)+" V\nCurrent: "+str(self.keysight.current)+" mA"
         self.status_electric = QLabel(power_status_string)
         self.status_electric.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_electric)
         
-        layoutstatus.addItem(smallvspace)
+        layoutstatus.addItem(self.vspace)
 
         self.status_orca = QLabel("Spatial Max: \nSpatial Mean: ")
         self.status_orca.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_orca)
 
-        layoutstatus.addItem(smallvspace)
+        layoutstatus.addItem(self.vspace)
 
         self.status_pixis = QLabel("Spectral Max: \nROI Max at: ")
         self.status_pixis.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis)
 
-        #layoutstatus.addItem(smallvspace)
 
         self.status_mono=QLabel("from: \nto: ")
         self.status_mono.setStyleSheet(status_style_string)
@@ -154,7 +150,7 @@ class MainWindow(QMainWindow):
         self.stage.navigation_graphics_show(layoutmidleft)
         self.keysight.power_graphics_show(layoutmidleft)
 
-        layoutmain.addWidget(self.midleft,2)
+        layoutmain.addWidget(self.midleft)
 
         self.midright= QWidget() 
         self.midright.setLayout(layoutmidright)
@@ -167,7 +163,7 @@ class MainWindow(QMainWindow):
         #image, colorbar and 1D-profile plot
 
 
-        layoutmain.addWidget( self.midright ,3)
+        layoutmain.addWidget( self.midright)
 
         # user interface buttons 
         scroll = QScrollArea()
@@ -176,20 +172,26 @@ class MainWindow(QMainWindow):
         ui.setFixedWidth(310)
         ui.setLayout(layoutright)
 
+        self.h5saving.save_ui(layoutright)
+
         self.orca.spatial_camera_ui(layoutright)
 
         self.pixis.spectral_camera_ui(layoutright)
         
         self.monochromator.mono_ui(layoutright)
 
-        self.stage.stage_ui(layoutright)
-
         self.keysight.power_ui(layoutright)
+
+        self.keysight.timeline_ui(layoutright)
+
+        self.stage.stage_ui(layoutright)
 
         self.scripting.script_ui(layoutright)
 
-        self.h5saving.save_ui(layoutright)
+
+
         
+        layoutright.addStretch()
         scroll.setWidgetResizable(True)
         scroll.setWidget(ui)
 

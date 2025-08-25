@@ -73,12 +73,12 @@ class Keysight:
         self.currentA_actual=string_volt_curr_tuple[2]
 
 
-    def measure_electric(self):
-        self.voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
-        self.app.status_voltage.setText("Voltage: "+str(np.round(self.voltage_actual,3))+" V")
-        print("sdf")
-        self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
-        self.app.status_current.setText("Current: "+str(np.round(self.currentA_actual*1000,2))+" mA")
+    #def measure_electric(self):
+    #    self.voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
+    #    self.app.status_voltage.setText("Voltage: "+str(np.round(self.voltage_actual,3))+" V")
+    #    print("sdf")
+    #    self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+    #    self.app.status_current.setText("Current: "+str(np.round(self.currentA_actual*1000,2))+" mA")
     
 
 
@@ -108,6 +108,14 @@ class Keysight:
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def expand2(self):
+        if not self.expanded2:
+            self.expanded2=True
+            self.app.set_layout_visible(self.dropdown2,True)
+        else:
+            self.expanded2=False
+            self.app.set_layout_visible(self.dropdown2,False)
+
     def setvoltage_edited(self,s):
         if s:
             self.voltage=np.double(s)
@@ -134,6 +142,9 @@ class Keysight:
 
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
+        self.live_mode_running=False
+        if self.connected:
+            self.live_mode()
 
 
         self.expanded=False
@@ -177,36 +188,81 @@ class Keysight:
         
         self.dropdown.addLayout(layoutset)
 
-        layoutIV=QHBoxLayout()
-        btn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.measure_IV)
+        layoutsafe=QHBoxLayout()
+        btn=self.app.normal_button(layoutsafe,"Safety limits",self.maximize)
         btn.setFixedWidth(110)
-        layoutIV.addStretch()
-        btn=self.app.normal_button(layoutIV,"Show last I-V",self.measure_IV)
-        btn.setFixedWidth(110)
+        layoutsafe.addStretch()
+        self.dropdown.addLayout(layoutsafe)
 
-        self.dropdown.addLayout(layoutIV)
+        layoutright.addLayout(self.dropdown)
+        self.app.set_layout_visible(self.dropdown,False)
+        layoutright.addItem(self.app.vspace)
 
-        #layoutfresh=QHBoxLayout()
-        #freshwidget = QLineEdit()
-        #freshwidget.setStyleSheet("background-color: lightGray")
-        #freshwidget.setMaxLength(7)
-        #freshwidget.setFixedWidth(self.app.standard_width)
-        #freshwidget.setText(str(self.refresh_rate))
-        #freshwidget.textEdited.connect(self.refreshrate_edited)
-        #label = QLabel("refresh interval (s)")
-        #label.setStyleSheet("color:white")
-        #layoutfresh.addWidget(freshwidget)
-        #layoutfresh.addWidget(label)
-        #layoutfresh.addStretch()
+
+    def timeline_ui(self,layoutright):
+        self.expanded2=False
+        self.app.heading_label(layoutright,"Timeline / I-V-Curve",self.expand2)
+
+        self.dropdown2=QVBoxLayout()
+
+        layoutfresh=QHBoxLayout()
+        freshwidget = QLineEdit()
+        freshwidget.setStyleSheet("background-color: lightGray")
+        freshwidget.setMaxLength(7)
+        freshwidget.setFixedWidth(self.app.standard_width)
+        freshwidget.setText(str(self.refresh_rate))
+        freshwidget.textEdited.connect(self.refreshrate_edited)
+        label = QLabel("refresh interval (s)")
+        label.setStyleSheet("color:white")
+        layoutfresh.addWidget(freshwidget)
+        layoutfresh.addWidget(label)
+        layoutfresh.addStretch()
 
         #self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
 
-        #self.dropdown.addLayout(layoutfresh)
+        self.dropdown2.addLayout(layoutfresh)
+
+        layouttimeline=QHBoxLayout()
+        btn=self.app.normal_button(layouttimeline,"Reset Timeline",self.measure_IV)
+        btn.setFixedWidth(110)
+        layouttimeline.addStretch()
+        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.measure_IV)
+        btn.setFixedWidth(110)
+        self.dropdown2.addLayout(layouttimeline)
+
+
+        layoutIVor=QHBoxLayout()
+        #label = QLabel("Show ")
+        #label.setStyleSheet("color:white")
+
+        #layoutIVor.addWidget(label)
+        layoutIVor.addStretch()
+        btn=self.app.normal_button(layoutIVor,"Timeline",self.measure_IV)
+        btn.setFixedWidth(70)
+        layoutIVor.addStretch()
+        label = QLabel("<- Show -> ")
+        label.setStyleSheet("color:white")
+        layoutIVor.addWidget(label)
+        layoutIVor.addStretch()
+        btn=self.app.normal_button(layoutIVor,"I-V-Curve",self.measure_IV)
+        btn.setFixedWidth(70)
+        layoutIVor.addStretch()
+        self.dropdown2.addLayout(layoutIVor)
+
+        layoutIV=QHBoxLayout()
+        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.maximize)
+        self.acqivbtn.setFixedWidth(110)
+        layoutIV.addStretch()
+        savbtn=self.app.normal_button(layoutIV,"Save I-V-Curve",self.maximize)
+        savbtn.setFixedWidth(110)
+        
+        self.dropdown2.addLayout(layoutIV)
+
         layoutmax=QHBoxLayout()
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.dropdown.addLayout(layoutmax)
+        self.dropdown2.addLayout(layoutmax)
 
         #layoutread=QHBoxLayout()
         #btn=self.app.normal_button(layoutread,"Measure",self.measure_electric)
@@ -214,14 +270,10 @@ class Keysight:
 
         #self.dropdown.addLayout(layoutread)
 
-        layoutright.addLayout(self.dropdown)
-        self.app.set_layout_visible(self.dropdown,False)
+        layoutright.addLayout(self.dropdown2)
+        self.app.set_layout_visible(self.dropdown2,False)
         layoutright.addItem(self.app.vspace)
 
-
-        self.live_mode_running=False
-        if self.connected:
-            self.live_mode()
 
 
     ## Handle view resizing 
@@ -236,7 +288,7 @@ class Keysight:
 
     def power_graphics_show(self,layout):
         pw = pg.PlotWidget()
-        pw.setTitle("Electrical Power Timeline / I-V-Curve")
+        pw.setTitle("Electric Power Timeline / I-V-Curve")
         pw.setBackground(None)
         self.p1 = pw.plotItem
         self.p1.setLabel('bottom', 'time', units='s')
@@ -291,13 +343,13 @@ class Keysight:
             self.live_mode_running=True
             self.timer.start(int(self.refresh_rate)*1000)
             #self.btnlive.setText("Status Live")
-            self.btnlive.setStyleSheet("background-color: green;color: black")
+            #self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
             #self.btnlive.setText("StatLive")
-            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            #self.btnlive.setStyleSheet("background-color: lightGray;color: black")
     """
     def plot_iv_detailed(self, zoom_voltage=1):
         plt.figure()
