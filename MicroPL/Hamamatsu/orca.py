@@ -39,7 +39,7 @@ class Orca():
             print("orca dummy mode")
             self.app.add_log("Orca dummy mode")
 
-        self.acqtime_spatial=1
+        self.acqtime_spatial=0.2
         self.crosshair=False
         self.live_mode_running=False
         self.live_mode_latency=300

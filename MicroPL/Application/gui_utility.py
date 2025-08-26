@@ -62,6 +62,132 @@ class WarnWindow(QWidget):
         self.move(x, y)
 
 
+class EntryMask3(QWidget):
+    def __init__(self,check_bool,app):#device,roi):
+        super().__init__()
+        self.device=app.stage
+        self.roi=app.pixis.roi
+        self.setWindowTitle("Enter Values")
+        self.setStyleSheet("background-color: #1e1e1e;") 
+        self.setFixedSize(QSize(300, 200))
+        if check_bool:
+            self.tempo_xmin=int(self.roi.pos()[0])
+            self.tempo_ymin=int(self.roi.pos()[1])
+            self.tempo_xmax=int(self.roi.pos()[0]+self.roi.size()[0])
+            self.tempo_ymax=int(self.roi.pos()[1]+self.roi.size()[1])
+        else:
+            self.tempo_xmin=self.device.xlimit[0]
+            self.tempo_ymin=self.device.ylimit[0]
+            self.tempo_xmax=self.device.xlimit[1]
+            self.tempo_ymax=self.device.ylimit[1]
+    
+
+        layout = QVBoxLayout()
+        self.label = QLabel()
+        self.label.setWordWrap(True)
+        self.label.setStyleSheet("color:white")
+        layout.addWidget(self.label)
+
+        entry_min=QHBoxLayout()
+        entry_max=QHBoxLayout()
+
+        widget = QLineEdit()
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(7)
+        widget.setFixedWidth(60)
+        widget.setText(str(self.tempo_xmin))
+        widget.textEdited.connect(self.temporary_xmin)
+        entry_min.addWidget(widget)
+        
+        label = QLabel("X min")
+        label.setStyleSheet("color:white")
+        entry_min.addWidget(label)    
+        entry_min.addStretch()
+        
+        widget = QLineEdit()
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(7)
+        widget.setFixedWidth(60)
+        widget.setText(str(self.tempo_ymin))
+        widget.textEdited.connect(self.temporary_ymin)
+        entry_min.addWidget(widget)
+        
+        label = QLabel("Y min")
+        label.setStyleSheet("color:white")
+        entry_min.addWidget(label)    
+
+
+        widget = QLineEdit()
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(7)
+        widget.setFixedWidth(60)
+        widget.setText(str(self.tempo_xmax))
+        widget.textEdited.connect(self.temporary_xmax)
+        entry_max.addWidget(widget)
+        
+        label = QLabel("X max")
+        label.setStyleSheet("color:white")
+        entry_max.addWidget(label)    
+        entry_max.addStretch()
+        
+        widget = QLineEdit()
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(7)
+        widget.setFixedWidth(60)
+        widget.setText(str(self.tempo_ymax))
+        widget.textEdited.connect(self.temporary_ymax)
+        entry_max.addWidget(widget)
+        
+        label = QLabel("Y max")
+        label.setStyleSheet("color:white")
+        entry_max.addWidget(label)    
+        
+        layout.addLayout(entry_min)
+        layout.addLayout(entry_max)
+
+        normal_button(layout,"Confirm",lambda: self.confirm_and_close(check_bool))
+
+        self.setLayout(layout)    
+
+    def setHeading(self,text):
+        self.label.setText(text)
+
+    
+    def location_on_the_screen(self):
+        ag = QDesktopWidget().availableGeometry()
+        x=ag.width()//2-150
+        y=ag.height()//2-100
+        self.move(x, y)
+
+    def temporary_xmin(self,s):
+        if s:
+            self.tempo_xmin=np.double(s)
+        
+    def temporary_ymin(self,s):
+        if s:
+            self.tempo_ymin=np.double(s)
+
+    def temporary_xmax(self,s):
+        if s:
+            self.tempo_xmax=np.double(s)
+
+    def temporary_ymax(self,s):
+        if s:
+            self.tempo_ymax=np.double(s)
+
+    def confirm_and_close(self,check_bool):
+        if check_bool: #ROI
+            self.roi.setPos(pg.Point([self.tempo_xmin,self.tempo_ymin]))
+            deltax=self.tempo_xmax-self.tempo_xmin
+            deltay=self.tempo_ymax-self.tempo_ymin
+            self.roi.setSize([deltax,deltay])
+        else: #stage
+            self.device.xlimit=[self.tempo_xmin,self.tempo_xmax]
+            self.device.ylimit=[self.tempo_ymin,self.tempo_ymax]
+            
+        self.close()
+
+
 class EntryMask4(QWidget):
     def __init__(self,check_bool,app):#device,roi):
         super().__init__()

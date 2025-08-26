@@ -87,8 +87,13 @@ class Stage:
             print("stage dummy mode")
 
 
+        self.xlast=np.copy(self.xpos)
+        self.ylast=np.copy(self.ypos)
+
         self.saved_positions=dict() 
         self.combolist=["choose position"]   
+        self.textitems=[]
+        self.symbolitems=[]
 
         self.xlimit=[0.,50.] # mm
         self.ylimit=[0.,50.] # mm 
@@ -111,7 +116,31 @@ class Stage:
         self.app.status_stage.setText(string_x_y_tuple[0])
         self.xpos=string_x_y_tuple[1]
         self.ypos=string_x_y_tuple[2]
+        self.plotactualpos.setData([self.xpos],[self.ypos])
 
+
+        self.plot.removeItem(self.plotlast)
+        xlow=self.xlast-self.cam_size/2
+        xhigh=self.xlast+self.cam_size/2
+        ylow=self.ylast-self.cam_size/2
+        yhigh=self.ylast+self.cam_size/2
+        cam_box_x=[xlow,xlow,xhigh,xhigh,xlow]
+        cam_box_y=[ylow,yhigh,yhigh,ylow,ylow]
+
+        self.plotlast=pg.PlotCurveItem(cam_box_x,cam_box_y)
+        self.plot.addItem(self.plotlast)
+
+        self.plot.removeItem(self.plotactualsquare)
+        xlow=self.xpos-self.cam_size/2
+        xhigh=self.xpos+self.cam_size/2
+        ylow=self.ypos-self.cam_size/2
+        yhigh=self.ypos+self.cam_size/2
+        cam_box_x=[xlow,xlow,xhigh,xhigh,xlow]
+        cam_box_y=[ylow,yhigh,yhigh,ylow,ylow]
+        self.plotactualsquare=pg.PlotCurveItem(cam_box_x,cam_box_y, pen="#0fef1a")        
+        self.plot.addItem(self.plotactualsquare)
+        #self.plotactualsquare.setData([self.cam_box_x],[self.cam_box_y])
+        
 
     def close(self):
         if self.live_mode_running:
@@ -243,18 +272,21 @@ class Stage:
         self.plot.plot([66],[52])
         self.plot.plot(xvalues,yvalues ,pen=dashed_pen)        
         
-        xlow=self.xpos-self.cam_size
-        xhigh=self.xpos+self.cam_size
-        ylow=self.ypos-self.cam_size
-        yhigh=self.ypos+self.cam_size
+        xlow=self.xpos-self.cam_size/2
+        xhigh=self.xpos+self.cam_size/2
+        ylow=self.ypos-self.cam_size/2
+        yhigh=self.ypos+self.cam_size/2
         cam_box_x=[xlow,xlow,xhigh,xhigh,xlow]
         cam_box_y=[ylow,yhigh,yhigh,ylow,ylow]
-        self.plot.plot(cam_box_x,cam_box_y)
+
+        self.plotlast=pg.PlotCurveItem(cam_box_x,cam_box_y)
+        self.plot.addItem(self.plotlast)       
+        self.plotactualsquare=pg.PlotCurveItem(cam_box_x,cam_box_y, pen="#0fef1a")
+        self.plot.addItem(self.plotactualsquare)
+        self.plotactualpos=pg.ScatterPlotItem([self.xpos],[self.ypos], pen="#0fef1a",symbol='x')
+        self.plotactualpos.setSize(12)
+        self.plot.addItem(self.plotactualpos)
         
-        text_item = pg.TextItem("Some text",color="white")
-        text_item.setPos(25, 20)
-        self.plot.addItem(text_item)
-        self.plot.plot([self.xpos],[self.ypos],symbol='x')
         # 1D spectrum view end  ###################################################
         # Button overlayed inside the plot area
         bsize=30
@@ -357,18 +389,35 @@ class Stage:
         self.saved_positions[self.position_name]=(self.xpos,self.ypos)
         self.combolist.append(self.position_name)
         self.combowidget.addItem(self.position_name)
+        
+        self.textitems.append( pg.TextItem(self.position_name,color="white"))
+        self.textitems[-1].setPos(self.xpos, self.ypos)
+        self.plot.addItem(self.textitems[-1])
+
+        self.symbolitems.append(pg.ScatterPlotItem([self.xpos],[self.ypos], pen="#ef0f2d",symbol='x'))
+        self.symbolitems[-1].setSize(12)
+        self.plot.addItem(self.symbolitems[-1])
 
     def delete_position(self):
-        if self.script_selected==0:
-            pass
-        else:
+        if self.script_selected>0:
             del self.saved_positions[self.combolist[self.script_selected]]
             del self.combolist[self.script_selected]
             self.combowidget.removeItem(self.script_selected)
-
+            self.plot.removeItem(self.textitems[self.script_selected])
+            self.plot.removeItem(self.symbolitems[self.script_selected])
+            del self.textitems[self.script_selected]
+            del self.symbolitems[self.script_selected]
     
     def position_select_changed(self,i):
         self.script_selected=i
+        if self.script_selected>0:
+            x,y=self.saved_positions[self.combolist[self.script_selected]]
+            self.widgetx.setText(str(x))
+            self.widgetx.setStyleSheet("background-color: lightGray;color: red")
+            self.widgety.setText(str(y))
+            self.widgety.setStyleSheet("background-color: lightGray;color: red")
+
+
 
 
     def stage_ui(self,layoutright):
@@ -532,7 +581,7 @@ class Stage:
                 
             if self.live_mode_running:
                 self.timer.stop()
-
+            self.xlast,self.ylast=self.get_position()
             self.set_position(self.xpos,self.ypos)
             self.xpos,self.ypos=self.get_position()
             self.widgety.setText(str(self.ypos))

@@ -1,7 +1,7 @@
 import pyvisa
-#import time
+import datetime
 import numpy as np
-#import time
+import time
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
@@ -61,6 +61,9 @@ class Keysight:
         self.currentA_list=[]
         self.timeline_list=[]
         self.timeline_time=0
+        self.timeline_start=time.time()
+        self.timeline_start_date=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
+        self.timeline_reset_pressed=False
         self.maximized=False
 
     def disconnect(self):
@@ -81,11 +84,24 @@ class Keysight:
         self.app.status_electric.setText(string_volt_curr_tuple[0])
         self.voltage_actual=string_volt_curr_tuple[1]
         self.currentA_actual=string_volt_curr_tuple[2]
-        self.voltage_list.append(self.voltage_actual)
-        self.currentA_list.append(self.currentA_actual)
-        self.timeline_list.append(self.timeline_time)
-        self.timeline_time += self.refresh_rate
-        self.mAcurve.setData(self.timeline_list,self.currentA_list)
+        if self.timeline_reset_pressed:
+            self.timeline_reset_pressed=False
+            self.voltage_list=[self.voltage_actual]
+            self.currentA_list=[self.currentA_actual]
+            self.timeline_time=0
+            self.timeline_list=[self.timeline_time]
+            self.timeline_start=time.time()
+            self.timeline_start_date=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
+            
+            #self.timeline_time = time.time()-self.timeline_start#self.refresh_rate
+
+        else:
+            self.voltage_list.append(self.voltage_actual)
+            self.currentA_list.append(self.currentA_actual)
+            self.timeline_time = time.time()-self.timeline_start
+            self.timeline_list.append(self.timeline_time)
+            #self.refresh_rate
+        self.Acurve.setData(self.timeline_list,self.currentA_list)
         self.Vcurve.setData(self.timeline_list,self.voltage_list)
         self.p1.setXRange(0,self.timeline_time)
 
@@ -316,10 +332,10 @@ class Keysight:
         self.dropdown2.addLayout(layoutfresh)
 
         layouttimeline=QHBoxLayout()
-        btn=self.app.normal_button(layouttimeline,"Reset Timeline",self.measure_IV)
+        btn=self.app.normal_button(layouttimeline,"Reset Timeline",self.reset_pressed)
         btn.setFixedWidth(110)
         layouttimeline.addStretch()
-        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.measure_IV)
+        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.measure_IV) ################
         btn.setFixedWidth(110)
         self.dropdown2.addLayout(layouttimeline)
 
@@ -327,23 +343,24 @@ class Keysight:
         layoutIVor=QHBoxLayout()
 
         layoutIVor.addStretch()
-        btn=self.app.normal_button(layoutIVor,"Timeline",self.measure_IV)
-        btn.setFixedWidth(70)
+        self.btntimelineshow=self.app.normal_button(layoutIVor,"Timeline",self.show_timline)
+        self.btntimelineshow.setFixedWidth(70)
+        self.btntimelineshow.setStyleSheet("background-color: green")
         layoutIVor.addStretch()
         label = QLabel("<- Show -> ")
         label.setStyleSheet("color:white")
         layoutIVor.addWidget(label)
         layoutIVor.addStretch()
-        btn=self.app.normal_button(layoutIVor,"I-V-Curve",self.measure_IV)
-        btn.setFixedWidth(70)
+        self.btnIVshow=self.app.normal_button(layoutIVor,"I-V-Curve",self.show_IV)
+        self.btnIVshow.setFixedWidth(70)
         layoutIVor.addStretch()
         self.dropdown2.addLayout(layoutIVor)
 
         layoutIV=QHBoxLayout()
-        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.maximize)
+        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.maximize) ##############
         self.acqivbtn.setFixedWidth(110)
         layoutIV.addStretch()
-        savbtn=self.app.normal_button(layoutIV,"Save I-V-Curve",self.maximize)
+        savbtn=self.app.normal_button(layoutIV,"Save I-V-Curve",self.maximize) ###############
         savbtn.setFixedWidth(110)
         
         self.dropdown2.addLayout(layoutIV)
@@ -370,7 +387,23 @@ class Keysight:
         if self.connected:
             self.live_mode()
 
+    def reset_pressed(self):
+        self.timeline_reset_pressed=True
 
+    def show_IV(self):
+        self.btntimelineshow.setStyleSheet("background-color: lightGray")
+        self.btnIVshow.setStyleSheet("background-color: green")
+        self.pw.setHidden(True)
+        self.pw2.setHidden(False)
+
+    def show_timline(self):
+        self.btnIVshow.setStyleSheet("background-color: lightGray")
+        self.btntimelineshow.setStyleSheet("background-color: green")
+
+        self.pw.setHidden(False)
+        self.pw2.setHidden(True)
+
+        #self.p1.plot([1,2,4,8,16,32])
 
     ## Handle view resizing 
     def updateViews(self):
@@ -383,10 +416,22 @@ class Keysight:
         self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
 
     def power_graphics_show(self,layout):
-        pw = pg.PlotWidget()
-        pw.setTitle("Electric Power Timeline / I-V-Curve")
-        pw.setBackground(None)
-        self.p1 = pw.plotItem
+        self.pw2=pg.PlotWidget()
+        self.pw2.setBackground(None)
+
+        self.pw2.setTitle("I-V-Curve")
+        self.pw2.setLabel('bottom', 'Voltage', units='V')
+        self.pw2.setLabel('left', 'Current', units='A')
+        #pw2vb = pg.ViewBox()
+        #pw2p1 = self.pw.plotItem
+        self.pw2.plot([1,2,4,8,16,32])
+        layout.addWidget(self.pw2)
+        self.pw2.setHidden(True)
+
+        self.pw = pg.PlotWidget()
+        self.pw.setTitle("Electric Power Timeline / I-V-Curve")
+        self.pw.setBackground(None)
+        self.p1 = self.pw.plotItem
         self.p1.setLabel('bottom', 'time', units='s')
         self.p1.setLabel('left', 'Voltage', units='V')
         ## create a new ViewBox, link the right axis to its coordinate system
@@ -405,10 +450,10 @@ class Keysight:
         #self.p1.plot([1,2,4,8,16,32])
         self.Vcurve=pg.PlotCurveItem([0],[0])#, pen="#0fef38")
         self.p1.addItem(self.Vcurve)
-        self.mAcurve=pg.PlotCurveItem([0],[0], pen="#0fef38")
-        self.p2.addItem(self.mAcurve)
+        self.Acurve=pg.PlotCurveItem([0],[0], pen="#0fef38")
+        self.p2.addItem(self.Acurve)
         self.p1.setXRange(0,1)#self.timeline_time)
-        layout.addWidget(pw,2)
+        layout.addWidget(self.pw,2)
 
 
 

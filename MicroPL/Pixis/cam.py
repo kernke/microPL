@@ -54,7 +54,7 @@ class Pixis():
             self.app.add_log("Pixis dummy mode")
 
         
-        self.acqtime_spectral=1
+        self.acqtime_spectral=0.2
         self.live_mode_latency=300
         self.save_full_image=True
         self.live_mode_running=False
