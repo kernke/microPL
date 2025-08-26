@@ -32,6 +32,7 @@ class MainWindow(QMainWindow):
         self.normal_button=normal_button
         self.set_layout_visible=set_layout_visible
         self.heading_label=heading_label
+        self.temporary_3values=None
 
         self.warnwindow=WarnWindow
         self.entrymask4=EntryMask4
