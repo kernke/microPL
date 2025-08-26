@@ -38,6 +38,8 @@ class Keysight:
             print("Keysight connected")
             self.connected=True
             self.app.add_log("Keysight connected")
+            # for safety
+            self.psu.write("OUTP OFF")
         except:
             self.connected=False
             print("dummy mode for keysight")
@@ -47,7 +49,9 @@ class Keysight:
         self.voltage=0
         self.current=0
         self.output_on=False
-        self.psu.write("OUTP OFF")
+        self.max_voltage=20
+        self.max_currentmA=500
+        self.max_powermW=5000
 
         self.refresh_rate=1.
         self.voltage_actual=0
@@ -86,16 +90,6 @@ class Keysight:
         self.p1.setXRange(0,self.timeline_time)
 
 
-
-    #def measure_electric(self):
-    #    self.voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
-    #    self.app.status_voltage.setText("Voltage: "+str(np.round(self.voltage_actual,3))+" V")
-    #    print("sdf")
-    #    self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
-    #    self.app.status_current.setText("Current: "+str(np.round(self.currentA_actual*1000,2))+" mA")
-    
-
-
     def measure_IV(self, voltage_step, max_voltage):
         print("Starting measurement...")
         self.on()
@@ -132,13 +126,88 @@ class Keysight:
 
     def setvoltage_edited(self,s):
         if s:
-            self.voltage=np.double(s)
-            self.psu.write(f"SOUR:VOLT {self.voltage}")
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                self.voltage=np.double(s)
+                self.voltwidget.setStyleSheet("background-color: lightGray;color: red")
+
+
+    def setvoltage_confirmed(self):
+        if self.voltage<self.max_voltage and self.voltage*self.current<self.max_powermW:
+            if self.live_mode_running:
+                self.timer.stop()
+                self.psu.write(f"SOUR:VOLT {self.voltage}")
+                self.timer.start(int(self.refresh_rate*1000))
+            else:
+                self.psu.write(f"SOUR:VOLT {self.voltage}")
+            self.voltwidget.setStyleSheet("background-color: lightGray;color: black")
+            self.app.add_log("set: "+str(np.round(self.voltage,3))+" V")
+
+
+    def setcurrent_confirmed(self):
+        if self.current<self.max_currentmA and self.voltage*self.current<self.max_powermW:
+            if self.live_mode_running:
+                self.timer.stop()
+                self.psu.write(f"SOUR:CURR {self.current/1000}")
+                self.timer.start(int(self.refresh_rate*1000))
+            else:
+                self.psu.write(f"SOUR:CURR {self.current/1000}")
+            self.currentwidget.setStyleSheet("background-color: lightGray;color: black")
+            self.app.add_log("set: "+str(np.round(self.current,1))+" mA")
+
 
     def setcurrent_edited(self,s):
         if s:
-            self.current=np.double(s)
-            self.psu.write(f"SOUR:CURR {self.current/1000}")
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                self.current=np.double(s)
+                if self.output_on:
+                    self.currentwidget.setStyleSheet("background-color: lightGray;color: red")
+
+
+    def power_on(self):
+        if self.output_on:
+            self.output_on=False
+            if self.live_mode_running:
+                self.timer.stop()
+                self.psu.write("OUTP OFF")
+                self.timer.start(int(self.refresh_rate*1000))
+            else:
+                self.psu.write("OUTP OFF")
+            self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
+            self.app.add_log("Electric Power Output OFF")
+        else:
+            cond0=self.voltage<self.max_voltage
+            cond1=self.voltage*self.current<self.max_powermW
+            cond2=self.current<self.max_currentmA
+            if cond0 and cond1 and cond2:
+                self.output_on=True
+                if self.live_mode_running:
+                    self.timer.stop()
+                    self.psu.write(f"SOUR:CURR {self.current/1000}")
+                    self.psu.write(f"SOUR:VOLT {self.voltage}")
+                    self.psu.write("OUTP ON")
+                    self.timer.start(int(self.refresh_rate*1000))
+                else:
+                    self.psu.write(f"SOUR:CURR {self.current/1000}")
+                    self.psu.write(f"SOUR:VOLT {self.voltage}")
+                    self.psu.write("OUTP ON")
+
+                self.powerbtn.setStyleSheet("background-color: green;color: black")
+                self.app.add_log("set: "+str(np.round(self.voltage,3))+" V ; "+str(np.round(self.current,1))+" mA")
+                self.app.add_log("Electric Power Output ON")
+            else:
+                self.app.add_log("Safety limits violated")
+                self.app.add_log("Electric Power not turned ON")
+
 
     def refreshrate_edited(self,s):
         if s:
@@ -160,7 +229,6 @@ class Keysight:
 
 
     def power_ui(self,layoutright):
-        #self.measure_electric()
 
         self.expanded=False
         self.app.heading_label(layoutright,"Electric Power Supply",self.expand)
@@ -169,7 +237,7 @@ class Keysight:
         
         layoutoutput=QHBoxLayout()
         self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
-        label = QLabel("grey   -> off\ngreen -> on         cyan -> limited by")
+        label = QLabel("grey   -> off\ngreen -> on")#         cyan -> limited by")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
         layoutoutput.addWidget(label)
@@ -178,30 +246,40 @@ class Keysight:
         
         self.dropdown.addLayout(layoutoutput)
         layoutset=QHBoxLayout()
-        voltwidget = QLineEdit()
-        voltwidget.setStyleSheet("background-color: lightGray")
-        voltwidget.setMaxLength(7)
-        voltwidget.setFixedWidth(self.app.standard_width)
-        voltwidget.setText(str(np.round(self.voltage_actual,3)))
-
-        voltwidget.textEdited.connect(self.setvoltage_edited)
+        self.voltwidget = QLineEdit()
+        self.voltwidget.setStyleSheet("background-color: lightGray")
+        self.voltwidget.setMaxLength(7)
+        self.voltwidget.setFixedWidth(self.app.standard_width)
+        self.voltwidget.setText(str(np.round(self.voltage_actual,3)))
+        self.voltwidget.returnPressed.connect(self.setvoltage_confirmed)
+        self.voltwidget.textEdited.connect(self.setvoltage_edited)
         label = QLabel("voltage (V)")
         label.setStyleSheet("color:white")
-        layoutset.addWidget(voltwidget)
+        layoutset.addWidget(self.voltwidget)
         layoutset.addWidget(label)
         layoutset.addStretch()
-        currentwidget = QLineEdit()
-        currentwidget.setStyleSheet("background-color: lightGray")
-        currentwidget.setMaxLength(7)
-        currentwidget.setFixedWidth(self.app.standard_width)
-        currentwidget.setText(str(np.round(self.currentA_actual*1000,1)))
-        currentwidget.textEdited.connect(self.setcurrent_edited)
+        self.currentwidget = QLineEdit()
+        self.currentwidget.setStyleSheet("background-color: lightGray")
+        self.currentwidget.setMaxLength(7)
+        self.currentwidget.setFixedWidth(self.app.standard_width)
+        self.currentwidget.setText(str(np.round(self.currentA_actual*1000,1)))
+        self.currentwidget.textEdited.connect(self.setcurrent_edited)
+        self.currentwidget.returnPressed.connect(self.setcurrent_confirmed)
         label = QLabel("current (mA)")
         label.setStyleSheet("color:white")
         layoutset.addWidget(label)
-        layoutset.addWidget(currentwidget)
+        layoutset.addWidget(self.currentwidget)
         
         self.dropdown.addLayout(layoutset)
+
+        layoutinfo=QHBoxLayout()
+        layoutinfo.addStretch()
+        label = QLabel("(if Output is on, confirm changes with enter)")
+        label.setStyleSheet("color:white")
+        layoutinfo.addWidget(label)
+        layoutinfo.addStretch()        
+        self.dropdown.addLayout(layoutinfo)
+        
 
         layoutsafe=QHBoxLayout()
         btn=self.app.normal_button(layoutsafe,"Safety limits",self.maximize)
@@ -247,10 +325,7 @@ class Keysight:
 
 
         layoutIVor=QHBoxLayout()
-        #label = QLabel("Show ")
-        #label.setStyleSheet("color:white")
 
-        #layoutIVor.addWidget(label)
         layoutIVor.addStretch()
         btn=self.app.normal_button(layoutIVor,"Timeline",self.measure_IV)
         btn.setFixedWidth(70)
@@ -335,19 +410,6 @@ class Keysight:
         self.p1.setXRange(0,1)#self.timeline_time)
         layout.addWidget(pw,2)
 
-
-
-    def power_on(self):
-        if self.output_on:
-            print("turning off")
-            self.output_on=False
-            self.psu.write("OUTP OFF")
-            self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
-        else:
-            print("turning on")
-            self.output_on=True
-            self.psu.write("OUTP ON")
-            self.powerbtn.setStyleSheet("background-color: green;color: black")
 
 
     def maximize(self):

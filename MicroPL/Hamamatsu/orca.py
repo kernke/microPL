@@ -221,21 +221,31 @@ class Orca():
         self.app.metadata_spatial["stage_x"]=xacq
         self.app.metadata_spatial["stage_y"]=yacq
         self.app.metadata_spatial["unsaved"]=True
-        self.app.add_log("spatial img acquired")
+        if not self.live_mode_running:
+            self.app.add_log("spatial img acquired")
         self.camera_handler =CameraHandler_spatial(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spatial)
         self.app.threadpool.start(self.camera_handler)
 
     def acqtime_spatial_edited(self,s):
         if s:
-            self.acqtime_spatial=np.double(s)
-            if self.live_mode_running and self.acqtime_spatial>0.001: #
-                latency=self.live_mode_latency
-                self.timer.stop()
-                self.timer.start(int(self.acqtime_spatial*1000+latency))
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                if np.double(s)>10:
+                    self.acqtime_spatial=10.
+                else:
+                    self.acqtime_spatial=np.double(s)
+                    if self.live_mode_running and self.acqtime_spatial>0.001: #
+                        self.timer.stop()
+                        self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
 
     def live_mode(self):
         if not self.live_mode_running:
+            self.app.add_log("spatial camera Live mode started")
             self.timer=QTimer()
             self.timer.timeout.connect(self.acquire_clicked_spatial)
             self.live_mode_running=True
@@ -243,7 +253,7 @@ class Orca():
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
-
+            self.app.add_log("spatial camera Live mode stopped")
             self.live_mode_running=False
             self.timer.stop()
             self.btnlive.setText("Live")

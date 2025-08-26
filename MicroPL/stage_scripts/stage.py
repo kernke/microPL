@@ -8,7 +8,7 @@ import sys
 from ctypes import cdll,c_int,byref,create_string_buffer,c_double,c_char_p  # import ctypes (used to call DLL functions)
 import pyqtgraph as pg
 import numpy as np
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton,QComboBox
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton,QComboBox,QApplication
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 
 class Update_Signal(QObject):
@@ -86,7 +86,9 @@ class Stage:
             self.app.add_log("Tango dummy mode")
             print("stage dummy mode")
 
-        
+
+        self.saved_positions=dict() 
+        self.combolist=["choose position"]   
 
         self.xlimit=[0.,50.] # mm
         self.ylimit=[0.,50.] # mm 
@@ -97,19 +99,6 @@ class Stage:
         self.step_large_micron=150
 
         self.cam_size=0.2
-
-
-
-        # some c-type variables (general purpose usage)
-        #dx = c_double()
-        #dy = c_double()
-        #dz = c_double()
-        #da = c_double()
-
-        #ca = c_char()
-        #cb = c_char()
-        #ia = c_int()
-        #ba = c_bool()
 
 
     def thread_task(self):
@@ -185,7 +174,8 @@ class Stage:
             print("Moved to " + str(X) + "," + str(Y) ) 
     
     def home_all(self):
-    
+        self.app.add_log("Starting Homing Procedure ...")
+        QApplication.processEvents()
         error = self.m_Tango.LSX_Calibrate(self.LSID)
         if error > 0:
             print("Error: Calibrate " + str(error))
@@ -215,7 +205,9 @@ class Stage:
             print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
 
         self.stage_actual()
-        print("stage homed")
+        self.app.add_log("Finished Homing Procedure")
+
+        #print("stage homed")
 
     def expand(self):
         if not self.expanded:
@@ -357,6 +349,28 @@ class Stage:
         self.stage_goto()
 
 
+    def position_name_edited(self,s):
+        if s:
+            self.position_name=s
+
+    def save_position(self):
+        self.saved_positions[self.position_name]=(self.xpos,self.ypos)
+        self.combolist.append(self.position_name)
+        self.combowidget.addItem(self.position_name)
+
+    def delete_position(self):
+        if self.script_selected==0:
+            pass
+        else:
+            del self.saved_positions[self.combolist[self.script_selected]]
+            del self.combolist[self.script_selected]
+            self.combowidget.removeItem(self.script_selected)
+
+    
+    def position_select_changed(self,i):
+        self.script_selected=i
+
+
     def stage_ui(self,layoutright):
         self.refresh_rate=1.
         self.timer=QTimer()
@@ -422,12 +436,13 @@ class Stage:
         self.widgetsavpos.setStyleSheet("background-color: lightGray")
         self.widgetsavpos.setMaxLength(15)
         self.widgetsavpos.setFixedWidth(160)
-        self.widgetsavpos.setText(str("Position 1"))
-        self.widgetsavpos.textEdited.connect(self.stage_update_x)
+        self.position_name="Position 1"
+        self.widgetsavpos.setText(self.position_name)
+        self.widgetsavpos.textEdited.connect(self.position_name_edited)
         layoutsavpos.addWidget(self.widgetsavpos)
         
         layoutsavpos.addStretch()
-        btn=self.app.normal_button(layoutsavpos,"Save Position",self.entry_window_limits)        
+        btn=self.app.normal_button(layoutsavpos,"Save Position",self.save_position)        
         btn.setFixedWidth(110)
 
         
@@ -435,18 +450,18 @@ class Stage:
 
 
         layoutchoosepos=QHBoxLayout()
-        widget = QComboBox()
+        self.combowidget = QComboBox()
         self.script_selected=0
-        widget.addItems(["choose Position",""])
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setFixedHeight(25)
-        widget.setFixedWidth(160)
-        widget.currentIndexChanged.connect(self.position_select_changed ) 
+        self.combowidget.addItems(self.combolist)
+        self.combowidget.setStyleSheet("background-color: lightGray")
+        self.combowidget.setFixedHeight(25)
+        self.combowidget.setFixedWidth(160)
+        self.combowidget.currentIndexChanged.connect(self.position_select_changed ) 
 
-        layoutchoosepos.addWidget(widget)
+        layoutchoosepos.addWidget(self.combowidget)
 
         layoutchoosepos.addStretch()
-        btn=self.app.normal_button(layoutchoosepos,"Delete Position",self.entry_window_limits) 
+        btn=self.app.normal_button(layoutchoosepos,"Delete Position",self.delete_position) 
         btn.setFixedWidth(110)
 
         
@@ -474,9 +489,6 @@ class Stage:
 
 
 
-    def position_select_changed(self):
-        pass
-
     def live_mode(self):
         if not self.live_mode_running:
             self.live_mode_running=True
@@ -497,7 +509,13 @@ class Stage:
         self.w.show()
         
     def stage_actual(self):
-        self.xpos,self.ypos=self.get_position()
+        if self.live_mode_running:
+            self.timer.stop()
+            self.xpos,self.ypos=self.get_position()
+            self.timer.start(int(self.refresh_rate*1000))
+        else:
+            self.xpos,self.ypos=self.get_position()
+            
         self.widgety.setText(str(self.ypos))
         self.widgetx.setText(str(self.xpos))
         self.widgetx.setStyleSheet("background-color: lightGray;color: black")
@@ -511,24 +529,45 @@ class Stage:
         cond4=self.ypos < self.ylimit[1]
 
         if cond1*cond2*cond3*cond4:        
-            self.set_position(self.xpos,self.ypos)    
-            self.stage_actual()
-            print("arrived")
+                
+            if self.live_mode_running:
+                self.timer.stop()
+
+            self.set_position(self.xpos,self.ypos)
+            self.xpos,self.ypos=self.get_position()
+            self.widgety.setText(str(self.ypos))
+            self.widgetx.setText(str(self.xpos))
+            self.widgetx.setStyleSheet("background-color: lightGray;color: black")
+            self.widgety.setStyleSheet("background-color: lightGray;color: black")
+
+            if self.live_mode_running:
+                self.timer.start(int(self.refresh_rate*1000))
+
+            self.app.add_log("Moved to x=" + str(self.xpos) + " mm, y=" + str(self.ypos)+" mm" ) 
         else:
-            print("move aborted")
-            print("point outside stage limits")
+            self.app.add_log("point outside stage limits")
+            self.app.add_log("move aborted")
         
     def stage_update_x(self,s):
         if s:
-            self.xpos=np.double(s)
-            self.widgetx.setStyleSheet("background-color: lightGray;color: red")
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                self.xpos=np.double(s)
+                self.widgetx.setStyleSheet("background-color: lightGray;color: red")
 
     def stage_update_y(self,s):
         if s:
-            self.ypos=np.double(s)
-            self.widgety.setStyleSheet("background-color: lightGray;color: red")
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                self.ypos=np.double(s)
+                self.widgety.setStyleSheet("background-color: lightGray;color: red")
 
-    #def stage_home(self):
-    #    self.home_all()    
-    #    self.stage_actual()
-    #    print("stage homed")
+

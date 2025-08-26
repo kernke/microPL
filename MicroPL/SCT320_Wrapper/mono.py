@@ -166,8 +166,14 @@ class SCT320():
     # monochromator methods #############################################
     def wavelength_updated(self,s):
         if s:
-            self.wavelength=np.double(s)
-            self.widgetwave.setStyleSheet("background-color: lightGray;color: red")
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                self.wavelength=np.double(s)
+                self.widgetwave.setStyleSheet("background-color: lightGray;color: red")
     
     def wavelength_edited(self):
         self.set_wavelength(self.wavelength)

@@ -249,12 +249,14 @@ class Pixis():
             self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
+            self.app.add_log("spectral camera Live mode started")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            self.app.add_log("spectral camera Live mode stopped")
 
     def checkbox_full_saving(self,state):
         if state == 2:
@@ -267,14 +269,19 @@ class Pixis():
 
     def acqtime_spectral_edited(self,s):
         if s:
-            self.acqtime_spectral=np.double(s)
-            if self.live_mode_running and self.acqtime_spectral>0.0001:
-                if self.app.orca.live_mode_running and False:
-                    latency=self.live_mode_latency+self.app.orca.live_mode_latency+700
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                if np.double(s)>10:
+                    self.acqtime_spectral=10.
                 else:
-                    latency=self.live_mode_latency
-                self.timer.stop()
-                self.timer.start(int(self.acqtime_spectral*1000+latency))#+200
+                    self.acqtime_spectral=np.double(s)
+                    if self.live_mode_running and self.acqtime_spectral>0.001:
+                        self.timer.stop()
+                        self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
 
 
 
@@ -321,7 +328,8 @@ class Pixis():
         self.app.metadata_spectral["stage_y"]=yacq
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
         self.app.metadata_spectral["unsaved"]=True
-        self.app.add_log("spectral img acquired")
+        if not self.live_mode_running:
+            self.app.add_log("spectral img acquired")
         self.camera_handler =CameraHandler_spectral(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spectral)
         self.app.threadpool.start(self.camera_handler)
