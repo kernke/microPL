@@ -70,7 +70,7 @@ class Keysight:
         self.IV_end_voltage=10
         self.IV_start_voltage=0
         self.IV_step_voltage=0.25
-        self.IV_settling_time=0.2
+        self.IV_settling_time=0.05
 
         self.IV_curve_voltages=[0]
         self.IV_curve_currents=[0]
@@ -359,7 +359,7 @@ class Keysight:
         self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.acquire_IV)
         self.acqivbtn.setFixedWidth(110)
         layoutIV.addStretch()
-        ivresetbtn=self.app.normal_button(layoutIV,"Reset I-V-settings",self.maximize) ###############
+        ivresetbtn=self.app.normal_button(layoutIV,"Reset I-V-settings",self.reset_iv_settings)
         ivresetbtn.setFixedWidth(120)
         
         self.dropdown2.addLayout(layoutIV)
@@ -431,9 +431,20 @@ class Keysight:
                 IV_set_voltage=self.IV_start_voltage+i*self.IV_step_voltage
                 self.psu.write(f"SOUR:VOLT {IV_set_voltage}")
                 time.sleep(self.IV_settling_time)
-                self.IV_curve_currents.append(float(self.psu.query("MEAS:CURR?").strip()))        
-                self.IV_curve_voltages.append(float(self.psu.query("MEAS:VOLT?").strip()))
+                self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+                self.voltage_actual=float(self.psu.query("MEAS:VOLT?").strip())
+                self.timeline_time = time.time()-self.timeline_start
+                
+                self.IV_curve_currents.append(self.currentA_actual)        
+                self.IV_curve_voltages.append(self.voltage_actual)
+                
+                self.voltage_list.append(self.voltage_actual)
+                self.currentA_list.append(self.currentA_actual)
+
+                self.timeline_list.append(self.timeline_time)
+                
                 self.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+
             
             self.psu.write(f"SOUR:CURR {0}")
             self.psu.write(f"SOUR:VOLT {0}")
