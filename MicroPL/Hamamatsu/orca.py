@@ -214,7 +214,7 @@ class Orca():
 
         self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
-            crosshaired_img=np.copy(self.img_data)#cimg.T[:,::-1])
+            crosshaired_img=np.copy(self.img_data)
             if self.binning==1:
                 crosshaired_img[1021:1027,:]=imgmax
                 crosshaired_img[:,1021:1027]=imgmax
@@ -227,7 +227,7 @@ class Orca():
             self.img.setImage(crosshaired_img)
 
         else: 
-            self.img.setImage(self.img_data)#cimg.T[:,::-1])
+            self.img.setImage(self.img_data)
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 
@@ -235,9 +235,7 @@ class Orca():
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
-        #self.app.stage.timer.stop()
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
-        #self.app.stage.timer.start(int(self.app.stage.refresh_rate*1000))
         self.app.metadata_spatial["stage_x"]=xacq
         self.app.metadata_spatial["stage_y"]=yacq
         self.app.metadata_spatial["unsaved"]=True

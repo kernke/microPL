@@ -65,7 +65,7 @@ class WarnWindow(QWidget):
         self.move(x, y)
 
 class ButtonMask3(QWidget):
-    def __init__(self,app,optionslist,keyword):#device,roi):
+    def __init__(self,app,optionslist,keyword):
         super().__init__()
         self.app=app
         self.keyword=keyword
@@ -108,25 +108,27 @@ class ButtonMask3(QWidget):
         self.move(x, y)
 
     def button_a(self):
-        #self.app.buttons3_selected=0
         if self.keyword=="resolution":
             self.app.orca.binning=1  
+            self.app.orca.resbtn.setText("Resolution (2048)")
         self.close()
 
     def button_b(self):
         if self.keyword=="resolution":
             self.app.orca.binning=2  
+            self.app.orca.resbtn.setText("Resolution (1024)")
         self.close()
 
     def button_c(self):
         if self.keyword=="resolution":
             self.app.orca.binning=4  
+            self.app.orca.resbtn.setText("Resolution (512)")
         self.close()
 
 
 
 class EntryMask3(QWidget):
-    def __init__(self,app,keyword):#device,roi):
+    def __init__(self,app,keyword):
         super().__init__()
         self.app=app
         self.keyword=keyword
@@ -258,12 +260,12 @@ class EntryMask3(QWidget):
             self.app.stage.step_small_micron=self.a
             self.app.stage.step_medium_micron=self.b
             self.app.stage.step_large_micron=self.c
-        #self.app.temporary_3values=(self.a,self.b,self.c)            
+           
         self.close()
 
 
 class EntryMask4b(QWidget):
-    def __init__(self,app,keyword):#device,roi):
+    def __init__(self,app,keyword):
         super().__init__()
         self.app=app
         self.keyword=keyword
@@ -420,7 +422,7 @@ class EntryMask4b(QWidget):
 
 
 class EntryMask4(QWidget):
-    def __init__(self,check_bool,app):#device,roi):
+    def __init__(self,check_bool,app):
         super().__init__()
         self.device=app.stage
         self.roi=app.pixis.roi

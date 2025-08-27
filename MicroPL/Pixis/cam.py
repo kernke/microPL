@@ -79,10 +79,6 @@ class Pixis():
         img = self.cam.read_newest_image()
         self.cam.stop_acquisition()
         
-        
-        #pprint.pp(np.shape(img))
-        #if show:
-        #    pg.image(img)
         return img
         
     def chip_temp(self):
@@ -303,12 +299,11 @@ class Pixis():
             end=1024
         self.app.monochromator.spectrum_x_axis=self.app.monochromator.grating_wavelength(self.roi)
         
-        #self.app.monochromator.spectrum_x_axis
         x_axis_plot=self.app.monochromator.spectrum_x_axis[start:end]
         self.roi.curve.setData(x_axis_plot,spectrum_y_axis[start:end] )
         self.wavelength_min=x_axis_plot[0]
         self.wavelength_max=x_axis_plot[-1]
-        #self.roi.curve.setData(self.app.monochromator.spectrum_x_axis,spectrum_y_axis )
+
         self.max_at_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
         
     def entry_window_roi(self):
@@ -324,9 +319,7 @@ class Pixis():
         self.app.metadata_spectral["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         self.app.metadata_spectral["center_wavelength"]=self.app.monochromator.wavelength
-        #self.app.stage.timer.stop()
-        xacq,yacq=self.app.stage.xpos,self.app.stage.ypos#stage.get_position()
-        #self.app.stage.timer.start(int(self.app.stage.refresh_rate*1000))
+        xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
         self.app.metadata_spectral["stage_x"]=xacq
         self.app.metadata_spectral["stage_y"]=yacq
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
