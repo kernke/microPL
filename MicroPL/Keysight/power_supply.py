@@ -66,6 +66,15 @@ class Keysight:
         self.timeline_reset_pressed=False
         self.maximized=False
 
+        self.IV_settings_prepared=False
+        self.IV_end_voltage=10
+        self.IV_start_voltage=0
+        self.IV_step_voltage=0.25
+        self.IV_settling_time=0.2
+
+        self.IV_curve_voltages=[0]
+        self.IV_curve_currents=[0]
+
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
@@ -105,24 +114,6 @@ class Keysight:
         self.Vcurve.setData(self.timeline_list,self.voltage_list)
         self.p1.setXRange(0,self.timeline_time)
 
-
-    def measure_IV(self, voltage_step, max_voltage):
-        print("Starting measurement...")
-        self.on()
-
-        for v in np.arange(0, max_voltage + voltage_step, voltage_step):
-            self.set_voltage(v)
-
-            meas_v = self.measure_voltage()
-            meas_i = self.measure_current()
-
-            self.voltages_set.append(v)
-            self.voltages_measured.append(meas_v)
-            self.currents_measured.append(meas_i)
-
-            print(f"Set {v:>4.1f} V -> Measured: {meas_v:>6.3f} V, {meas_i*1000:>7.3f} mA")
-
-        self.off()
 
     def expand(self):
         if not self.expanded:
@@ -298,7 +289,7 @@ class Keysight:
         
 
         layoutsafe=QHBoxLayout()
-        btn=self.app.normal_button(layoutsafe,"Safety limits",self.maximize)
+        btn=self.app.normal_button(layoutsafe,"Safety limits",self.set_safety)
         btn.setFixedWidth(110)
         layoutsafe.addStretch()
         self.dropdown.addLayout(layoutsafe)
@@ -306,6 +297,14 @@ class Keysight:
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)
+
+    def set_safety(self):
+        self.window = self.app.entrymask3(self.app,"safety")#device,roi
+        self.window.setHeading("Set safety limits to the output of the electric power supply")
+        self.window.setLabels(["Voltage (V)","Current (mA)","Power (mW)"])
+        self.window.setDefaults([str(self.max_voltage),str(self.max_currentmA),str(self.max_powermW)])
+        self.window.location_on_the_screen()
+        self.window.show()
 
 
     def timeline_ui(self,layoutright):
@@ -335,7 +334,7 @@ class Keysight:
         btn=self.app.normal_button(layouttimeline,"Reset Timeline",self.reset_pressed)
         btn.setFixedWidth(110)
         layouttimeline.addStretch()
-        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.measure_IV) ################
+        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.maximize) ################
         btn.setFixedWidth(110)
         self.dropdown2.addLayout(layouttimeline)
 
@@ -357,11 +356,11 @@ class Keysight:
         self.dropdown2.addLayout(layoutIVor)
 
         layoutIV=QHBoxLayout()
-        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.maximize) ##############
+        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.acquire_IV)
         self.acqivbtn.setFixedWidth(110)
         layoutIV.addStretch()
-        savbtn=self.app.normal_button(layoutIV,"Save I-V-Curve",self.maximize) ###############
-        savbtn.setFixedWidth(110)
+        ivresetbtn=self.app.normal_button(layoutIV,"Reset I-V-settings",self.maximize) ###############
+        ivresetbtn.setFixedWidth(120)
         
         self.dropdown2.addLayout(layoutIV)
 
@@ -369,13 +368,10 @@ class Keysight:
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
+        savbtn=self.app.normal_button(layoutmax,"Save I-V-Curve",self.maximize) ###############
+        savbtn.setFixedWidth(110)
+
         self.dropdown2.addLayout(layoutmax)
-
-        #layoutread=QHBoxLayout()
-        #btn=self.app.normal_button(layoutread,"Measure",self.measure_electric)
-        #layoutread.addStretch()
-
-        #self.dropdown.addLayout(layoutread)
 
         layoutright.addLayout(self.dropdown2)
         self.app.set_layout_visible(self.dropdown2,False)
@@ -387,6 +383,72 @@ class Keysight:
         if self.connected:
             self.live_mode()
 
+    def reset_iv_settings(self):
+        self.acqivbtn.setStyleSheet("background-color:LightGray")
+        self.IV_settings_prepared=False                   
+
+    def acquire_IV(self):
+        if not self.IV_settings_prepared:
+            self.window = self.app.entrymask4b(self.app,"IVcurve")#device,roi
+            heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
+            heading_string+=" and measuring the corresponding current after a given settling time. "
+            heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
+            heading_string+="to start the measurement."
+            self.window.setHeading(heading_string)
+            self.window.setLabels(["Voltage-Start (V)","Voltage-End (V)","Voltage-Step (V)","Settling Time (s)"])
+            defaultlist=[str(self.IV_start_voltage),str(self.IV_end_voltage),str(self.IV_step_voltage)]
+            defaultlist.append(str(self.IV_settling_time))
+            self.window.setDefaults(defaultlist)
+            self.window.location_on_the_screen()
+            self.window.show()
+        else:
+            self.app.add_log("(wait) Acquiring I-V-Curve")
+            self.acqivbtn.setStyleSheet("background-color:LightGray")
+            self.IV_settings_prepared=False
+            
+            self.show_IV()
+
+            self.IV_curve_voltages=[]
+            self.IV_curve_currents=[]
+            if self.live_mode_running:
+                self.timer.stop()
+            if self.app.orca.live_mode_running:
+                self.app.orca.timer.stop()
+                self.app.orca.live_mode_running=False
+            if self.app.pixis.live_mode_running:
+                self.app.pixis.timer.stop()
+                self.app.pixis.live_mode_running=False
+            if self.app.stage.live_mode_running:
+                self.app.stage.timer.stop()
+
+            self.psu.write("OUTP OFF")
+            self.psu.write(f"SOUR:CURR {self.max_currentmA/1000}")
+            self.psu.write(f"SOUR:VOLT {0}")
+            self.psu.write("OUTP ON")
+
+            number_of_steps=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)
+            for i in range(number_of_steps):
+                IV_set_voltage=self.IV_start_voltage+i*self.IV_step_voltage
+                self.psu.write(f"SOUR:VOLT {IV_set_voltage}")
+                time.sleep(self.IV_settling_time)
+                self.IV_curve_currents.append(float(self.psu.query("MEAS:CURR?").strip()))        
+                self.IV_curve_voltages.append(float(self.psu.query("MEAS:VOLT?").strip()))
+                self.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+            
+            self.psu.write(f"SOUR:CURR {0}")
+            self.psu.write(f"SOUR:VOLT {0}")
+            self.psu.write("OUTP OFF")
+            
+            self.voltwidget.setText("0")
+            self.currentwidget.setText("0")
+
+            self.app.add_log("(continue) I-V-Curve finished")
+            if self.live_mode_running:
+                self.timer.start(int(self.refresh_rate)*1000)
+            if self.app.stage.live_mode_running:
+                self.app.stage.timer.start(int(self.app.stage.refresh_rate)*1000)
+
+                
     def reset_pressed(self):
         self.timeline_reset_pressed=True
 
@@ -423,8 +485,9 @@ class Keysight:
         self.pw2.setLabel('bottom', 'Voltage', units='V')
         self.pw2.setLabel('left', 'Current', units='A')
         #pw2vb = pg.ViewBox()
-        #pw2p1 = self.pw.plotItem
-        self.pw2.plot([1,2,4,8,16,32])
+        #pw2p1 = self.pw.
+        self.IVcurveplot=pg.PlotCurveItem(self.IV_curve_voltages,self.IV_curve_currents)
+        self.pw2.addItem(self.IVcurveplot)#plot([1,2,4,8,16,32])
         layout.addWidget(self.pw2)
         self.pw2.setHidden(True)
 

@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QThreadPool,QStringListModel 
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel,QScrollArea,QListView,QSpacerItem,QSizePolicy
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel
+from PyQt5.QtWidgets import QScrollArea,QListView,QSpacerItem,QSizePolicy
+from PyQt5.QtGui import QIcon 
+#import os
 
-from .Application.gui_utility import EntryMask4,EntryMask6,WarnWindow,normal_button,set_layout_visible,heading_label
+from .Application.gui_utility import ButtonMask3,EntryMask3,EntryMask4,EntryMask6,WarnWindow
+from .Application.gui_utility import EntryMask4b,normal_button,set_layout_visible,heading_label
+
 from .Application.saving import Saving
 from .Application.scripting import Scripting
 from .Pixis.cam import Pixis
@@ -21,6 +26,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MicroPL App")
+        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        #print(os.listdir())
         self.setStyleSheet("background-color: #1e1e1e;")
         self.move(0,0)
         self.resize(1920,980)
@@ -32,10 +39,14 @@ class MainWindow(QMainWindow):
         self.normal_button=normal_button
         self.set_layout_visible=set_layout_visible
         self.heading_label=heading_label
-        self.temporary_3values=None
+        #self.temporary_3values=None
+        #self.buttons3_selected=None
 
         self.warnwindow=WarnWindow
+        self.buttonmask3=ButtonMask3
+        self.entrymask3=EntryMask3
         self.entrymask4=EntryMask4
+        self.entrymask4b=EntryMask4b
         self.entrymask6=EntryMask6
         self.vspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
 

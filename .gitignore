@@ -7,5 +7,4 @@ dist/
 docs/_build
 *.egg-info/
 *.tif
-*.png
 *.dll

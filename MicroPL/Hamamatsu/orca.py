@@ -40,6 +40,7 @@ class Orca():
             self.app.add_log("Orca dummy mode")
 
         self.acqtime_spatial=0.2
+        self.binning=1
         self.crosshair=False
         self.live_mode_running=False
         self.live_mode_latency=300
@@ -109,8 +110,8 @@ class Orca():
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.maxbtn=self.app.normal_button(layoutmax,"Resolution (2048)",self.maximize)
-        self.maxbtn.setFixedWidth(110)
+        self.resbtn=self.app.normal_button(layoutmax,"Resolution (2048)",self.set_resolution)
+        self.resbtn.setFixedWidth(110)
 
 
         self.dropdown.addLayout(layoutmax)
@@ -121,6 +122,12 @@ class Orca():
 
         layoutright.addItem(self.app.vspace)
 
+
+    def set_resolution(self):
+        self.window = self.app.buttonmask3(self.app,["2048x2048","1024x1024","512x512"],"resolution")#device,roi
+        self.window.setHeading("Set the resolution of the saved image from the Orca spatial camera")
+        self.window.location_on_the_screen()
+        self.window.show()
 
     def spatial_camera_show(self,layoutleft):
 
@@ -195,19 +202,32 @@ class Orca():
 
 
     def image_from_thread_spatial(self,cimg):
-        self.img_data=cimg.T[:,::-1]
+        if self.binning==1:
+            self.img_data=cimg.T[:,::-1]
+        elif self.binning==2:
+            self.img_data=np.reshape(cimg.T[:,::-1],(1024,2,1024,2)).mean(-1).mean(1)
+        else:
+            self.img_data=np.reshape(cimg.T[:,::-1],(512,4,512,4)).mean(-1).mean(1)
+
         imgmax=np.max(cimg)
         imgmean=np.mean(cimg)
 
         self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
-            crosshaired_img=np.copy(cimg.T[:,::-1])
-            crosshaired_img[1021:1027,:]=imgmax
-            crosshaired_img[:,1021:1027]=imgmax
+            crosshaired_img=np.copy(self.img_data)#cimg.T[:,::-1])
+            if self.binning==1:
+                crosshaired_img[1021:1027,:]=imgmax
+                crosshaired_img[:,1021:1027]=imgmax
+            elif self.binning==2:
+                crosshaired_img[510:514,:]=imgmax
+                crosshaired_img[:,510:514]=imgmax
+            else:
+                crosshaired_img[255:257,:]=imgmax
+                crosshaired_img[:,255:257]=imgmax
             self.img.setImage(crosshaired_img)
 
         else: 
-            self.img.setImage(cimg.T[:,::-1])
+            self.img.setImage(self.img_data)#cimg.T[:,::-1])
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 

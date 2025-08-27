@@ -97,11 +97,13 @@ class Stage:
 
         self.xlimit=[0.,50.] # mm
         self.ylimit=[0.,50.] # mm 
-        self.step_size=0.05 # mm
         
         self.step_small_micron=10
         self.step_medium_micron=50
         self.step_large_micron=150
+
+        self.step_size=self.step_medium_micron/1000 # mm
+        
 
         self.cam_size=0.2
 
@@ -319,7 +321,7 @@ class Stage:
         self.btn_step.move(xshift-bsize+10, int(3.5*bsize))  # position inside plot area
         self.btn_step.setStyleSheet("background-color: lightGray")#;font-size: 18pt")
         self.btn_step.setFixedWidth(70)
-
+        self.btn_step.clicked.connect(self.set_step_size)
 
         self.btn_small = QPushButton("small", self.plot)
         self.btn_small.move(xshift-bsize+10, int(4.75*bsize))  # position inside plot area
@@ -340,6 +342,14 @@ class Stage:
         self.btn_large.clicked.connect(self.clicked_large)
 
         layout.addWidget(self.plot,2)
+
+    def set_step_size(self):
+        self.window = self.app.entrymask3(self.app,"step_size")#device,roi
+        self.window.setHeading("Set step widths of the navigation tool")
+        self.window.setLabels(["small (\u03BCm)","medium (\u03BCm)","large (\u03BCm)"])
+        self.window.setDefaults([str(self.step_small_micron),str(self.step_medium_micron),str(self.step_large_micron)])
+        self.window.location_on_the_screen()
+        self.window.show()
 
     def clicked_small(self):
         self.step_size=self.step_small_micron/1000
@@ -386,17 +396,24 @@ class Stage:
             self.position_name=s
 
     def save_position(self):
-        self.saved_positions[self.position_name]=(self.xpos,self.ypos)
-        self.combolist.append(self.position_name)
-        self.combowidget.addItem(self.position_name)
-        
-        self.textitems.append( pg.TextItem(self.position_name,color="white"))
-        self.textitems[-1].setPos(self.xpos, self.ypos)
-        self.plot.addItem(self.textitems[-1])
+        if self.position_name in self.saved_positions:
+            self.app.add_log("Name already taken")
+        else:   
+            self.saved_positions[self.position_name]=(self.xpos,self.ypos)
+            self.combolist.append(self.position_name)
+            self.combowidget.addItem(self.position_name)
+            
+            self.textitems.append( pg.TextItem(self.position_name,color="white"))
+            self.textitems[-1].setPos(self.xpos, self.ypos)
+            self.plot.addItem(self.textitems[-1])
 
-        self.symbolitems.append(pg.ScatterPlotItem([self.xpos],[self.ypos], pen="#ef0f2d",symbol='x'))
-        self.symbolitems[-1].setSize(12)
-        self.plot.addItem(self.symbolitems[-1])
+            self.symbolitems.append(pg.ScatterPlotItem([self.xpos],[self.ypos], pen="#ef0f2d",symbol='x'))
+            self.symbolitems[-1].setSize(12)
+            self.plot.addItem(self.symbolitems[-1])
+
+            self.position_name="Position "+str(len(self.combolist))
+            self.widgetsavpos.setText(self.position_name)
+
 
     def delete_position(self):
         if self.script_selected>0:
@@ -485,7 +502,7 @@ class Stage:
         self.widgetsavpos.setStyleSheet("background-color: lightGray")
         self.widgetsavpos.setMaxLength(15)
         self.widgetsavpos.setFixedWidth(160)
-        self.position_name="Position 1"
+        self.position_name="Position "+str(len(self.combolist))
         self.widgetsavpos.setText(self.position_name)
         self.widgetsavpos.textEdited.connect(self.position_name_edited)
         layoutsavpos.addWidget(self.widgetsavpos)
@@ -523,7 +540,8 @@ class Stage:
         btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)  
         btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
-        btn=self.app.normal_button(layoutstagebuttons2,"Calibrate Spatial Cam",self.entry_window_limits)  
+        btn=self.app.normal_button(layoutstagebuttons2,"Calibrate Spatial Cam",self.calibrate_spatial_cam)  
+        btn.setStyleSheet("background-color: dimgrey")
         btn.setFixedWidth(130)
 
         #self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
@@ -536,6 +554,8 @@ class Stage:
 
         layoutright.addItem(self.app.vspace)
 
+    def calibrate_spatial_cam(self):
+        pass
 
 
     def live_mode(self):

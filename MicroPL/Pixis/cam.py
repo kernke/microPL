@@ -223,6 +223,9 @@ class Pixis():
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
+        self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temperature",self.chip_temp)
+        self.ctempbtn.setFixedWidth(110)
+
         self.dropdown.addLayout(layoutmax)
 
         layoutright.addLayout(self.dropdown)
