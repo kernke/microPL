@@ -113,6 +113,7 @@ class ButtonMask3(QWidget):
             self.app.orca.resbtn.setText("Resolution (2048)")
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Normal)")
+            self.app.pixis.shutter_value="Normal"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
         self.close()
 
@@ -122,6 +123,7 @@ class ButtonMask3(QWidget):
             self.app.orca.resbtn.setText("Resolution (1024)")
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Open)")
+            self.app.pixis.shutter_value="Always Open"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
         self.close()
 
@@ -131,6 +133,7 @@ class ButtonMask3(QWidget):
             self.app.orca.resbtn.setText("Resolution (512)")
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Closed)")
+            self.app.pixis.shutter_value="Always Closed"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Closed')
 
         self.close()

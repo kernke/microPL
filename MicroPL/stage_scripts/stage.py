@@ -31,6 +31,49 @@ class Status_update(QRunnable):
         self.signals.string_update.emit((stage_status_string,x,y))
  
 
+class Homing(QRunnable):
+    def __init__(self, stageclass):
+        super().__init__()
+        self.stageclass = stageclass
+        self.signals=Update_Signal()
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+
+        error = self.stageclass.m_Tango.LSX_Calibrate(self.LSID)
+        if error > 0:
+            print("Error: Calibrate " + str(error))
+        else:
+            print("Info: Calibration done")
+        # range measure for X axis
+        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.LSID, 1)
+        if error > 0:
+            print("Error: Range measure " + str(error))
+        else:
+            print("Info: Range measure for X done")
+
+        # range measure for Y axis
+        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.LSID, 2)
+        if error > 0:
+            print("Error: Range measure " + str(error))
+        else:
+            print("Info: Range measure for Y done")
+            
+        # move center
+        inp = c_char_p("!moc\r".encode("utf-8"))
+        resp = create_string_buffer(256)
+        error = self.stageclass.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
+        if error > 0:
+            print("Error: SendString " + str(error))
+        else:
+            print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
+
+        x,y =self.stageclass.stage.get_position()
+        stage_status_string="Stage X: "+str(x)+ " mm\n"
+        stage_status_string+="Stage Y: "+str(y)+ " mm"
+
+        self.signals.string_update.emit((stage_status_string,x,y))
+
 
 class Stage:
     def __init__(self,app):
@@ -162,25 +205,6 @@ class Stage:
         self.m_Tango.LSX_Disconnect(self.LSID)
         print("Tango disconnected")
     
-    def version_DLL(self):
-        
-        resp = create_string_buffer(256)
-        error = self.m_Tango.LSX_GetDLLVersionString(self.LSID, resp, 256)
-        if error > 0:
-            print("Error: DLLVersionString " + str(error))
-        else:
-            print("Dll version: " + str(resp.value.decode("ascii")))
-
-    def version(self):           
-        
-        inp = c_char_p("?version\r".encode("utf-8"))
-        resp = create_string_buffer(256)
-        error = self.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
-        if error > 0:
-            print("Error: SendString " + str(error))
-        else:
-            print('Info: Version ' + str(resp.value.decode("ascii")))
-
 
     def get_position(self):
         dx = c_double() 
@@ -214,41 +238,19 @@ class Stage:
         #else:
         #    print("Moved to " + str(X) + "," + str(Y) ) 
     
-    def home_all(self):
+    def home_stage(self):
         self.app.add_log("Starting Homing Procedure ...")
-        QApplication.processEvents()
-        error = self.m_Tango.LSX_Calibrate(self.LSID)
-        if error > 0:
-            print("Error: Calibrate " + str(error))
-        else:
-            print("Info: Calibration done")
-        # range measure for X axis
-        error = self.m_Tango.LSX_RMeasureEx(self.LSID, 1)
-        if error > 0:
-            print("Error: Range measure " + str(error))
-        else:
-            print("Info: Range measure for X done")
+        if self.live_mode_running:
+            self.timer.stop()
+        self.homeworker=Homing(self)
+        self.homeworker.signals.string_update.connect(self.home_stage_done)
+        self.app.threadpool.start(self.homeworker)
 
-        # range measure for Y axis
-        error = self.m_Tango.LSX_RMeasureEx(self.LSID, 2)
-        if error > 0:
-            print("Error: Range measure " + str(error))
-        else:
-            print("Info: Range measure for Y done")
-            
-        # move center
-        inp = c_char_p("!moc\r".encode("utf-8"))
-        resp = create_string_buffer(256)
-        error = self.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
-        if error > 0:
-            print("Error: SendString " + str(error))
-        else:
-            print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
-
-        self.stage_actual()
+    def home_stage_done(self,string_x_y_tuple):
+        if self.live_mode_running:
+            self.timer.start(int(self.refresh_rate*1000))
         self.app.add_log("Finished Homing Procedure")
-
-        #print("stage homed")
+        self.status_update_from_thread(string_x_y_tuple)
 
     def expand(self):
         if not self.expanded:
@@ -258,14 +260,6 @@ class Stage:
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
-    #def refreshrate_edited(self,s):
-    #    if s:
-    #        if self.live_mode_running:
-    #            self.refresh_rate=np.double(s)
-    #            self.timer.stop()
-    #            self.timer.start(int(1000*self.refresh_rate))
-    #        else:
-    #            self.refresh_rate=np.double(s)
 
     def navigation_graphics_show(self,layout):
         self.plot = pg.PlotWidget()
@@ -441,17 +435,11 @@ class Stage:
             x,y=self.saved_positions[self.combolist[self.script_selected]]
             self.widgetx.setText(str(x))
             self.stage_update_x(x)
-            #self.widgetx.setStyleSheet("background-color: lightGray;color: red")
             self.widgety.setText(str(y))
             self.stage_update_y(y)
-            
-            #self.widgety.setStyleSheet("background-color: lightGray;color: red")
-            #self.xpo
 
 
-
-
-    def stage_ui(self,layoutright):
+    def stage_ui(self,layoutright):################################################################################
         self.refresh_rate=1.
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
@@ -505,7 +493,7 @@ class Stage:
 
         layoutstagebuttons.addStretch()
 
-        self.app.normal_button(layoutstagebuttons,"Home",self.home_all)
+        self.app.normal_button(layoutstagebuttons,"Home",self.home_stage)
 
         self.dropdown.addLayout(layoutstagebuttons)
 
@@ -662,3 +650,71 @@ class Stage:
                 self.widgety.setStyleSheet("background-color: lightGray;color: red")
 
 
+    #def refreshrate_edited(self,s):
+    #    if s:
+    #        if self.live_mode_running:
+    #            self.refresh_rate=np.double(s)
+    #            self.timer.stop()
+    #            self.timer.start(int(1000*self.refresh_rate))
+    #        else:
+    #            self.refresh_rate=np.double(s)
+
+"""
+
+    def version_DLL(self):
+        
+        resp = create_string_buffer(256)
+        error = self.m_Tango.LSX_GetDLLVersionString(self.LSID, resp, 256)
+        if error > 0:
+            print("Error: DLLVersionString " + str(error))
+        else:
+            print("Dll version: " + str(resp.value.decode("ascii")))
+
+    def version(self):           
+        
+        inp = c_char_p("?version\r".encode("utf-8"))
+        resp = create_string_buffer(256)
+        error = self.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
+        if error > 0:
+            print("Error: SendString " + str(error))
+        else:
+            print('Info: Version ' + str(resp.value.decode("ascii")))
+
+
+    def home_all(self):
+        self.app.add_log("Starting Homing Procedure ...")
+        QApplication.processEvents()
+        error = self.m_Tango.LSX_Calibrate(self.LSID)
+        if error > 0:
+            print("Error: Calibrate " + str(error))
+        else:
+            print("Info: Calibration done")
+        # range measure for X axis
+        error = self.m_Tango.LSX_RMeasureEx(self.LSID, 1)
+        if error > 0:
+            print("Error: Range measure " + str(error))
+        else:
+            print("Info: Range measure for X done")
+
+        # range measure for Y axis
+        error = self.m_Tango.LSX_RMeasureEx(self.LSID, 2)
+        if error > 0:
+            print("Error: Range measure " + str(error))
+        else:
+            print("Info: Range measure for Y done")
+            
+        # move center
+        inp = c_char_p("!moc\r".encode("utf-8"))
+        resp = create_string_buffer(256)
+        error = self.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
+        if error > 0:
+            print("Error: SendString " + str(error))
+        else:
+            print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
+
+        self.stage_actual()
+        self.app.add_log("Finished Homing Procedure")
+
+        #print("stage homed")
+
+"""

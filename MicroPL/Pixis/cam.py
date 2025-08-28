@@ -54,6 +54,8 @@ class Pixis():
         self.save_full_image=True
         self.live_mode_running=False
         self.maximized=False
+        self.shutter_value="Normal"
+        self.live_mode_just_stopped=False
         #pprint.pp(dir(cam))
 
         #def pixelfmt():
@@ -266,6 +268,7 @@ class Pixis():
 
     def live_mode(self):
         if not self.live_mode_running:
+            self.remember_shutter=self.shutter_value
             self.live_mode_running=True
             self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
@@ -277,14 +280,11 @@ class Pixis():
         else:
 
             self.live_mode_running=False
+            self.live_mode_just_stopped=True
             self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
-            self.shutterbtn.setText("Shutter (Normal)")
- 
-            self.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
-            self.app.add_log("Spectral camera shutter returned to 'normal'")
-            self.app.add_log("spectral camera Live mode stopped")
+
 
     def checkbox_full_saving(self,state):
         if state == 2:
@@ -368,6 +368,18 @@ class Pixis():
         statustext="Spectral Max: "+str(int(imgmax))+"\n"
         
         self.updateRoi()
+
+        if self.live_mode_just_stopped:
+            if self.remember_shutter=="Normal":
+                self.shutterbtn.setText("Shutter (Normal)")
+            elif self.remember_shutter=="Always Open":
+                self.shutterbtn.setText("Shutter (Open)")
+            elif self.remember_shutter=="Always Closed":
+                self.shutterbtn.setText("Shutter (Closed)")
+
+            self.cam.set_attribute_value("Shutter Timing Mode", self.remember_shutter)
+            self.app.add_log("Spectral camera shutter returned to "+self.remember_shutter)
+            self.app.add_log("spectral camera Live mode stopped")
 
         statustext+="ROI Max at: "+str(np.round(self.max_at_wavelength,2))
         self.app.status_pixis.setText(statustext+" nm")
