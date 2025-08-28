@@ -1,8 +1,8 @@
 import pylablib as pll
 from pylablib.devices import PrincetonInstruments
 import pyqtgraph as pg
-import pprint
 import numpy as np
+import time
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QCheckBox,QVBoxLayout
@@ -29,12 +29,6 @@ class CameraHandler_spectral(QRunnable):
         self.signals.camsignal.emit(cimg)
 
 
-#shutter_timing = cam.get_attribute_value("Shutter Timing Mode")
-#pprint.pp("Shutter timing: " + str(shutter_timing))
-#attr = cam._list_attributes()
-#pprint.pp(attr)
-#cam.setup_shutter("open")
-
 class Pixis():
     def __init__(self,app):
         self.app=app
@@ -48,6 +42,7 @@ class Pixis():
 
             self.connected=True
             self.app.add_log("Pixis connected")
+
         except:
             self.connected=False
             print("pixis dummy mode")
@@ -83,9 +78,9 @@ class Pixis():
         
     def chip_temp(self):
         temp = self.cam.get_attribute_value("Sensor Temperature Reading")
-        pprint.pp("Sensor Temperature: " + str(temp))
+        self.app.add_log("Sensor Temperature: " + str(temp))
         temp_status = self.cam.get_attribute_value("Sensor Temperature Status")
-        pprint.pp("Temperature status: " + str(temp_status))
+        self.app.add_log("Temperature status: " + str(temp_status))
 
 
 
@@ -94,7 +89,10 @@ class Pixis():
         if self.live_mode_running:
             self.live_mode_running=False
             self.timer.stop()
+        
+        self.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
         self.cam.close()
+
         print("Camera disconnected")
         
 
@@ -215,11 +213,23 @@ class Pixis():
 
         self.dropdown.addLayout(layoutacqbutton)
 
+        layoutauto=QHBoxLayout()
+        self.autobtn=self.app.normal_button(layoutauto,"Auto Exposure",self.maximize)
+        self.autobtn.setFixedWidth(110)
+        layoutauto.addStretch()
+        self.shutterbtn=self.app.normal_button(layoutauto,"Shutter (Normal)",self.shutter_setting)
+        self.shutterbtn.setFixedWidth(120)
+
+        self.dropdown.addLayout(layoutauto)
+
+        layoutright.addLayout(self.dropdown)
+
+
         layoutmax=QHBoxLayout()
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temperature",self.chip_temp)
+        self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temp. (Logging)",self.chip_temp)
         self.ctempbtn.setFixedWidth(120)
 
         self.dropdown.addLayout(layoutmax)
@@ -229,6 +239,14 @@ class Pixis():
         
         layoutright.addItem(self.app.vspace)
 
+
+    def shutter_setting(self):
+        self.window = self.app.buttonmask3(self.app,["Normal","Open","Closed"],"shutter")#device,roi
+        heading_string="Set the mechanical shutter of the spectrometer/camera. "
+        heading_string+="(Normal: opens and closes the shutter on acquisition)"
+        self.window.setHeading(heading_string)
+        self.window.location_on_the_screen()
+        self.window.show()
 
     def maximize(self):
         if self.maximized:
@@ -247,7 +265,10 @@ class Pixis():
             self.live_mode_running=True
             self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
+            self.shutterbtn.setText("Shutter (Open)")
+            self.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
             self.btnlive.setStyleSheet("background-color: green;color: black")
+            self.app.add_log("Spectral camera shutter opened permanently")
             self.app.add_log("spectral camera Live mode started")
         else:
 
@@ -255,6 +276,10 @@ class Pixis():
             self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            self.shutterbtn.setText("Shutter (Normal)")
+ 
+            self.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
+            self.app.add_log("Spectral camera shutter returned to 'normal'")
             self.app.add_log("spectral camera Live mode stopped")
 
     def checkbox_full_saving(self,state):

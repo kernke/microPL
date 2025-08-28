@@ -111,18 +111,28 @@ class ButtonMask3(QWidget):
         if self.keyword=="resolution":
             self.app.orca.binning=1  
             self.app.orca.resbtn.setText("Resolution (2048)")
+        elif self.keyword=="shutter":
+            self.app.pixis.shutterbtn.setText("Shutter (Normal)")
+            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
         self.close()
 
     def button_b(self):
         if self.keyword=="resolution":
             self.app.orca.binning=2  
             self.app.orca.resbtn.setText("Resolution (1024)")
+        elif self.keyword=="shutter":
+            self.app.pixis.shutterbtn.setText("Shutter (Open)")
+            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
         self.close()
 
     def button_c(self):
         if self.keyword=="resolution":
             self.app.orca.binning=4  
             self.app.orca.resbtn.setText("Resolution (512)")
+        elif self.keyword=="shutter":
+            self.app.pixis.shutterbtn.setText("Shutter (Closed)")
+            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Closed')
+
         self.close()
 
 

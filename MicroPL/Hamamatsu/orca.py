@@ -28,12 +28,15 @@ class CameraHandler_spatial(QRunnable):
 class Orca():
     def __init__(self,app):
         self.app=app
+        self.acqtime_spatial=0.2
         try:
             self.cam = DCAM.DCAMCamera(idx=0)
             self.cam.setup_acquisition(mode="snap")
             print("orca connected")
             self.app.add_log("Orca connected")
             self.connected=True
+            self.cam.set_exposure(self.acqtime_spatial)
+            #self.cam.start_acquisition()
         except:
             self.connected=False
             print("orca dummy mode")
@@ -48,7 +51,7 @@ class Orca():
         
 
     def acquire(self,exposure_time):
-        self.cam.set_exposure(exposure_time)
+        #self.cam.set_exposure(exposure_time)
         self.cam.start_acquisition()
         self.cam.wait_for_frame()
         image = self.cam.read_newest_image()
@@ -59,6 +62,7 @@ class Orca():
         if self.live_mode_running:
             self.live_mode_running=False
             self.timer.stop()
+        #self.cam.stop_acquisition()
         self.cam.close()
         print("orca disconnected")
 
@@ -259,8 +263,11 @@ class Orca():
                     self.acqtime_spatial=np.double(s)
                     if self.live_mode_running and self.acqtime_spatial>0.001: #
                         self.timer.stop()
+                        self.cam.set_exposure(self.acqtime_spatial)
                         self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
-
+                    else:
+                        self.cam.set_exposure(self.acqtime_spatial)
+                        
     def live_mode(self):
         if not self.live_mode_running:
             self.app.add_log("spatial camera Live mode started")
