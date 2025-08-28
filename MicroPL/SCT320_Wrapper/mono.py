@@ -18,7 +18,7 @@ from msl.equipment import (
 
 class Finish_Signal(QObject):
 
-    bool_update = pyqtSignal(object)   
+    grating_update = pyqtSignal(object)   
 
 class Grating_changer(QRunnable):
 
@@ -31,12 +31,13 @@ class Grating_changer(QRunnable):
     @pyqtSlot()
     def run(self): # A slot takes no params
         self.mono.set_mono_grating(self.pos)
+        grating_pos=self.mono.get_mono_grating()
         #voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
         #statusstring="Voltage: "+str(np.round(voltage_actual,3))+" V\n"
         #currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
         #statusstring+="Current: "+str(np.round(currentA_actual*1000,2))+" mA"
 
-        #self.signals.bool_update.emit(True)
+        self.signals.grating_update.emit(grating_pos)
  
 
 
@@ -61,8 +62,8 @@ class SCT320():
             print("mono connected")
             self.app.add_log("SCT320 connected")
             self.connected=True
-            self.wavelength=self.get_wavelength()
-            self.grating_pos=self.get_grating()[0]
+            self.wavelength=np.round(self.mono.get_mono_wavelength_nm(),2)
+            self.grating_pos=self.mono.get_mono_grating()#[0]
             self.grating_idx,self.densities,self.blazes=self.gratings()
 
         except:
@@ -107,44 +108,26 @@ class SCT320():
             #print('Grating: {}, Density: {}, Blaze: {}'.format(index, density, blaze))
         return indices,densities,blazes
             
-    def get_wavelength(self):
+    #def get_wavelength(self):
         # Wavelength information (centerwavelength)
-        nm = self.mono.get_mono_wavelength_nm()
-        min_nm = self.mono.get_mono_wavelength_min_nm()
-        cutoff_nm = self.mono.get_mono_wavelength_cutoff_nm()
-        print('Wavelength at {} nm (Min: {} nm, Max: {} nm)'.format(nm, min_nm, cutoff_nm))
-        return nm
+    #    nm = self.mono.get_mono_wavelength_nm()
+        #min_nm = self.mono.get_mono_wavelength_min_nm()
+        #cutoff_nm = self.mono.get_mono_wavelength_cutoff_nm()
+        #print('Wavelength at {} nm (Min: {} nm, Max: {} nm)'.format(nm, min_nm, cutoff_nm))
+    #    return nm
 
-    def set_wavelength(self, WL):
+    #def set_wavelength(self, WL):
+    #    #print('Setting the wavelength to '+ str(WL) +'nm...')
+    #    self.mono.set_mono_wavelength_nm(WL)
+        #print('  Wavelength at {} nm'.format(self.mono.get_mono_wavelength_nm()))
 
-        print('Setting the wavelength to '+ str(WL) +'nm...')
-        self.mono.set_mono_wavelength_nm(WL)
-        print('  Wavelength at {} nm'.format(self.mono.get_mono_wavelength_nm()))
-
-    def grating_changed(self):
-        self.app.add_log("grating changed")
-
-    def set_grating(self,G):
-    # Set the grating to position G
-        print('Setting the Grating to position'+ str(G) +'...')
-        self.grating_changer =Grating_changer(self,G) 
-        self.grating_changer.signals.camsignal.connect(self.grating_changed)
-        self.app.threadpool.start(self.grating_changer)
-
-
-        #self.mono.set_mono_grating(G)
-        #index = self.mono.get_mono_grating()
-        #density = self.mono.get_mono_grating_density(index)
-        #blaze = self.mono.get_mono_grating_blaze(index)
-        #print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
+    def grating_changed(self,grating_pos):
+        self.grating_pos=grating_pos    
+        self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
+        self.grating_actual=self.grating_list[int(self.grating_pos-1)]
+        self.app.add_log(self.grating_actual)
+        self.app.add_log("(continue) changed to grating:")
         
-    def get_grating(self):
-        index = self.mono.get_mono_grating()
-        print('Grating: ' + str(index) + '.' )
-        density = self.mono.get_mono_grating_density(index)
-        blaze = self.mono.get_mono_grating_blaze(index)
-        print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
-        return index,density,blaze
 
     def expand(self):
         if not self.expanded:
@@ -182,7 +165,7 @@ class SCT320():
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.setCurrentIndex(int(self.grating_pos-1))
-        widget.currentIndexChanged.connect(self.grating_changed )
+        widget.currentIndexChanged.connect(self.grating_changing )
         layoutgrating.addWidget(widget)
 
         
@@ -210,24 +193,21 @@ class SCT320():
                 self.widgetwave.setStyleSheet("background-color: lightGray;color: red")
     
     def wavelength_edited(self):
-        self.set_wavelength(self.wavelength)
-        #check for rounding
-        self.wavelength=np.round(self.get_wavelength(),2)
+        self.mono.set_mono_wavelength_nm(self.wavelength)
+        #check for parallelization
+        self.wavelength=np.round(self.mono.get_mono_wavelength_nm(),2)
         self.spectrum_x_axis=self.grating_wavelength(self.app.pixis.roi)
         self.widgetwave.setText(str(self.wavelength))
         self.widgetwave.setStyleSheet("background-color: lightGray;color: black")
         self.app.add_log("wavelength at "+str(self.wavelength)+" nm")
 
-    def grating_changed(self, i): # i is an int
-        self.app.add_log("(wait) start grating change ...")
-        QApplication.processEvents()
+    def grating_changing(self, i): # i is an int
+        self.app.add_log("start grating change ...")
+        self.app.add_log("(wait ~ 40 seconds)")
 
-        self.set_grating(int(i+1))
-        self.grating_pos=self.get_grating()[0]    
-        self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
-        self.grating_actual=self.grating_list[int(self.grating_pos-1)]
-        self.app.add_log(self.grating_actual)
-        self.app.add_log("(continue) changed to grating:")#+str(self.grating_actual))
+        self.grating_changer =Grating_changer(self.mono,int(i+1)) 
+        self.grating_changer.signals.grating_update.connect(self.grating_changed)
+        self.app.threadpool.start(self.grating_changer)
 
 
 

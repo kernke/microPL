@@ -131,6 +131,7 @@ class Pixis():
 
         hist.setBackground(None)
         hist.setLevelMode(mode="mono")
+        hist.gradient.loadPreset("greyclip")
         layout.addWidget(hist, 0, 1)
         hist.setImageItem(self.img)
 
@@ -214,7 +215,7 @@ class Pixis():
         self.dropdown.addLayout(layoutacqbutton)
 
         layoutauto=QHBoxLayout()
-        self.autobtn=self.app.normal_button(layoutauto,"Auto Exposure",self.maximize)
+        self.autobtn=self.app.normal_button(layoutauto,"Auto Exposure",self.auto_exposure)
         self.autobtn.setFixedWidth(110)
         layoutauto.addStretch()
         self.shutterbtn=self.app.normal_button(layoutauto,"Shutter (Normal)",self.shutter_setting)
@@ -238,6 +239,9 @@ class Pixis():
         self.app.set_layout_visible(self.dropdown,False)
         
         layoutright.addItem(self.app.vspace)
+
+    def auto_exposure(self):
+        pass
 
 
     def shutter_setting(self):

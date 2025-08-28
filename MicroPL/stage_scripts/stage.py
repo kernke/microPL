@@ -37,42 +37,48 @@ class Stage:
         self.app=app
         try:
             self.m_Tango = cdll.LoadLibrary(r"C:\Users\user\Documents\Python\MicroPL\MicroPL\stage_scripts\Tango_DLL.dll")  # give location of dll (current directory)
+            testing=False
+            if testing:
+                if self.m_Tango == 0:
+                    print("Error: failed to load DLL")
+                    sys.exit(0)
 
-            if self.m_Tango == 0:
-                print("Error: failed to load DLL")
-                sys.exit(0)
+                # Tango_DLL.dll loaded successfully
 
-            # Tango_DLL.dll loaded successfully
+                if self.m_Tango.LSX_CreateLSID == 0:
+                    print("unexpected error. required DLL function CreateLSID() missing")
+                    sys.exit(0)
+                
+                # continue only if required function exists
 
-            if self.m_Tango.LSX_CreateLSID == 0:
-                print("unexpected error. required DLL function CreateLSID() missing")
-                sys.exit(0)
-            
-            # continue only if required function exists
+                self.LSID = c_int()
+                error = int  # value is either DLL or Tango error number if not zero
+                error = self.m_Tango.LSX_CreateLSID(byref(self.LSID))
+                if error > 0:
+                    print("Error: " + str(error))
+                    sys.exit(0)
 
-            self.LSID = c_int()
-            error = int  # value is either DLL or Tango error number if not zero
-            error = self.m_Tango.LSX_CreateLSID(byref(self.LSID))
-            if error > 0:
-                print("Error: " + str(error))
-                sys.exit(0)
+                # OK: got communication ID from DLL (usually 1. may vary with multiple connections)
+                # keep this LSID in mind during the whole session
 
-            # OK: got communication ID from DLL (usually 1. may vary with multiple connections)
-            # keep this LSID in mind during the whole session
+                if self.m_Tango.LSX_ConnectSimple == 0:
+                    print("unexepcted error. required DLL function ConnectSimple() missing")
+                    sys.exit(0)
+                # continue only if required function exists
 
-            if self.m_Tango.LSX_ConnectSimple == 0:
-                print("unexepcted error. required DLL function ConnectSimple() missing")
-                sys.exit(0)
-            # continue only if required function exists
+                # set your COM Port accordingly, in this example we use COM5
+                # comPort = c_char_p("COM5".encode("utf-8"))
+                # error = m_Tango.LSX_ConnectSimple(LSID,2,comPort,57600,0)
+                # following combination of -1,"" works only for USB and PCI-E but not for RS232 connections 
+                error = self.m_Tango.LSX_ConnectSimple(self.LSID, -1, "", 57600, 0)
+                if error > 0:
+                    print("Error: LSX_ConnectSimple " + str(error))
+                    sys.exit(0)
+            else:
+                self.LSID = c_int()
+                error = self.m_Tango.LSX_CreateLSID(byref(self.LSID))
+                error = self.m_Tango.LSX_ConnectSimple(self.LSID, -1, "", 57600, 0)
 
-            # set your COM Port accordingly, in this example we use COM5
-            # comPort = c_char_p("COM5".encode("utf-8"))
-            # error = m_Tango.LSX_ConnectSimple(LSID,2,comPort,57600,0)
-            # following combination of -1,"" works only for USB and PCI-E but not for RS232 connections 
-            error = self.m_Tango.LSX_ConnectSimple(self.LSID, -1, "", 57600, 0)
-            if error > 0:
-                print("Error: LSX_ConnectSimple " + str(error))
-                sys.exit(0)
 
             print("TANGO is now successfully connected to DLL")
             self.app.add_log("Tango connected")
@@ -89,6 +95,10 @@ class Stage:
 
         self.xlast=np.copy(self.xpos)
         self.ylast=np.copy(self.ypos)
+
+        self.xpos_set=np.copy(self.xpos)
+        self.ypos_set=np.copy(self.ypos)
+
 
         self.saved_positions=dict() 
         self.combolist=["choose position"]   
@@ -201,8 +211,8 @@ class Stage:
         
         if error > 0:
             print("Error: Function MoveAbsolute " + str(error))
-        else:
-            print("Moved to " + str(X) + "," + str(Y) ) 
+        #else:
+        #    print("Moved to " + str(X) + "," + str(Y) ) 
     
     def home_all(self):
         self.app.add_log("Starting Homing Procedure ...")
@@ -375,19 +385,19 @@ class Stage:
         self.btn_up.setStyleSheet("background-color: orange;font-size: 13pt")
 
     def clicked_left(self):
-        self.xpos=self.xpos-self.step_size
+        self.xpos_set=self.xpos-self.step_size
         self.stage_goto()
 
     def clicked_right(self):
-        self.xpos=self.xpos+self.step_size
+        self.xpos_set=self.xpos+self.step_size
         self.stage_goto()
 
     def clicked_up(self):
-        self.ypos=self.ypos+self.step_size
+        self.ypos_set=self.ypos+self.step_size
         self.stage_goto()
 
     def clicked_down(self):
-        self.ypos=self.ypos-self.step_size
+        self.ypos_set=self.ypos-self.step_size
         self.stage_goto()
 
 
@@ -460,7 +470,7 @@ class Stage:
         self.widgetx.setStyleSheet("background-color: lightGray")
         self.widgetx.setMaxLength(7)
         self.widgetx.setFixedWidth(self.app.standard_width)
-        self.widgetx.setText(str(self.xpos))
+        self.widgetx.setText(str(self.xpos_set))
         self.widgetx.textEdited.connect(self.stage_update_x)
         layoutstage.addWidget(self.widgetx)
         
@@ -475,7 +485,7 @@ class Stage:
         self.widgety.setStyleSheet("background-color: lightGray")
         self.widgety.setMaxLength(7)
         self.widgety.setFixedWidth(self.app.standard_width)
-        self.widgety.setText(str(self.ypos))
+        self.widgety.setText(str(self.ypos_set))
         self.widgety.textEdited.connect(self.stage_update_y)
         
         label = QLabel("Y (mm)")
@@ -588,12 +598,16 @@ class Stage:
         if self.live_mode_running:
             self.timer.stop()
             self.xpos,self.ypos=self.get_position()
+            self.xpos_set=np.copy(self.xpos)
+            self.ypos_set=np.copy(self.ypos)
             self.timer.start(int(self.refresh_rate*1000))
         else:
             self.xpos,self.ypos=self.get_position()
+            self.xpos_set=np.copy(self.xpos)
+            self.ypos_set=np.copy(self.ypos)
             
-        self.widgety.setText(str(self.ypos))
-        self.widgetx.setText(str(self.xpos))
+        self.widgety.setText(str(self.ypos_set))
+        self.widgetx.setText(str(self.xpos_set))
         self.widgetx.setStyleSheet("background-color: lightGray;color: black")
         self.widgety.setStyleSheet("background-color: lightGray;color: black")
 
@@ -609,7 +623,7 @@ class Stage:
             if self.live_mode_running:
                 self.timer.stop()
             self.xlast,self.ylast=self.get_position()
-            self.set_position(self.xpos,self.ypos)
+            self.set_position(self.xpos_set,self.ypos_set)
             self.xpos,self.ypos=self.get_position()
             self.widgety.setText(str(self.ypos))
             self.widgetx.setText(str(self.xpos))
@@ -618,8 +632,9 @@ class Stage:
 
             if self.live_mode_running:
                 self.timer.start(int(self.refresh_rate*1000))
-
-            self.app.add_log("Moved to x=" + str(self.xpos) + " mm, y=" + str(self.ypos)+" mm" ) 
+            
+            self.app.add_log("x=" + str(self.xpos) + " mm, y=" + str(self.ypos)+" mm" )
+            self.app.add_log("Stage moved to:") 
         else:
             self.app.add_log("point outside stage limits")
             self.app.add_log("move aborted")
@@ -632,7 +647,7 @@ class Stage:
             except:
                 itsanumber=False
             if itsanumber:
-                self.xpos=np.double(s)
+                self.xpos_set=np.double(s)
                 self.widgetx.setStyleSheet("background-color: lightGray;color: red")
 
     def stage_update_y(self,s):
@@ -643,7 +658,7 @@ class Stage:
             except:
                 itsanumber=False
             if itsanumber:
-                self.ypos=np.double(s)
+                self.ypos_set=np.double(s)
                 self.widgety.setStyleSheet("background-color: lightGray;color: red")
 
 

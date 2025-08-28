@@ -110,22 +110,29 @@ class Orca():
 
         self.dropdown.addLayout(layoutacqbutton)
         
+        layoutauto=QHBoxLayout()
+        self.maxbtn=self.app.normal_button(layoutauto,"Auto Exposure",self.auto_exposure)
+        self.maxbtn.setFixedWidth(110)
+        layoutauto.addStretch()
+        self.resbtn=self.app.normal_button(layoutauto,"Resolution (2048)",self.set_resolution)
+        self.resbtn.setFixedWidth(110)
+
+
+        self.dropdown.addLayout(layoutauto)
+
         layoutmax=QHBoxLayout()
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.resbtn=self.app.normal_button(layoutmax,"Resolution (2048)",self.set_resolution)
-        self.resbtn.setFixedWidth(110)
-
-
-        self.dropdown.addLayout(layoutmax)
-
         layoutright.addLayout(self.dropdown)
+        self.dropdown.addLayout(layoutmax)
 
         self.app.set_layout_visible(self.dropdown,False)
 
         layoutright.addItem(self.app.vspace)
 
+    def auto_exposure(self):
+        pass
 
     def set_resolution(self):
         self.window = self.app.buttonmask3(self.app,["2048x2048","1024x1024","512x512"],"resolution")#device,roi

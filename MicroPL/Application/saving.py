@@ -148,7 +148,7 @@ class Saving:
      
     def set_filepath(self):
         filename, _ = QFileDialog.getSaveFileName(
-            self, "Save spectrum", self.filepath, "spectra (*.h5)",
+            self.app, "Save spectrum", self.filepath, "spectra (*.h5)",
             options=QFileDialog.DontConfirmOverwrite
         )
         if filename:
