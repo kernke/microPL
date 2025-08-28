@@ -430,9 +430,13 @@ class Stage:
         if self.script_selected>0:
             x,y=self.saved_positions[self.combolist[self.script_selected]]
             self.widgetx.setText(str(x))
-            self.widgetx.setStyleSheet("background-color: lightGray;color: red")
+            self.stage_update_x(x)
+            #self.widgetx.setStyleSheet("background-color: lightGray;color: red")
             self.widgety.setText(str(y))
-            self.widgety.setStyleSheet("background-color: lightGray;color: red")
+            self.stage_update_y(y)
+            
+            #self.widgety.setStyleSheet("background-color: lightGray;color: red")
+            #self.xpo
 
 
 
@@ -546,7 +550,6 @@ class Stage:
         layoutstagebuttons3=QHBoxLayout()
         self.btnlive=self.app.normal_button(layoutstagebuttons3,"Status Live",self.live_mode)
 
-
         self.dropdown.addLayout(layoutstagebuttons2)
         self.dropdown.addLayout(layoutstagebuttons3)
 
@@ -566,12 +569,12 @@ class Stage:
         if not self.live_mode_running:
             self.live_mode_running=True
             self.timer.start(int(self.refresh_rate)*1000)
-            #self.btnlive.setStyleSheet("background-color: green;color: black")
+            self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
-            #self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
 
 
     # stage ui  methods ##########################################################

@@ -5,6 +5,8 @@ https://msl-equipment.readthedocs.io/en/latest/_api/msl.equipment.resources.prin
 """
 import numpy as np
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit,QLabel,QComboBox,QVBoxLayout,QApplication
+from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable
+
 
 #import pprint
 from msl.equipment import (
@@ -13,6 +15,30 @@ from msl.equipment import (
     Backend,
 )
 #from msl.equipment.exceptions import PrincetonInstrumentsError
+
+class Finish_Signal(QObject):
+
+    bool_update = pyqtSignal(object)   
+
+class Grating_changer(QRunnable):
+
+    def __init__(self, mono,pos):
+        super().__init__()
+        self.mono = mono
+        self.pos=pos
+        self.signals=Finish_Signal()
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.mono.set_mono_grating(self.pos)
+        #voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
+        #statusstring="Voltage: "+str(np.round(voltage_actual,3))+" V\n"
+        #currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+        #statusstring+="Current: "+str(np.round(currentA_actual*1000,2))+" mA"
+
+        #self.signals.bool_update.emit(True)
+ 
+
 
 class SCT320():
     def __init__(self,app):
@@ -95,14 +121,22 @@ class SCT320():
         self.mono.set_mono_wavelength_nm(WL)
         print('  Wavelength at {} nm'.format(self.mono.get_mono_wavelength_nm()))
 
+    def grating_changed(self):
+        self.app.add_log("grating changed")
+
     def set_grating(self,G):
     # Set the grating to position G
         print('Setting the Grating to position'+ str(G) +'...')
-        self.mono.set_mono_grating(G)
-        index = self.mono.get_mono_grating()
-        density = self.mono.get_mono_grating_density(index)
-        blaze = self.mono.get_mono_grating_blaze(index)
-        print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
+        self.grating_changer =Grating_changer(self,G) 
+        self.grating_changer.signals.camsignal.connect(self.grating_changed)
+        self.app.threadpool.start(self.grating_changer)
+
+
+        #self.mono.set_mono_grating(G)
+        #index = self.mono.get_mono_grating()
+        #density = self.mono.get_mono_grating_density(index)
+        #blaze = self.mono.get_mono_grating_blaze(index)
+        #print('  Grating at position {} -> Density: {}, Blaze: {}'.format(index, density, blaze))
         
     def get_grating(self):
         index = self.mono.get_mono_grating()

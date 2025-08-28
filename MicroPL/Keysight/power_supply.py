@@ -140,7 +140,8 @@ class Keysight:
                 itsanumber=False
             if itsanumber:
                 self.voltage=np.double(s)
-                self.voltwidget.setStyleSheet("background-color: lightGray;color: red")
+                if self.output_on:
+                    self.voltwidget.setStyleSheet("background-color: lightGray;color: red")
 
 
     def setvoltage_confirmed(self):
