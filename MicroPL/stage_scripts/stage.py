@@ -442,8 +442,7 @@ class Stage:
         self.timer=QTimer()
         self.timer.timeout.connect(self.thread_task)
         self.live_mode_running=False
-        if self.connected:
-            self.live_mode()
+
 
 
         self.expanded=False
@@ -544,15 +543,20 @@ class Stage:
         btn.setStyleSheet("background-color: dimgrey")
         btn.setFixedWidth(130)
 
-        #self.btnlive=self.app.normal_button(layoutstagebuttons2,"Status Live",self.live_mode)
+        layoutstagebuttons3=QHBoxLayout()
+        self.btnlive=self.app.normal_button(layoutstagebuttons3,"Status Live",self.live_mode)
+
 
         self.dropdown.addLayout(layoutstagebuttons2)
-
+        self.dropdown.addLayout(layoutstagebuttons3)
 
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
 
         layoutright.addItem(self.app.vspace)
+
+        if self.connected:
+            self.live_mode()
 
     def calibrate_spatial_cam(self):
         pass
