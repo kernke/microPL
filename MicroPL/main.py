@@ -239,6 +239,10 @@ class MainWindow(QMainWindow):
         if len(self.logging_list)>2000:
             del self.logging_list[-1]
 
+    def update_log(self,logstring):
+        del self.logging_list[0]
+        self.logging_list.insert(0, logstring)
+        self.logging_model.setStringList(self.logging_list)
 
 
 

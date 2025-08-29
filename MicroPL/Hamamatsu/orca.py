@@ -14,14 +14,82 @@ class CameraSignalspatial(QObject):
 class CameraHandler_spatial(QRunnable):
     def __init__(self, device):
         super().__init__()
-        self.device = device
+        self.orca = device
         self.signals = CameraSignalspatial()
     
     @pyqtSlot()
-    def run(self): # A slot takes no params
-        cimg=self.device.acquire(self.device.acqtime_spatial)
-        print("max intens: "+str(np.max(cimg)))
-        self.signals.camsignal.emit(cimg)
+    def run(self): 
+
+        acq_s=self.orca.acqtime_spatial
+        #print(self.orca.auto_expose_start)
+        if self.orca.auto_exposure_activated:
+            self.orca.cam.set_exposure(self.orca.auto_expose_start)
+            self.orca.cam.start_acquisition()
+            self.orca.cam.wait_for_frame()
+            img = self.orca.cam.read_newest_image()
+            self.orca.cam.stop_acquisition()
+
+            img_max=np.max(img).astype(np.double)
+            counts_per_s= img_max/self.orca.auto_expose_start
+
+            acq_s=np.round(65535./counts_per_s,2)
+            if acq_s>self.orca.auto_expose_max:
+                acq_s=self.orca.auto_expose_max
+            elif acq_s<self.orca.auto_expose_min:
+                acq_s=self.orca.auto_expose_min
+
+            self.orca.cam.set_exposure(acq_s)
+
+        #else:
+
+        if acq_s>10:
+            number_of_full=int(acq_s//10)
+            remaining=acq_s-number_of_full*10
+            if remaining>0.01:
+                self.orca.cam.set_exposure(remaining)
+                self.orca.cam.start_acquisition()
+                self.orca.cam.wait_for_frame()
+                img = self.orca.cam.read_newest_image()
+                self.orca.cam.stop_acquisition()
+            else:
+                self.orca.cam.set_exposure(10)
+                self.orca.cam.start_acquisition()
+                self.orca.cam.wait_for_frame()
+                img = self.orca.cam.read_newest_image()
+                self.orca.cam.stop_acquisition()
+                number_of_full -= 1
+
+            self.orca.cam.set_exposure(10)
+            for i in range(number_of_full):
+                self.orca.cam.start_acquisition()
+                self.orca.cam.wait_for_frame()
+                img += self.orca.cam.read_newest_image()
+                self.orca.cam.stop_acquisition()
+
+
+        else:
+            self.orca.cam.start_acquisition()
+            self.orca.cam.wait_for_frame()
+            img = self.orca.cam.read_newest_image()
+            self.orca.cam.stop_acquisition()
+
+        #this line is a bit unclean, as it indirectly returns the acqtime
+        self.orca.acqtime_spatial=acq_s
+
+        self.signals.camsignal.emit(img)
+
+
+
+
+
+        #self.orca.cam.start_acquisition()
+        #self.orca.cam.wait_for_frame()
+        #image = self.orca.cam.read_newest_image()
+        #self.orca.cam.stop_acquisition()
+        # A slot takes no params
+        #cimg=self.device.acquire(self.device.acqtime_spatial)
+        #print("max intens: "+str(np.max(cimg)))
+        #self.signals.camsignal.emit(image)
 
 
 
@@ -36,7 +104,6 @@ class Orca():
             self.app.add_log("Orca connected")
             self.connected=True
             self.cam.set_exposure(self.acqtime_spatial)
-            #self.cam.start_acquisition()
         except:
             self.connected=False
             print("orca dummy mode")
@@ -48,21 +115,19 @@ class Orca():
         self.live_mode_running=False
         self.live_mode_latency=300
         self.maximized=False
-        
 
-    def acquire(self,exposure_time):
-        #self.cam.set_exposure(exposure_time)
-        self.cam.start_acquisition()
-        self.cam.wait_for_frame()
-        image = self.cam.read_newest_image()
-        self.cam.stop_acquisition()
-        return image
+        self.auto_exposure_activated=False
+        self.auto_expose_start=0.1
+        self.auto_expose_min=0.01
+        self.auto_expose_max=10      
+
+        self.counter=0  
 
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
             self.timer.stop()
-        #self.cam.stop_acquisition()
+
         self.cam.close()
         print("orca disconnected")
 
@@ -82,13 +147,13 @@ class Orca():
         self.dropdown=QVBoxLayout()
 
         layoutacqtime_spatial=QHBoxLayout()
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(self.app.standard_width)
-        widget.setText(str(self.acqtime_spatial))
-        layoutacqtime_spatial.addWidget(widget)
-        widget.textEdited.connect(self.acqtime_spatial_edited)
+        self.acqwidget = QLineEdit()
+        self.acqwidget.setStyleSheet("background-color: lightGray")
+        self.acqwidget.setMaxLength(7)
+        self.acqwidget.setFixedWidth(self.app.standard_width)
+        self.acqwidget.setText(str(self.acqtime_spatial))
+        layoutacqtime_spatial.addWidget(self.acqwidget)
+        self.acqwidget.textEdited.connect(self.acqtime_spatial_edited)
 
         label = QLabel("acquisition time (s)")
         label.setStyleSheet("color:white")
@@ -111,8 +176,8 @@ class Orca():
         self.dropdown.addLayout(layoutacqbutton)
         
         layoutauto=QHBoxLayout()
-        self.maxbtn=self.app.normal_button(layoutauto,"Auto Exposure",self.auto_exposure)
-        self.maxbtn.setFixedWidth(110)
+        self.autobtn=self.app.normal_button(layoutauto,"Auto Exposure",self.auto_exposure)
+        self.autobtn.setFixedWidth(110)
         layoutauto.addStretch()
         self.resbtn=self.app.normal_button(layoutauto,"Resolution (2048)",self.set_resolution)
         self.resbtn.setFixedWidth(110)
@@ -132,7 +197,21 @@ class Orca():
         layoutright.addItem(self.app.vspace)
 
     def auto_exposure(self):
-        pass
+        if self.auto_exposure_activated:
+            self.auto_exposure_activated=False
+            self.autobtn.setStyleSheet("background-color:lightgrey")
+        else:
+            self.window = self.app.entrymask3(self.app,"auto_spatial")#device,roi
+            heading_string="Turn on AutoExposure with the following settings: "
+            heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
+            heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
+            self.window.setHeading(heading_string)
+            self.window.setLabels(["Start (s)","Min (s)","Max (s)"])
+            self.window.setDefaults([self.auto_expose_start,self.auto_expose_min,self.auto_expose_max])
+            self.window.location_on_the_screen()
+            self.window.show()
+
+
 
     def set_resolution(self):
         self.window = self.app.buttonmask3(self.app,["2048x2048","1024x1024","512x512"],"resolution")#device,roi
@@ -223,6 +302,17 @@ class Orca():
         imgmax=np.max(cimg)
         imgmean=np.mean(cimg)
 
+        self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
+        if not self.live_mode_running:
+            self.app.update_log("spatial img "+str(self.counter)+ " acquired")
+            self.counter+=1
+            if self.auto_exposure_activated:
+                self.app.add_log("auto exposure (s):"+str(self.acqtime_spatial))
+                self.acqwidget.setText(str(self.acqtime_spatial))
+
+        if imgmax>65534:
+            self.app.update_log("Warning: spatial img oversaturation")
+
         self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Mean: "+str(int(imgmean)))
         if self.crosshair:
             crosshaired_img=np.copy(self.img_data)
@@ -245,13 +335,12 @@ class Orca():
     def acquire_clicked_spatial(self):
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
-        self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
         self.app.metadata_spatial["stage_x"]=xacq
         self.app.metadata_spatial["stage_y"]=yacq
         self.app.metadata_spatial["unsaved"]=True
         if not self.live_mode_running:
-            self.app.add_log("spatial img acquired")
+            self.app.add_log("spatial img Acq. started")
         self.camera_handler =CameraHandler_spatial(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spatial)
         self.app.threadpool.start(self.camera_handler)
@@ -264,11 +353,14 @@ class Orca():
             except:
                 itsanumber=False
             if itsanumber:
-                if np.double(s)>10:
+                if np.double(s)>10 and self.live_mode_running:
                     self.acqtime_spatial=10.
+                    self.app.add_log("in Live mode max: 10 s")
                 else:
                     self.acqtime_spatial=np.double(s)
-                    if self.live_mode_running and self.acqtime_spatial>0.001: #
+
+                if self.acqtime_spatial>0.001:
+                    if self.live_mode_running: 
                         self.timer.stop()
                         self.cam.set_exposure(self.acqtime_spatial)
                         self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))

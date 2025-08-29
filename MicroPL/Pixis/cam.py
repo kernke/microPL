@@ -18,15 +18,71 @@ class CameraHandler_spectral(QRunnable):
     def __init__(self, device):
         super().__init__()
 
-        self.device = device
+        self.pixis = device
         self.signals = CameraSignalspectral()
 
     
     @pyqtSlot()
     def run(self): # A slot takes no params
-        cimg=self.device.acquire(self.device.acqtime_spectral,0, 1024, 0, 256, 1,1,show=False)
-        print("max intens: "+str(np.max(cimg)))
-        self.signals.camsignal.emit(cimg)
+        acq_s=self.pixis.acqtime_spectral
+        #print(self.pixis.auto_expose_start)
+        if self.pixis.auto_exposure_activated:
+            self.pixis.cam.set_exposure(self.pixis.auto_expose_start)
+            self.pixis.cam.start_acquisition()
+            self.pixis.cam.wait_for_frame()
+            img = self.pixis.cam.read_newest_image()
+            self.pixis.cam.stop_acquisition()
+
+            img_max=np.max(img).astype(np.double)
+            counts_per_s= img_max/self.pixis.auto_expose_start
+
+            acq_s=np.round(65535./counts_per_s,2)
+            if acq_s>self.pixis.auto_expose_max:
+                acq_s=self.pixis.auto_expose_max
+            elif acq_s<self.pixis.auto_expose_min:
+                acq_s=self.pixis.auto_expose_min
+
+            self.pixis.cam.set_exposure(acq_s)
+
+        #else:
+
+        if acq_s>10:
+            number_of_full=int(acq_s//10)
+            remaining=acq_s-number_of_full*10
+            if remaining>0.01:
+                self.pixis.cam.set_exposure(remaining)
+                self.pixis.cam.start_acquisition()
+                self.pixis.cam.wait_for_frame()
+                img = self.pixis.cam.read_newest_image()
+                self.pixis.cam.stop_acquisition()
+            else:
+                self.pixis.cam.set_exposure(10)
+                self.pixis.cam.start_acquisition()
+                self.pixis.cam.wait_for_frame()
+                img = self.pixis.cam.read_newest_image()
+                self.pixis.cam.stop_acquisition()
+                number_of_full -= 1
+
+            self.pixis.cam.set_exposure(10)
+            for i in range(number_of_full):
+                self.pixis.cam.start_acquisition()
+                self.pixis.cam.wait_for_frame()
+                img += self.pixis.cam.read_newest_image()
+                self.pixis.cam.stop_acquisition()
+
+
+        else:
+            self.pixis.cam.start_acquisition()
+            self.pixis.cam.wait_for_frame()
+            img = self.pixis.cam.read_newest_image()
+            self.pixis.cam.stop_acquisition()
+
+        #this line is a bit unclean, as it indirectly returns the acqtime
+        self.pixis.acqtime_spectral=acq_s
+
+        self.signals.camsignal.emit(img)
+
+
 
 
 class Pixis():
@@ -56,28 +112,16 @@ class Pixis():
         self.maximized=False
         self.shutter_value="Normal"
         self.live_mode_just_stopped=False
-        #pprint.pp(dir(cam))
 
-        #def pixelfmt():
-        #self.pix_format = cam.get_attribute_value("Pixel Format")  # get the current pixel format
+        self.auto_exposure_activated=False
+        self.auto_expose_start=0.1
+        self.auto_expose_min=0.01
+        self.auto_expose_max=10
+
+        self.counter=0
 
 
-    
-    def acquire(self, t, x0,x1,y0,y1, hbin,vbin,show=True):
-        self.cam.set_exposure(t)
-        #attr = self.cam.get_exposure()
-        #pprint.pp("Exposure time: " + str(attr))
-        
-        #check for potential comment
-        self.cam.set_roi(x0, x1, y0, y1, hbin, vbin)
-
-        self.cam.start_acquisition()
-        self.cam.wait_for_frame()
-        img = self.cam.read_newest_image()
-        self.cam.stop_acquisition()
-        
-        return img
-        
+           
     def chip_temp(self):
         temp = self.cam.get_attribute_value("Sensor Temperature Reading")
         self.app.add_log("Sensor Temperature: " + str(temp))
@@ -92,7 +136,6 @@ class Pixis():
             self.live_mode_running=False
             self.timer.stop()
         
-        self.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
         self.cam.close()
 
         print("Camera disconnected")
@@ -184,13 +227,13 @@ class Pixis():
         self.dropdown.addWidget(self.checkbox)
 
         layoutacqtime_spectral=QHBoxLayout()
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(self.app.standard_width)
-        widget.setText(str(self.acqtime_spectral))
-        layoutacqtime_spectral.addWidget(widget)
-        widget.textEdited.connect(self.acqtime_spectral_edited)
+        self.acqwidget = QLineEdit()
+        self.acqwidget.setStyleSheet("background-color: lightGray")
+        self.acqwidget.setMaxLength(7)
+        self.acqwidget.setFixedWidth(self.app.standard_width)
+        self.acqwidget.setText(str(self.acqtime_spectral))
+        layoutacqtime_spectral.addWidget(self.acqwidget)
+        self.acqwidget.textEdited.connect(self.acqtime_spectral_edited)
 
         label = QLabel("acquisition time (s)")
         label.setStyleSheet("color:white")
@@ -243,7 +286,19 @@ class Pixis():
         layoutright.addItem(self.app.vspace)
 
     def auto_exposure(self):
-        pass
+        if self.auto_exposure_activated:
+            self.auto_exposure_activated=False
+            self.autobtn.setStyleSheet("background-color:lightgrey")
+        else:
+            self.window = self.app.entrymask3(self.app,"auto_spectral")#device,roi
+            heading_string="Turn on AutoExposure with the following settings: "
+            heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
+            heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
+            self.window.setHeading(heading_string)
+            self.window.setLabels(["Start (s)","Min (s)","Max (s)"])
+            self.window.setDefaults([self.auto_expose_start,self.auto_expose_min,self.auto_expose_max])
+            self.window.location_on_the_screen()
+            self.window.show()
 
 
     def shutter_setting(self):
@@ -303,14 +358,21 @@ class Pixis():
             except:
                 itsanumber=False
             if itsanumber:
-                if np.double(s)>10:
+                if np.double(s)>10 and self.live_mode_running:
                     self.acqtime_spectral=10.
+                    self.app.add_log("in Live mode max: 10 s")
                 else:
                     self.acqtime_spectral=np.double(s)
-                    if self.live_mode_running and self.acqtime_spectral>0.001:
-                        self.timer.stop()
-                        self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
 
+                if self.acqtime_spectral>0.001:
+                    if self.live_mode_running:
+                        self.timer.stop()
+                        self.cam.set_exposure(self.acqtime_spectral)
+                        self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
+                    else:
+                        self.cam.set_exposure(self.acqtime_spectral)
+                #else:
+                #    self.app.add_log("Acq. time must be > 0.001 s")
 
 
     def updateRoi(self):
@@ -346,30 +408,40 @@ class Pixis():
         self.app.metadata_spectral["ROI_origin"]=(self.roi.pos()[0],self.roi.pos()[1])
         self.app.metadata_spectral["ROI_extent"]=(self.roi.size()[0],self.roi.size()[1])
         self.app.metadata_spectral["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
-        self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         self.app.metadata_spectral["center_wavelength"]=self.app.monochromator.wavelength
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
         self.app.metadata_spectral["stage_x"]=xacq
         self.app.metadata_spectral["stage_y"]=yacq
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
         self.app.metadata_spectral["unsaved"]=True
-        if not self.live_mode_running:
-            self.app.add_log("spectral img acquired")
+        self.app.add_log("spectral img "+str(self.counter)+ " Acq. start")
         self.camera_handler =CameraHandler_spectral(self) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spectral)
         self.app.threadpool.start(self.camera_handler)
 
 
-
     def image_from_thread_spectral(self,cimg):
         self.img.setImage(cimg.T[::-1])
         self.img_data=cimg.T[::-1]
+        self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         imgmax=np.max(cimg)
         statustext="Spectral Max: "+str(int(imgmax))+"\n"
         
         self.updateRoi()
 
+        if not self.live_mode_running:
+            self.app.update_log("spectral img "+str(self.counter)+ " acquired")    
+            self.counter+=1
+            if self.auto_exposure_activated:
+                self.app.add_log("auto exposure (s):"+str(self.acqtime_spectral))
+                self.acqwidget.setText(str(self.acqtime_spectral))
+
+        
+        if imgmax>65534:
+            self.app.update_log("Warning: spectral img oversaturation")
+
         if self.live_mode_just_stopped:
+            self.live_mode_just_stopped=False
             if self.remember_shutter=="Normal":
                 self.shutterbtn.setText("Shutter (Normal)")
             elif self.remember_shutter=="Always Open":

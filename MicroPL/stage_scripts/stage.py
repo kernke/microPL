@@ -351,7 +351,7 @@ class Stage:
         self.window = self.app.entrymask3(self.app,"step_size")#device,roi
         self.window.setHeading("Set step widths of the navigation tool")
         self.window.setLabels(["small (\u03BCm)","medium (\u03BCm)","large (\u03BCm)"])
-        self.window.setDefaults([str(self.step_small_micron),str(self.step_medium_micron),str(self.step_large_micron)])
+        self.window.setDefaults([self.step_small_micron,self.step_medium_micron,self.step_large_micron])
         self.window.location_on_the_screen()
         self.window.show()
 

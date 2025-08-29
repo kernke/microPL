@@ -213,11 +213,11 @@ class EntryMask3(QWidget):
         self.labelc.setText(labels[2])
 
     def setDefaults(self,defaults):
-        self.widgeta.setText(defaults[0])
+        self.widgeta.setText(str(defaults[0]))
         self.a=defaults[0]
-        self.widgetb.setText(defaults[1])
+        self.widgetb.setText(str(defaults[1]))
         self.b=defaults[1]
-        self.widgetc.setText(defaults[2])
+        self.widgetc.setText(str(defaults[2]))
         self.c=defaults[2]
 
     def location_on_the_screen(self):
@@ -262,7 +262,7 @@ class EntryMask3(QWidget):
             self.app.keysight.max_voltage=self.a
             self.app.keysight.max_currentmA=self.b
             self.app.keysight.max_powermW=self.c#
-        if self.keyword=="step_size":
+        elif self.keyword=="step_size":
             if self.app.stage.step_small_micron==self.app.stage.step_size:
                 self.app.stage.step_size=self.a
             if self.app.stage.step_medium_micron==self.app.stage.step_size:
@@ -273,7 +273,20 @@ class EntryMask3(QWidget):
             self.app.stage.step_small_micron=self.a
             self.app.stage.step_medium_micron=self.b
             self.app.stage.step_large_micron=self.c
-           
+        elif self.keyword=="auto_spectral":
+            self.app.pixis.auto_exposure_activated=True
+            self.app.pixis.auto_expose_start=self.a
+            self.app.pixis.auto_expose_min=self.b        
+            self.app.pixis.auto_expose_max=self.c
+            self.app.pixis.autobtn.setStyleSheet("background-color:green")
+        elif self.keyword=="auto_spatial":
+            self.app.orca.auto_exposure_activated=True
+            self.app.orca.auto_expose_start=self.a
+            self.app.orca.auto_expose_min=self.b        
+            self.app.orca.auto_expose_max=self.c
+            self.app.orca.autobtn.setStyleSheet("background-color:green")
+
+
         self.close()
 
 
@@ -367,13 +380,13 @@ class EntryMask4b(QWidget):
         self.labeld.setText(labels[3])
 
     def setDefaults(self,defaults):
-        self.widgeta.setText(defaults[0])
+        self.widgeta.setText(str(defaults[0]))
         self.a=defaults[0]
-        self.widgetb.setText(defaults[1])
+        self.widgetb.setText(str(defaults[1]))
         self.b=defaults[1]
-        self.widgetc.setText(defaults[2])
+        self.widgetc.setText(str(defaults[2]))
         self.c=defaults[2]
-        self.widgetd.setText(defaults[3])
+        self.widgetd.setText(str(defaults[3]))
         self.d=defaults[3]
 
     def location_on_the_screen(self):

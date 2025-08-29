@@ -303,7 +303,7 @@ class Keysight:
         self.window = self.app.entrymask3(self.app,"safety")#device,roi
         self.window.setHeading("Set safety limits to the output of the electric power supply")
         self.window.setLabels(["Voltage (V)","Current (mA)","Power (mW)"])
-        self.window.setDefaults([str(self.max_voltage),str(self.max_currentmA),str(self.max_powermW)])
+        self.window.setDefaults([self.max_voltage,self.max_currentmA,self.max_powermW])
         self.window.location_on_the_screen()
         self.window.show()
 
