@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication,QVBoxLayout
 from PyQt5.QtCore import QTimer
 import numpy as np
+import time
 
 class Scripting:
     def __init__(self,app):
@@ -33,7 +34,7 @@ class Scripting:
         
         widget = QComboBox()
         self.script_selected=0
-        widget.addItems(["choose script","from settings txt","grid mapping spatial","grid mapping spectral","grid mapping both"])
+        widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve"])
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.currentIndexChanged.connect(self.script_changed )        
@@ -91,11 +92,17 @@ class Scripting:
                 else:
                     self.script_end()
 
-            else:# self.script_selected==2:
+            elif self.script_selected==2:
                 if not self.script_execution and self.script_index is None:
                     self.entry_window_script_grid()
                 else:
                     self.script_end()
+            else:
+                if not self.script_execution and self.script_index is None:
+                    self.acquire_IV()
+                else:
+                    self.script_end()
+
 
     def sleep_method(self,time_seconds):
         self.sleep_timer=QTimer()
@@ -292,3 +299,75 @@ class Scripting:
                     return None
                     
             self.script_end()
+
+
+    def acquire_IV(self):
+        if not self.IV_settings_prepared:
+            self.window = self.app.entrymask4b(self.app,"IVcurve")#device,roi
+            heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
+            heading_string+=" and measuring the corresponding current after a given settling time. "
+            heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
+            heading_string+="to start the measurement."
+            self.window.setHeading(heading_string)
+            self.window.setLabels(["Voltage-Start (V)","Voltage-Step (V)","Voltage-End (V)","Settling Time (s)"])
+            defaultlist=[self.IV_start_voltage,self.IV_step_voltage,self.IV_end_voltage,self.IV_settling_time]
+            self.window.setDefaults(defaultlist)
+            self.window.location_on_the_screen()
+            self.window.show()
+        else:
+            self.app.add_log("(wait) Acquiring I-V-Curve")
+            self.acqivbtn.setStyleSheet("background-color:LightGray")
+            self.IV_settings_prepared=False
+            
+            self.show_IV()
+
+            self.IV_curve_voltages=[]
+            self.IV_curve_currents=[]
+            if self.live_mode_running:
+                self.timer.stop()
+            if self.app.orca.live_mode_running:
+                self.app.orca.timer.stop()
+                self.app.orca.live_mode_running=False
+            if self.app.pixis.live_mode_running:
+                self.app.pixis.timer.stop()
+                self.app.pixis.live_mode_running=False
+            if self.app.stage.live_mode_running:
+                self.app.stage.timer.stop()
+
+            self.psu.write("OUTP OFF")
+            self.psu.write(f"SOUR:CURR {self.max_currentmA/1000}")
+            self.psu.write(f"SOUR:VOLT {0}")
+            self.psu.write("OUTP ON")
+
+            number_of_steps=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)
+            for i in range(number_of_steps):
+                IV_set_voltage=self.IV_start_voltage+i*self.IV_step_voltage
+                self.psu.write(f"SOUR:VOLT {IV_set_voltage}")
+                time.sleep(self.IV_settling_time)
+                self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
+                self.voltage_actual=float(self.psu.query("MEAS:VOLT?").strip())
+                self.timeline_time = time.time()-self.timeline_start
+                
+                self.IV_curve_currents.append(self.currentA_actual)        
+                self.IV_curve_voltages.append(self.voltage_actual)
+                
+                self.voltage_list.append(self.voltage_actual)
+                self.currentA_list.append(self.currentA_actual)
+
+                self.timeline_list.append(self.timeline_time)
+                
+                self.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+
+            
+            self.psu.write(f"SOUR:CURR {0}")
+            self.psu.write(f"SOUR:VOLT {0}")
+            self.psu.write("OUTP OFF")
+            
+            self.voltwidget.setText("0")
+            self.currentwidget.setText("0")
+
+            self.app.add_log("(continue) I-V-Curve finished")
+            if self.live_mode_running:
+                self.timer.start(int(self.refresh_rate)*1000)
+            if self.app.stage.live_mode_running:
+                self.app.stage.timer.start(int(self.app.stage.refresh_rate)*1000)

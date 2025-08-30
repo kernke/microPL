@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QSize
-from PyQt5.QtWidgets import  QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QDesktopWidget,QDialog
+from PyQt5.QtWidgets import  QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QDesktopWidget,QDialog,QCheckBox
 from PyQt5.QtGui import QIcon
 
 import pyqtgraph as pg
@@ -163,7 +163,7 @@ class EntryMask3(QWidget):
         self.widgeta.setStyleSheet("background-color: lightGray")
         self.widgeta.setMaxLength(5)
         self.widgeta.setFixedWidth(50)
-        self.widgeta.textEdited.connect(self.temporary_a)
+        self.widgeta.textEdited.connect(lambda s: self.number_entry(s,i=0))#temporary_a)
         entries.addWidget(self.widgeta)
         
         self.labela = QLabel()
@@ -175,7 +175,7 @@ class EntryMask3(QWidget):
         self.widgetb.setStyleSheet("background-color: lightGray")
         self.widgetb.setMaxLength(5)
         self.widgetb.setFixedWidth(50)
-        self.widgetb.textEdited.connect(self.temporary_b)
+        self.widgetb.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_b)
         entries.addWidget(self.widgetb)
         
         self.labelb = QLabel()
@@ -187,7 +187,7 @@ class EntryMask3(QWidget):
         self.widgetc.setStyleSheet("background-color: lightGray")
         self.widgetc.setMaxLength(5)
         self.widgetc.setFixedWidth(50)
-        self.widgetc.textEdited.connect(self.temporary_c)
+        self.widgetc.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_c)
         entries.addWidget(self.widgetc)
         
         self.labelc = QLabel()
@@ -226,7 +226,7 @@ class EntryMask3(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
-    def temporary_a(self,s):
+    def number_entry(self,s,i=0):
         if s:
             try:
                itsanumber=np.double(s)
@@ -234,27 +234,12 @@ class EntryMask3(QWidget):
             except:
                 itsanumber=False
             if itsanumber:
-                self.a=np.double(s)
-        
-    def temporary_b(self,s):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                self.b=np.double(s)
-
-    def temporary_c(self,s):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                self.c=np.double(s)
+                if i==0:
+                    self.a=np.double(s)
+                elif i==1:
+                    self.b=np.double(s)
+                elif i==2:
+                    self.c=np.double(s)
 
 
     def confirm_and_close(self):
@@ -298,13 +283,54 @@ class EntryMask4b(QWidget):
         self.setWindowTitle("Enter Values")
         self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;") 
-        self.setFixedSize(QSize(500, 250))    
+        self.setFixedSize(QSize(500, 350))    
 
         layout = QVBoxLayout()
         self.label = QLabel()
         self.label.setWordWrap(True)
         self.label.setStyleSheet("color:white")
         layout.addWidget(self.label)
+
+        checkboxes1=QHBoxLayout()
+        checkboxes2=QHBoxLayout()
+
+
+        checkbox = QCheckBox('Spatial image  ')#, self.app)
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(True)
+        #self.checkbox.stateChanged.connect(self.checkbox_full_saving)
+
+        checkboxes1.addWidget(checkbox)
+        checkboxes1.addStretch()
+
+        checkbox = QCheckBox('Spectral image')#, self.app)
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(True)
+
+        checkboxes1.addWidget(checkbox)
+        checkboxes1.addStretch()
+
+        layout.addLayout(checkboxes1)
+
+        checkbox = QCheckBox('Auto Exposure')#, self.app)
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(True)
+        #self.checkbox.stateChanged.connect(self.checkbox_full_saving)
+
+        checkboxes2.addWidget(checkbox)
+        checkboxes2.addStretch()
+
+        checkbox = QCheckBox('Auto Exposure')#, self.app)
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(True)
+
+        checkboxes2.addWidget(checkbox)
+        checkboxes2.addStretch()
+
+        layout.addLayout(checkboxes2)
+
+
+
 
         entries1=QHBoxLayout()
         #entries.addStretch()
@@ -313,7 +339,7 @@ class EntryMask4b(QWidget):
         self.widgeta.setStyleSheet("background-color: lightGray")
         self.widgeta.setMaxLength(5)
         self.widgeta.setFixedWidth(50)
-        self.widgeta.textEdited.connect(self.temporary_a)
+        self.widgeta.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_a)
         entries1.addWidget(self.widgeta)
         
         self.labela = QLabel()
@@ -325,7 +351,7 @@ class EntryMask4b(QWidget):
         self.widgetb.setStyleSheet("background-color: lightGray")
         self.widgetb.setMaxLength(5)
         self.widgetb.setFixedWidth(50)
-        self.widgetb.textEdited.connect(self.temporary_b)
+        self.widgetb.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_b)
         entries1.addWidget(self.widgetb)
         
         self.labelb = QLabel()
@@ -340,7 +366,7 @@ class EntryMask4b(QWidget):
         self.widgetc.setStyleSheet("background-color: lightGray")
         self.widgetc.setMaxLength(5)
         self.widgetc.setFixedWidth(50)
-        self.widgetc.textEdited.connect(self.temporary_c)
+        self.widgetc.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_c)
         entries2.addWidget(self.widgetc)
         
         self.labelc = QLabel()
@@ -352,7 +378,7 @@ class EntryMask4b(QWidget):
         self.widgetd.setStyleSheet("background-color: lightGray")
         self.widgetd.setMaxLength(5)
         self.widgetd.setFixedWidth(50)
-        self.widgetd.textEdited.connect(self.temporary_d)
+        self.widgetd.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_d)
         entries2.addWidget(self.widgetd)
         
         self.labeld = QLabel()
@@ -395,7 +421,7 @@ class EntryMask4b(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
-    def temporary_a(self,s):
+    def number_entry(self,s,i=0):
         if s:
             try:
                itsanumber=np.double(s)
@@ -403,37 +429,14 @@ class EntryMask4b(QWidget):
             except:
                 itsanumber=False
             if itsanumber:
-                self.a=np.double(s)
-        
-    def temporary_b(self,s):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                self.b=np.double(s)
-
-    def temporary_c(self,s):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                self.c=np.double(s)
-
-    def temporary_d(self,s):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                self.d=np.double(s)
+                if i==0:
+                    self.a=np.double(s)
+                elif i==1:
+                    self.b=np.double(s)
+                elif i==2:
+                    self.c=np.double(s)
+                elif i==3:
+                    self.d=np.double(s)
 
 
     def confirm_and_close(self):
@@ -482,7 +485,7 @@ class EntryMask4(QWidget):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_xmin))
-        widget.textEdited.connect(self.temporary_xmin)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_xmin)
         entry_min.addWidget(widget)
         
         label = QLabel("X min")
@@ -495,7 +498,7 @@ class EntryMask4(QWidget):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_ymin))
-        widget.textEdited.connect(self.temporary_ymin)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_ymin)
         entry_min.addWidget(widget)
         
         label = QLabel("Y min")
@@ -508,7 +511,7 @@ class EntryMask4(QWidget):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_xmax))
-        widget.textEdited.connect(self.temporary_xmax)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_xmax)
         entry_max.addWidget(widget)
         
         label = QLabel("X max")
@@ -521,7 +524,7 @@ class EntryMask4(QWidget):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_ymax))
-        widget.textEdited.connect(self.temporary_ymax)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_ymax)
         entry_max.addWidget(widget)
         
         label = QLabel("Y max")
@@ -549,21 +552,24 @@ class EntryMask4(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
-    def temporary_xmin(self,s):
-        if s:
-            self.tempo_xmin=np.double(s)
-        
-    def temporary_ymin(self,s):
-        if s:
-            self.tempo_ymin=np.double(s)
 
-    def temporary_xmax(self,s):
+    def number_entry(self,s,i=0):
         if s:
-            self.tempo_xmax=np.double(s)
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                if i==0:
+                    self.tempo_xmin=np.double(s)
+                elif i==1:
+                    self.tempo_ymin=np.double(s)
+                elif i==2:
+                    self.tempo_xmax=np.double(s)
+                elif i==3:
+                    self.tempo_ymax=np.double(s)
 
-    def temporary_ymax(self,s):
-        if s:
-            self.tempo_ymax=np.double(s)
 
     def confirm_and_close(self,check_bool):
         if check_bool: #ROI
@@ -623,7 +629,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_xmin))
-        widget.textEdited.connect(self.temporary_xmin)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_xmin)
         entry_min.addWidget(widget)
         
         label = QLabel("X min")
@@ -636,7 +642,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_ymin))
-        widget.textEdited.connect(self.temporary_ymin)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_ymin)
         entry_min.addWidget(widget)
         
         label = QLabel("Y min")
@@ -649,7 +655,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_xmax))
-        widget.textEdited.connect(self.temporary_xmax)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_xmax)
         entry_max.addWidget(widget)
         
         label = QLabel("X max")
@@ -662,7 +668,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_ymax))
-        widget.textEdited.connect(self.temporary_ymax)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_ymax)
         entry_max.addWidget(widget)
         
         label = QLabel("Y max")
@@ -678,7 +684,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_xnum))
-        widget.textEdited.connect(self.temporary_xnum)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=4))#self.temporary_xnum)
         entry_num.addWidget(widget)
         
         label = QLabel("X num")
@@ -691,7 +697,7 @@ class EntryMask6(QDialog):
         widget.setMaxLength(7)
         widget.setFixedWidth(60)
         widget.setText(str(self.tempo_ynum))
-        widget.textEdited.connect(self.temporary_ynum)
+        widget.textEdited.connect(lambda s: self.number_entry(s,i=5))#self.temporary_ynum)
         entry_num.addWidget(widget)
         
         label = QLabel("Y num")
@@ -703,42 +709,33 @@ class EntryMask6(QDialog):
         normal_button(layout,"Start",self.confirm_and_close)
         self.setLayout(layout)    
     
-    
+
     def location_on_the_screen(self):
         ag = QDesktopWidget().availableGeometry()
         x=ag.width()//2-175
         y=ag.height()//2-150
         self.move(x, y)
 
-    def temporary_xmin(self,s):
+    def number_entry(self,s,i=0):
         if s:
-            self.tempo_xmin=np.double(s)
-            self.app.scripting.script_x_entries[0]=self.tempo_xmin
-        
-    def temporary_ymin(self,s):
-        if s:
-            self.tempo_ymin=np.double(s)
-            self.app.scripting.script_y_entries[0]=self.tempo_ymin
-
-    def temporary_xmax(self,s):
-        if s:
-            self.tempo_xmax=np.double(s)
-            self.app.scripting.script_x_entries[1]=self.tempo_xmax
-
-    def temporary_ymax(self,s):
-        if s:
-            self.tempo_ymax=np.double(s)
-            self.app.scripting.script_y_entries[1]=self.tempo_ymax
-
-    def temporary_xnum(self,s):
-        if s:
-            self.tempo_xnum=int(s)
-            self.app.scripting.script_x_entries[2]=self.tempo_xnum
-
-    def temporary_ynum(self,s):
-        if s:
-            self.tempo_ynum=int(s)
-            self.app.scripting.script_y_entries[2]=self.tempo_ynum
+            try:
+               itsanumber=np.double(s)
+               itsanumber=True
+            except:
+                itsanumber=False
+            if itsanumber:
+                if i==0:
+                    self.tempo_xmin=np.double(s)
+                elif i==1:
+                    self.tempo_ymin=np.double(s)
+                elif i==2:
+                    self.tempo_xmax=np.double(s)
+                elif i==3:
+                    self.tempo_ymax=np.double(s)
+                elif i==4:
+                    self.tempo_xnum=int(s)
+                elif i==5:
+                    self.tempo_ynum=int(s)
 
             
     def confirm_and_close(self):

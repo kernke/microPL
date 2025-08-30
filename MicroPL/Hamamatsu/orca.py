@@ -232,17 +232,15 @@ class Orca():
         #self.label_up = QLabel("Title", self.cw)
         #self.label_up.move(100, -10)
         #self.label_up.setStyleSheet("color: white;font-size: 13pt")
-        layout= QGridLayout()
+        layout= QHBoxLayout()#QGridLayout()
         self.cw.setLayout(layout)
-        layout.setSpacing(0)
         view = pg.GraphicsView()
         view.setBackground(None)
         vb = pg.ViewBox()
         vb.setAspectLocked()
-        #view.setFixedSize(512,512)
         view.setCentralItem(vb)
 
-        layout.addWidget(view, 0, 0)#,4, 0)
+        layout.addWidget(view,10)
 
         self.img=pg.ImageItem()
         self.img_data=cimg
@@ -251,15 +249,19 @@ class Orca():
         vb.invertY(True)
         vb.autoRange()
         
-        hist = pg.HistogramLUTWidget()#gradientPosition="left")
-        #hist.move(-100,100)
+        hist = pg.HistogramLUTWidget(gradientPosition="left")
         hist.setLevelMode(mode="mono")
         hist.setBackground(None)
         hist.gradient.loadPreset("plasma")
         #hist.gradient.setColorMap(pg.colormap.get('plasma')) 
-        layout.addWidget(hist, 0, 1)
+        layout.addWidget(hist,3)#, 0, 1)
         hist.setImageItem(self.img)
-        
+
+        #histogram = hist.getHistogramItem()#getPlotItem()#.histItem#histogram#getHistogramLUTItem()#getHistogramWidget()
+        #axis=histogram.get_axis("left")
+        #axis.setLabel('Intensity ( 0 - 65535 )', units='')
+
+
         # image view window end########################################################
         layoutleft.addWidget(self.cw,3)    
 

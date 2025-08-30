@@ -2,10 +2,10 @@ import pylablib as pll
 from pylablib.devices import PrincetonInstruments
 import pyqtgraph as pg
 import numpy as np
-import time
+#import time
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QCheckBox,QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QCheckBox,QVBoxLayout
 
 import datetime
 
@@ -153,7 +153,7 @@ class Pixis():
 
         # image view window start########################################################
         self.cw = QWidget() 
-        layout = QGridLayout()
+        layout = QHBoxLayout()
         self.cw.setLayout(layout)
         layout.setSpacing(0)
         view = pg.GraphicsView()
@@ -163,7 +163,7 @@ class Pixis():
         #vb.setAspectLocked()
         view.setCentralItem(vb)
         
-        layout.addWidget(view, 0, 0)
+        layout.addWidget(view,10)
 
         self.img=pg.ImageItem()
         self.img_data=cimg.T[:,::-1]
@@ -172,12 +172,12 @@ class Pixis():
         vb.invertY(True)
         vb.autoRange()
         
-        hist = pg.HistogramLUTWidget()#gradientPosition="left")#,orientation="horizontal")
+        hist = pg.HistogramLUTWidget(gradientPosition="left")#,orientation="horizontal")
 
         hist.setBackground(None)
         hist.setLevelMode(mode="mono")
         hist.gradient.loadPreset("greyclip")
-        layout.addWidget(hist, 0, 1)
+        layout.addWidget(hist,3)# 0, 1)
         hist.setImageItem(self.img)
 
         # ROI
@@ -220,7 +220,7 @@ class Pixis():
 
         self.dropdown=QVBoxLayout()
        
-        self.checkbox = QCheckBox('save full chip image', self.app)
+        self.checkbox = QCheckBox('save full chip image')#, self.app)
         self.checkbox.setStyleSheet("color:white")
         self.checkbox.setChecked(True)
         self.checkbox.stateChanged.connect(self.checkbox_full_saving)

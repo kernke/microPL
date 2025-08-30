@@ -102,14 +102,22 @@ class Keysight:
             self.timeline_start=time.time()
             self.timeline_start_date=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
             
-            #self.timeline_time = time.time()-self.timeline_start#self.refresh_rate
-
         else:
             self.voltage_list.append(self.voltage_actual)
             self.currentA_list.append(self.currentA_actual)
             self.timeline_time = time.time()-self.timeline_start
             self.timeline_list.append(self.timeline_time)
-            #self.refresh_rate
+            
+        if self.output_on:
+            if np.isclose(self.voltage,self.voltage_actual,rtol=0.01,atol=0.01):
+                self.voltwidget.setStyleSheet("background-color: cyan")
+            else:
+                self.voltwidget.setStyleSheet("background-color: lightGray")
+
+            if np.isclose(self.current/1000,self.currentA_actual,rtol=0.01,atol=0.001):
+                self.currentwidget.setStyleSheet("background-color: cyan")
+            else:
+                self.currentwidget.setStyleSheet("background-color: lightGray")
         self.Acurve.setData(self.timeline_list,self.currentA_list)
         self.Vcurve.setData(self.timeline_list,self.voltage_list)
         self.p1.setXRange(0,self.timeline_time)
@@ -245,7 +253,7 @@ class Keysight:
         
         layoutoutput=QHBoxLayout()
         self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
-        label = QLabel("grey   -> off\ngreen -> on")#         cyan -> limited by")
+        label = QLabel("grey   -> off\ngreen -> on         cyan -> limited by")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
         layoutoutput.addWidget(label)
@@ -300,7 +308,7 @@ class Keysight:
         layoutright.addItem(self.app.vspace)
 
     def set_safety(self):
-        self.window = self.app.entrymask3(self.app,"safety")#device,roi
+        self.window = self.app.entrymask3(self.app,"safety")
         self.window.setHeading("Set safety limits to the output of the electric power supply")
         self.window.setLabels(["Voltage (V)","Current (mA)","Power (mW)"])
         self.window.setDefaults([self.max_voltage,self.max_currentmA,self.max_powermW])
@@ -313,6 +321,23 @@ class Keysight:
         self.app.heading_label(layoutright,"Timeline / I-V-Curve",self.expand2)
 
         self.dropdown2=QVBoxLayout()
+
+        layoutIVor=QHBoxLayout()
+
+        layoutIVor.addStretch()
+        self.btntimelineshow=self.app.normal_button(layoutIVor,"Timeline",self.show_timline)
+        self.btntimelineshow.setFixedWidth(70)
+        self.btntimelineshow.setStyleSheet("background-color: green")
+        layoutIVor.addStretch()
+        label = QLabel("<- Show -> ")
+        label.setStyleSheet("color:white")
+        layoutIVor.addWidget(label)
+        layoutIVor.addStretch()
+        self.btnIVshow=self.app.normal_button(layoutIVor,"I-V-Curve",self.show_IV)
+        self.btnIVshow.setFixedWidth(70)
+        layoutIVor.addStretch()
+        self.dropdown2.addLayout(layoutIVor)
+
 
         layoutfresh=QHBoxLayout()
         freshwidget = QLineEdit()
@@ -340,37 +365,10 @@ class Keysight:
         self.dropdown2.addLayout(layouttimeline)
 
 
-        layoutIVor=QHBoxLayout()
-
-        layoutIVor.addStretch()
-        self.btntimelineshow=self.app.normal_button(layoutIVor,"Timeline",self.show_timline)
-        self.btntimelineshow.setFixedWidth(70)
-        self.btntimelineshow.setStyleSheet("background-color: green")
-        layoutIVor.addStretch()
-        label = QLabel("<- Show -> ")
-        label.setStyleSheet("color:white")
-        layoutIVor.addWidget(label)
-        layoutIVor.addStretch()
-        self.btnIVshow=self.app.normal_button(layoutIVor,"I-V-Curve",self.show_IV)
-        self.btnIVshow.setFixedWidth(70)
-        layoutIVor.addStretch()
-        self.dropdown2.addLayout(layoutIVor)
-
-        layoutIV=QHBoxLayout()
-        self.acqivbtn=self.app.normal_button(layoutIV,"Acq. I-V-Curve",self.acquire_IV)
-        self.acqivbtn.setFixedWidth(110)
-        layoutIV.addStretch()
-        ivresetbtn=self.app.normal_button(layoutIV,"Reset I-V-settings",self.reset_iv_settings)
-        ivresetbtn.setFixedWidth(120)
-        
-        self.dropdown2.addLayout(layoutIV)
-
         layoutmax=QHBoxLayout()
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        savbtn=self.app.normal_button(layoutmax,"Save I-V-Curve",self.maximize) ###############
-        savbtn.setFixedWidth(110)
 
         self.dropdown2.addLayout(layoutmax)
 
@@ -383,83 +381,6 @@ class Keysight:
         self.live_mode_running=False
         if self.connected:
             self.live_mode()
-
-    def reset_iv_settings(self):
-        self.acqivbtn.setStyleSheet("background-color:LightGray")
-        self.IV_settings_prepared=False                   
-
-    def acquire_IV(self):
-        if not self.IV_settings_prepared:
-            self.window = self.app.entrymask4b(self.app,"IVcurve")#device,roi
-            heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
-            heading_string+=" and measuring the corresponding current after a given settling time. "
-            heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
-            heading_string+="to start the measurement."
-            self.window.setHeading(heading_string)
-            self.window.setLabels(["Voltage-Start (V)","Voltage-End (V)","Voltage-Step (V)","Settling Time (s)"])
-            defaultlist=[str(self.IV_start_voltage),str(self.IV_end_voltage),str(self.IV_step_voltage)]
-            defaultlist.append(str(self.IV_settling_time))
-            self.window.setDefaults(defaultlist)
-            self.window.location_on_the_screen()
-            self.window.show()
-        else:
-            self.app.add_log("(wait) Acquiring I-V-Curve")
-            self.acqivbtn.setStyleSheet("background-color:LightGray")
-            self.IV_settings_prepared=False
-            
-            self.show_IV()
-
-            self.IV_curve_voltages=[]
-            self.IV_curve_currents=[]
-            if self.live_mode_running:
-                self.timer.stop()
-            if self.app.orca.live_mode_running:
-                self.app.orca.timer.stop()
-                self.app.orca.live_mode_running=False
-            if self.app.pixis.live_mode_running:
-                self.app.pixis.timer.stop()
-                self.app.pixis.live_mode_running=False
-            if self.app.stage.live_mode_running:
-                self.app.stage.timer.stop()
-
-            self.psu.write("OUTP OFF")
-            self.psu.write(f"SOUR:CURR {self.max_currentmA/1000}")
-            self.psu.write(f"SOUR:VOLT {0}")
-            self.psu.write("OUTP ON")
-
-            number_of_steps=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)
-            for i in range(number_of_steps):
-                IV_set_voltage=self.IV_start_voltage+i*self.IV_step_voltage
-                self.psu.write(f"SOUR:VOLT {IV_set_voltage}")
-                time.sleep(self.IV_settling_time)
-                self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
-                self.voltage_actual=float(self.psu.query("MEAS:VOLT?").strip())
-                self.timeline_time = time.time()-self.timeline_start
-                
-                self.IV_curve_currents.append(self.currentA_actual)        
-                self.IV_curve_voltages.append(self.voltage_actual)
-                
-                self.voltage_list.append(self.voltage_actual)
-                self.currentA_list.append(self.currentA_actual)
-
-                self.timeline_list.append(self.timeline_time)
-                
-                self.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
-
-            
-            self.psu.write(f"SOUR:CURR {0}")
-            self.psu.write(f"SOUR:VOLT {0}")
-            self.psu.write("OUTP OFF")
-            
-            self.voltwidget.setText("0")
-            self.currentwidget.setText("0")
-
-            self.app.add_log("(continue) I-V-Curve finished")
-            if self.live_mode_running:
-                self.timer.start(int(self.refresh_rate)*1000)
-            if self.app.stage.live_mode_running:
-                self.app.stage.timer.start(int(self.app.stage.refresh_rate)*1000)
-
                 
     def reset_pressed(self):
         self.timeline_reset_pressed=True
@@ -556,30 +477,3 @@ class Keysight:
             self.timer.stop()
             #self.btnlive.setText("StatLive")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
-    """
-    def plot_iv_detailed(self, zoom_voltage=1):
-        plt.figure()
-        plt.plot(self.voltages_measured, self.currents_measured, marker='o')
-        plt.xlabel("Measured Voltage (V)")
-        plt.ylabel("Measured Current (A)")
-        plt.title("I/V Curve from Keysight")
-        plt.grid(True)
-
-        plt.figure()
-        plt.plot(self.voltages_measured, self.currents_measured, marker='o')
-        plt.xlim(0, zoom_voltage)
-        plt.xlabel("Measured Voltage (V)")
-        plt.ylabel("Measured Current (A)")
-        plt.title("I/V Curve Zoomed from Keysight")
-        plt.grid(True)
-
-        plt.figure()
-        plt.plot(self.voltages_measured, self.currents_measured, marker='o')
-        plt.xlabel("Measured Voltage (V)")
-        plt.ylabel("Measured Current (A)")
-        plt.title("I/V Curve (Log Scale)")
-        plt.yscale("log")
-        plt.grid(True, which="both")
-        
-        plt.show()
-    """
