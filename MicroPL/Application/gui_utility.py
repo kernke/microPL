@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QSize
-from PyQt5.QtWidgets import  QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QDesktopWidget,QDialog,QCheckBox
+from PyQt5.QtWidgets import  QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QWidget,QLabel,QDesktopWidget,QCheckBox
 from PyQt5.QtGui import QIcon
 
 import pyqtgraph as pg
 import numpy as np
-
-#from .utility import normal_button
 
 
 def normal_button(layout,text,function):
@@ -38,6 +36,55 @@ def heading_label(layout,heading_string,func_connect):
     layoutheading.addStretch()
     layout.addLayout(layoutheading)
 
+
+class Multi_entry(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    def entry_label_structure(self,layout,widgettext,labeltext,widgetname):
+        
+        setattr(self,widgetname,QLineEdit())
+        widget=getattr(self,widgetname)
+        widget.setStyleSheet("background-color: lightGray")
+        widget.setMaxLength(5)
+        widget.setFixedWidth(50)
+        widget.setText(widgettext)
+        layout.addWidget(widget)
+
+        
+        labelwidget = QLabel()
+        labelwidget.setStyleSheet("color:white")
+        labelwidget.setText(labeltext)
+        layout.addWidget(labelwidget)    
+
+    def number_entry(self,widgetname,valuename,s,positive=True):
+        if s:
+            try:
+                num=np.double(s)
+                #if positive:
+                if num<0:
+                    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
+                else:
+                    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
+                    setattr(self,valuename,num)
+                #else:
+                #    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
+                #    setattr(self,valuename,num)
+            except:
+                getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
+                
+
+    def p_int_entry(self,widgetname,valuename,s):
+        if s:
+            try:
+                num=int(s)
+                if num<0:
+                    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
+                else:
+                    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
+                    setattr(self,valuename,num)
+            except:
+                getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
 
 class WarnWindow(QWidget):
     def __init__(self):
@@ -138,13 +185,16 @@ class ButtonMask3(QWidget):
 
         self.close()
 
-
-
-class EntryMask3(QWidget):
-    def __init__(self,app,keyword):
+class EntryMask3(Multi_entry):
+    def __init__(self,app,keyword,defaults,labels,text):
         super().__init__()
+        #super(EntryMask3, self).__init__()
         self.app=app
+        self.a=defaults[0]
+        self.b=defaults[1]
+        self.c=defaults[2]
         self.keyword=keyword
+
         self.setWindowTitle("Enter Values")
         self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;") 
@@ -154,47 +204,26 @@ class EntryMask3(QWidget):
         self.label = QLabel()
         self.label.setWordWrap(True)
         self.label.setStyleSheet("color:white")
+        self.label.setText(text)
         layout.addWidget(self.label)
 
         entries=QHBoxLayout()
-        #entries.addStretch()
+        widgetnames=["widgeta","widgetb","widgetc"]
 
-        self.widgeta = QLineEdit()
-        self.widgeta.setStyleSheet("background-color: lightGray")
-        self.widgeta.setMaxLength(5)
-        self.widgeta.setFixedWidth(50)
-        self.widgeta.textEdited.connect(lambda s: self.number_entry(s,i=0))#temporary_a)
-        entries.addWidget(self.widgeta)
-        
-        self.labela = QLabel()
-        self.labela.setStyleSheet("color:white")
-        entries.addWidget(self.labela)    
-        entries.addStretch()
-        
-        self.widgetb = QLineEdit()
-        self.widgetb.setStyleSheet("background-color: lightGray")
-        self.widgetb.setMaxLength(5)
-        self.widgetb.setFixedWidth(50)
-        self.widgetb.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_b)
-        entries.addWidget(self.widgetb)
-        
-        self.labelb = QLabel()
-        self.labelb.setStyleSheet("color:white")
-        entries.addWidget(self.labelb)    
-        entries.addStretch()
+        for i in range(3):            
+            self.entry_label_structure(entries,str(defaults[i]),labels[i],widgetnames[i]) 
+            if i<2:
+                entries.addStretch()
 
-        self.widgetc = QLineEdit()
-        self.widgetc.setStyleSheet("background-color: lightGray")
-        self.widgetc.setMaxLength(5)
-        self.widgetc.setFixedWidth(50)
-        self.widgetc.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_c)
-        entries.addWidget(self.widgetc)
+        getattr(self,widgetnames[0]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[0],"a",s))
+        getattr(self,widgetnames[1]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[1],"b",s))        
+        getattr(self,widgetnames[2]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[2],"c",s))        
         
-        self.labelc = QLabel()
-        self.labelc.setStyleSheet("color:white")
-        entries.addWidget(self.labelc)    
-        #entries.addStretch()
-                
+            
+
         layout.addLayout(entries)
         layoutclosing=QHBoxLayout()
         layoutclosing.addStretch()
@@ -204,21 +233,6 @@ class EntryMask3(QWidget):
         
         self.setLayout(layout)    
 
-    def setHeading(self,text):
-        self.label.setText(text)
-
-    def setLabels(self,labels):
-        self.labela.setText(labels[0])
-        self.labelb.setText(labels[1])
-        self.labelc.setText(labels[2])
-
-    def setDefaults(self,defaults):
-        self.widgeta.setText(str(defaults[0]))
-        self.a=defaults[0]
-        self.widgetb.setText(str(defaults[1]))
-        self.b=defaults[1]
-        self.widgetc.setText(str(defaults[2]))
-        self.c=defaults[2]
 
     def location_on_the_screen(self):
         ag = QDesktopWidget().availableGeometry()
@@ -226,20 +240,6 @@ class EntryMask3(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
-    def number_entry(self,s,i=0):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                if i==0:
-                    self.a=np.double(s)
-                elif i==1:
-                    self.b=np.double(s)
-                elif i==2:
-                    self.c=np.double(s)
 
 
     def confirm_and_close(self):
@@ -271,15 +271,20 @@ class EntryMask3(QWidget):
             self.app.orca.auto_expose_max=self.c
             self.app.orca.autobtn.setStyleSheet("background-color:green")
 
-
         self.close()
 
-
-class EntryMask4b(QWidget):
-    def __init__(self,app,keyword):
+class EntryMaskIV(Multi_entry):
+    def __init__(self,app,defaults,labels,text):
         super().__init__()
         self.app=app
-        self.keyword=keyword
+        self.a=defaults[0]
+        self.b=defaults[1]
+        self.c=defaults[2]
+        self.d=defaults[3]
+        self.spatial=True
+        self.spectral=True
+
+        #self.keyword=keyword
         self.setWindowTitle("Enter Values")
         self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;") 
@@ -289,101 +294,54 @@ class EntryMask4b(QWidget):
         self.label = QLabel()
         self.label.setWordWrap(True)
         self.label.setStyleSheet("color:white")
+        self.label.setText(text)
         layout.addWidget(self.label)
 
         checkboxes1=QHBoxLayout()
-        checkboxes2=QHBoxLayout()
 
-
-        checkbox = QCheckBox('Spatial image  ')#, self.app)
+        checkbox = QCheckBox('Spatial image  ')
         checkbox.setStyleSheet("color:white")
         checkbox.setChecked(True)
-        #self.checkbox.stateChanged.connect(self.checkbox_full_saving)
+        checkbox.stateChanged.connect(self.checkbox_spatial)
 
         checkboxes1.addWidget(checkbox)
         checkboxes1.addStretch()
 
-        checkbox = QCheckBox('Spectral image')#, self.app)
+        checkbox = QCheckBox('Spectral image')
         checkbox.setStyleSheet("color:white")
         checkbox.setChecked(True)
+        checkbox.stateChanged.connect(self.checkbox_spectral)
 
         checkboxes1.addWidget(checkbox)
         checkboxes1.addStretch()
 
         layout.addLayout(checkboxes1)
 
-        checkbox = QCheckBox('Auto Exposure')#, self.app)
-        checkbox.setStyleSheet("color:white")
-        checkbox.setChecked(True)
-        #self.checkbox.stateChanged.connect(self.checkbox_full_saving)
 
-        checkboxes2.addWidget(checkbox)
-        checkboxes2.addStretch()
-
-        checkbox = QCheckBox('Auto Exposure')#, self.app)
-        checkbox.setStyleSheet("color:white")
-        checkbox.setChecked(True)
-
-        checkboxes2.addWidget(checkbox)
-        checkboxes2.addStretch()
-
-        layout.addLayout(checkboxes2)
-
-
-
+        widgetnames=["widgeta","widgetb","widgetc","widgetd"]
 
         entries1=QHBoxLayout()
-        #entries.addStretch()
+            
+        self.entry_label_structure(entries1,str(defaults[0]),labels[0],widgetnames[0]) 
+        entries1.addStretch()        
+        self.entry_label_structure(entries1,str(defaults[1]),labels[1],widgetnames[1]) 
+        entries1.addStretch()
 
-        self.widgeta = QLineEdit()
-        self.widgeta.setStyleSheet("background-color: lightGray")
-        self.widgeta.setMaxLength(5)
-        self.widgeta.setFixedWidth(50)
-        self.widgeta.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_a)
-        entries1.addWidget(self.widgeta)
-        
-        self.labela = QLabel()
-        self.labela.setStyleSheet("color:white")
-        entries1.addWidget(self.labela)    
-        entries1.addStretch()
-        
-        self.widgetb = QLineEdit()
-        self.widgetb.setStyleSheet("background-color: lightGray")
-        self.widgetb.setMaxLength(5)
-        self.widgetb.setFixedWidth(50)
-        self.widgetb.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_b)
-        entries1.addWidget(self.widgetb)
-        
-        self.labelb = QLabel()
-        self.labelb.setStyleSheet("color:white")
-        entries1.addWidget(self.labelb)    
-        entries1.addStretch()
         
         entries2=QHBoxLayout()
+        self.entry_label_structure(entries2,str(defaults[2]),labels[2],widgetnames[2]) 
+        entries2.addStretch()        
+        self.entry_label_structure(entries2,str(defaults[3]),labels[3],widgetnames[3]) 
+        entries2.addStretch()
         
-
-        self.widgetc = QLineEdit()
-        self.widgetc.setStyleSheet("background-color: lightGray")
-        self.widgetc.setMaxLength(5)
-        self.widgetc.setFixedWidth(50)
-        self.widgetc.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_c)
-        entries2.addWidget(self.widgetc)
-        
-        self.labelc = QLabel()
-        self.labelc.setStyleSheet("color:white")
-        entries2.addWidget(self.labelc)    
-        #entries.addStretch()
-
-        self.widgetd = QLineEdit()
-        self.widgetd.setStyleSheet("background-color: lightGray")
-        self.widgetd.setMaxLength(5)
-        self.widgetd.setFixedWidth(50)
-        self.widgetd.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_d)
-        entries2.addWidget(self.widgetd)
-        
-        self.labeld = QLabel()
-        self.labeld.setStyleSheet("color:white")
-        entries2.addWidget(self.labeld)    
+        getattr(self,widgetnames[0]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[0],"a",s))
+        getattr(self,widgetnames[1]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[1],"b",s))        
+        getattr(self,widgetnames[2]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[2],"c",s))        
+        getattr(self,widgetnames[3]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[3],"d",s))        
 
 
         layout.addLayout(entries1)
@@ -396,24 +354,17 @@ class EntryMask4b(QWidget):
         
         self.setLayout(layout)    
 
-    def setHeading(self,text):
-        self.label.setText(text)
-
-    def setLabels(self,labels):
-        self.labela.setText(labels[0])
-        self.labelb.setText(labels[1])
-        self.labelc.setText(labels[2])
-        self.labeld.setText(labels[3])
-
-    def setDefaults(self,defaults):
-        self.widgeta.setText(str(defaults[0]))
-        self.a=defaults[0]
-        self.widgetb.setText(str(defaults[1]))
-        self.b=defaults[1]
-        self.widgetc.setText(str(defaults[2]))
-        self.c=defaults[2]
-        self.widgetd.setText(str(defaults[3]))
-        self.d=defaults[3]
+    def checkbox_spatial(self,state):
+        if state == 2:
+            self.spatial=True
+        else:
+            self.spatial=False
+            
+    def checkbox_spectral(self,state):
+        if state == 2:
+            self.spectral=True
+        else:
+            self.spectral=False
 
     def location_on_the_screen(self):
         ag = QDesktopWidget().availableGeometry()
@@ -421,129 +372,79 @@ class EntryMask4b(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
-    def number_entry(self,s,i=0):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                if i==0:
-                    self.a=np.double(s)
-                elif i==1:
-                    self.b=np.double(s)
-                elif i==2:
-                    self.c=np.double(s)
-                elif i==3:
-                    self.d=np.double(s)
-
 
     def confirm_and_close(self):
-        if self.keyword=="IVcurve":
-            self.app.keysight.IV_start_voltage=self.a
-            self.app.keysight.IV_end_voltage=self.b
-            self.app.keysight.IV_step_voltage=self.c
-            self.app.keysight.IV_settling_time=self.d
-            self.app.keysight.acqivbtn.setStyleSheet("background-color:cyan")
-            self.app.keysight.IV_settings_prepared=True
+        self.app.scripting.IV_start_voltage=self.a
+        self.app.scripting.IV_end_voltage=self.b
+        self.app.scripting.IV_step_voltage=self.c
+        self.app.scripting.IV_settling_time=self.d
+        self.app.scripting.IV_spatial=self.spatial
+        self.app.scripting.IV_spectral=self.spectral
+        self.app.scripting.script_settings_prepared=True
         self.close()
 
-
-class EntryMask4(QWidget):
-    def __init__(self,check_bool,app):
+class EntryMask4(Multi_entry):
+    def __init__(self,app,keyword,defaults,labels,text):
         super().__init__()
-        self.device=app.stage
-        self.roi=app.pixis.roi
+        self.app=app
+        self.keyword=keyword
+
         self.setWindowTitle("Enter Values")
         self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;border: 1px solid black") 
         self.setFixedSize(QSize(300, 200))
-        if check_bool:
-            self.tempo_xmin=int(self.roi.pos()[0])
-            self.tempo_ymin=int(self.roi.pos()[1])
-            self.tempo_xmax=int(self.roi.pos()[0]+self.roi.size()[0])
-            self.tempo_ymax=int(self.roi.pos()[1]+self.roi.size()[1])
-        else:
-            self.tempo_xmin=self.device.xlimit[0]
-            self.tempo_ymin=self.device.ylimit[0]
-            self.tempo_xmax=self.device.xlimit[1]
-            self.tempo_ymax=self.device.ylimit[1]
+
+        self.xmin=defaults[0]
+        self.ymin=defaults[1]
+        self.xmax=defaults[2]
+        self.ymax=defaults[3]
     
 
         layout = QVBoxLayout()
         self.label = QLabel()
         self.label.setWordWrap(True)
         self.label.setStyleSheet("color:white")
+        self.label.setText(text)
         layout.addWidget(self.label)
 
-        entry_min=QHBoxLayout()
-        entry_max=QHBoxLayout()
 
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_xmin))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_xmin)
-        entry_min.addWidget(widget)
+        widgetnames=["widgeta","widgetb","widgetc","widgetd"]
+
+        entries1=QHBoxLayout()
+            
+        self.entry_label_structure(entries1,str(defaults[0]),labels[0],widgetnames[0]) 
+        entries1.addStretch()        
+        self.entry_label_structure(entries1,str(defaults[1]),labels[1],widgetnames[1]) 
+        entries1.addStretch()
+
         
-        label = QLabel("X min")
-        label.setStyleSheet("color:white")
-        entry_min.addWidget(label)    
-        entry_min.addStretch()
+        entries2=QHBoxLayout()
+        self.entry_label_structure(entries2,str(defaults[2]),labels[2],widgetnames[2]) 
+        entries2.addStretch()        
+        self.entry_label_structure(entries2,str(defaults[3]),labels[3],widgetnames[3]) 
+        entries2.addStretch()
         
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_ymin))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_ymin)
-        entry_min.addWidget(widget)
-        
-        label = QLabel("Y min")
-        label.setStyleSheet("color:white")
-        entry_min.addWidget(label)    
+        getattr(self,widgetnames[0]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[0],"xmin",s))
+        getattr(self,widgetnames[1]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[1],"ymin",s))        
+        getattr(self,widgetnames[2]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[2],"xmax",s))        
+        getattr(self,widgetnames[3]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[3],"ymax",s))        
 
 
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_xmax))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_xmax)
-        entry_max.addWidget(widget)
-        
-        label = QLabel("X max")
-        label.setStyleSheet("color:white")
-        entry_max.addWidget(label)    
-        entry_max.addStretch()
-        
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_ymax))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_ymax)
-        entry_max.addWidget(widget)
-        
-        label = QLabel("Y max")
-        label.setStyleSheet("color:white")
-        entry_max.addWidget(label)    
-        
-        layout.addLayout(entry_min)
-        layout.addLayout(entry_max)
+
+        layout.addLayout(entries1)
+        layout.addLayout(entries2)
 
         layoutclosing=QHBoxLayout()
         layoutclosing.addStretch()
-        normal_button(layoutclosing,"Confirm",lambda: self.confirm_and_close(check_bool))
+        normal_button(layoutclosing,"Confirm",self.confirm_and_close)
         layoutclosing.addStretch()
         layout.addLayout(layoutclosing)
 
         self.setLayout(layout)    
-
-    def setHeading(self,text):
-        self.label.setText(text)
 
     
     def location_on_the_screen(self):
@@ -552,161 +453,109 @@ class EntryMask4(QWidget):
         y=ag.height()//2-100
         self.move(x, y)
 
+    def confirm_and_close(self):
 
-    def number_entry(self,s,i=0):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                if i==0:
-                    self.tempo_xmin=np.double(s)
-                elif i==1:
-                    self.tempo_ymin=np.double(s)
-                elif i==2:
-                    self.tempo_xmax=np.double(s)
-                elif i==3:
-                    self.tempo_ymax=np.double(s)
-
-
-    def confirm_and_close(self,check_bool):
-        if check_bool: #ROI
-            self.roi.setPos(pg.Point([self.tempo_xmin,self.tempo_ymin]))
-            deltax=self.tempo_xmax-self.tempo_xmin
-            deltay=self.tempo_ymax-self.tempo_ymin
-            self.roi.setSize([deltax,deltay])
+        if self.keyword=="roi": #ROI
+            self.app.pixis.roi.setPos(pg.Point([self.xmin,self.ymin]))
+            deltax=self.xmax-self.xmin
+            deltay=self.ymax-self.ymin
+            self.app.pixis.roi.setSize([deltax,deltay])
         else: #stage
-            self.device.xlimit=[self.tempo_xmin,self.tempo_xmax]
-            self.device.ylimit=[self.tempo_ymin,self.tempo_ymax]
+            self.app.stage.xlimit=[self.xmin,self.xmax]
+            self.app.stage.ylimit=[self.ymin,self.ymax]
             
         self.close()
 
-
-
-class EntryMask6(QDialog):
-
-    def __init__(self,app):
+class EntryMaskMapping(Multi_entry):
+    def __init__(self,app,defaults,labels,text):
         super().__init__()
         self.app=app
         self.setWindowTitle("Enter Values")
         self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color:dimgray")# #1e1e1e;") 
-        self.setFixedSize(QSize(350, 300))
+        self.setFixedSize(QSize(500, 350))
 
-        if self.app.scripting.script_x_entries is None:
-            self.tempo_xmin=0.
-            self.tempo_ymin=0.
-            self.tempo_xmax=50.
-            self.tempo_ymax=50.
-            self.tempo_xnum=10
-            self.tempo_ynum=10
-            self.app.scripting.script_x_entries=[self.tempo_xmin,self.tempo_xmax,int(self.tempo_xnum)]
-            self.app.scripting.script_y_entries=[self.tempo_ymin,self.tempo_ymax,int(self.tempo_ynum)]
-        else:
-            self.tempo_xmin=self.app.scripting.script_x_entries[0]
-            self.tempo_ymin=self.app.scripting.script_y_entries[0]
-            self.tempo_xmax=self.app.scripting.script_x_entries[1]
-            self.tempo_ymax=self.app.scripting.script_y_entries[1]
-            self.tempo_xnum=self.app.scripting.script_x_entries[2]
-            self.tempo_ynum=self.app.scripting.script_y_entries[2]
-        
+        self.xmin=defaults[0]
+        self.ymin=defaults[1]
+        self.xmax=defaults[2]
+        self.ymax=defaults[3]
+        self.xnum=defaults[4]
+        self.ynum=defaults[5]
 
+        self.spatial=True
+        self.spectral=False
+                
         layout = QVBoxLayout()
         self.label = QLabel()
-        self.label.setText("Measurement grid with current settings\nChoose the grid via start position (min), end position (max)\nand number of points (num) in each dimension")
+        self.label.setText(text)
         self.label.setWordWrap(True)
         self.label.setStyleSheet("color:white")
         layout.addWidget(self.label)
 
-        entry_min=QHBoxLayout()
-        entry_max=QHBoxLayout()
-        entry_num=QHBoxLayout()
+        checkboxes1=QHBoxLayout()
 
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_xmin))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=0))#self.temporary_xmin)
-        entry_min.addWidget(widget)
-        
-        label = QLabel("X min")
-        label.setStyleSheet("color:white")
-        entry_min.addWidget(label)    
-        entry_min.addStretch()
-        
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_ymin))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=1))#self.temporary_ymin)
-        entry_min.addWidget(widget)
-        
-        label = QLabel("Y min")
-        label.setStyleSheet("color:white")
-        entry_min.addWidget(label)    
+        checkbox = QCheckBox('Spatial image  ')
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(True)
+        checkbox.stateChanged.connect(self.checkbox_spatial)
+
+        checkboxes1.addWidget(checkbox)
+        checkboxes1.addStretch()
+
+        checkbox = QCheckBox('Spectral image')
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(False)
+        checkbox.stateChanged.connect(self.checkbox_spectral)
+
+        checkboxes1.addWidget(checkbox)
+        checkboxes1.addStretch()
+
+        layout.addLayout(checkboxes1)
 
 
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_xmax))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=2))#self.temporary_xmax)
-        entry_max.addWidget(widget)
-        
-        label = QLabel("X max")
-        label.setStyleSheet("color:white")
-        entry_max.addWidget(label)    
-        entry_max.addStretch()
-        
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_ymax))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=3))#self.temporary_ymax)
-        entry_max.addWidget(widget)
-        
-        label = QLabel("Y max")
-        label.setStyleSheet("color:white")
-        entry_max.addWidget(label)    
-        
-        layout.addLayout(entry_min)
-        layout.addLayout(entry_max)
+        widgetnames=["widgeta","widgetb","widgetc","widgetd","widgete","widgetf"]
 
+        entries1=QHBoxLayout()            
+        self.entry_label_structure(entries1,str(defaults[0]),labels[0],widgetnames[0]) 
+        entries1.addStretch()        
+        self.entry_label_structure(entries1,str(defaults[1]),labels[1],widgetnames[1]) 
+        entries1.addStretch()
 
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_xnum))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=4))#self.temporary_xnum)
-        entry_num.addWidget(widget)
+        entries2=QHBoxLayout()
+        self.entry_label_structure(entries2,str(defaults[2]),labels[2],widgetnames[2]) 
+        entries2.addStretch()        
+        self.entry_label_structure(entries2,str(defaults[3]),labels[3],widgetnames[3]) 
+        entries2.addStretch()
         
-        label = QLabel("X num")
-        label.setStyleSheet("color:white")
-        entry_num.addWidget(label)    
-        entry_num.addStretch()
-        
-        widget = QLineEdit()
-        widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(7)
-        widget.setFixedWidth(60)
-        widget.setText(str(self.tempo_ynum))
-        widget.textEdited.connect(lambda s: self.number_entry(s,i=5))#self.temporary_ynum)
-        entry_num.addWidget(widget)
-        
-        label = QLabel("Y num")
-        label.setStyleSheet("color:white")
-        entry_num.addWidget(label)    
+        entries3=QHBoxLayout()
+        self.entry_label_structure(entries3,str(defaults[4]),labels[4],widgetnames[4]) 
+        entries3.addStretch()        
+        self.entry_label_structure(entries3,str(defaults[5]),labels[5],widgetnames[5]) 
+        entries3.addStretch()
 
-        layout.addLayout(entry_num)
+        getattr(self,widgetnames[0]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[0],"xmin",s))
+        getattr(self,widgetnames[1]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[1],"ymin",s))        
+        getattr(self,widgetnames[2]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[2],"xmax",s))        
+        getattr(self,widgetnames[3]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[3],"ymax",s))        
 
-        normal_button(layout,"Start",self.confirm_and_close)
+        getattr(self,widgetnames[4]).textEdited.connect(
+                lambda s: self.p_int_entry(widgetnames[4],"xnum",s))        
+        getattr(self,widgetnames[5]).textEdited.connect(
+                lambda s: self.p_int_entry(widgetnames[5],"ynum",s))        
+
+        layout.addLayout(entries1)
+        layout.addLayout(entries2)
+        layout.addLayout(entries3)
+
+        layoutclosing=QHBoxLayout()
+        layoutclosing.addStretch()
+        normal_button(layoutclosing,"Confirm",self.confirm_and_close)
+        layoutclosing.addStretch()
+        layout.addLayout(layoutclosing)
         self.setLayout(layout)    
     
 
@@ -716,31 +565,25 @@ class EntryMask6(QDialog):
         y=ag.height()//2-150
         self.move(x, y)
 
-    def number_entry(self,s,i=0):
-        if s:
-            try:
-               itsanumber=np.double(s)
-               itsanumber=True
-            except:
-                itsanumber=False
-            if itsanumber:
-                if i==0:
-                    self.tempo_xmin=np.double(s)
-                elif i==1:
-                    self.tempo_ymin=np.double(s)
-                elif i==2:
-                    self.tempo_xmax=np.double(s)
-                elif i==3:
-                    self.tempo_ymax=np.double(s)
-                elif i==4:
-                    self.tempo_xnum=int(s)
-                elif i==5:
-                    self.tempo_ynum=int(s)
-
+    def checkbox_spatial(self,state):
+        if state == 2:
+            self.spatial=True
+            print("spat True")
+        else:
+            self.spatial=False
             
+    def checkbox_spectral(self,state):
+        if state == 2:
+            self.spectral=True
+        else:
+            self.spectral=False
+
     def confirm_and_close(self):
-        xcoords=np.linspace(self.tempo_xmin,self.tempo_xmax,int(self.tempo_xnum))
-        ycoords=np.linspace(self.tempo_ymin,self.tempo_ymax,int(self.tempo_ynum))
+        self.app.scripting.script_x_entries=[self.xmin,self.xmax,int(self.xnum)]
+        self.app.scripting.script_y_entries=[self.ymin,self.ymax,int(self.ynum)]
+
+        xcoords=np.linspace(self.xmin,self.xmax,int(self.xnum))
+        ycoords=np.linspace(self.ymin,self.ymax,int(self.ynum))
         xx,yy=np.meshgrid(xcoords,ycoords)
 
         newx=np.zeros(xx.shape[0]*xx.shape[1])
@@ -757,7 +600,9 @@ class EntryMask6(QDialog):
                 newx[counter]=xx[i,jnum]
                 newy[counter]=yy[i,jnum]
                 counter+=1
-        
+
+        self.app.scripting.grid_spatial=self.spatial
+        self.app.scripting.grid_spectral=self.spectral        
         self.app.scripting.script_positions_x=newx
         self.app.scripting.script_positions_y=newy  
         self.app.scripting.script_execution=True

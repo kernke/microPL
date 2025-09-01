@@ -9,13 +9,15 @@ import numpy as np
 import datetime
 
 class CameraSignalspatial(QObject):
-    camsignal = pyqtSignal(object)   
+    camsignal = pyqtSignal(object)
+    #complete_signal=pyqtSignal(bool)
 
 class CameraHandler_spatial(QRunnable):
-    def __init__(self, device):
+    def __init__(self, device,event=None):
         super().__init__()
         self.orca = device
         self.signals = CameraSignalspatial()
+        self.event=event
     
     @pyqtSlot()
     def run(self): 
@@ -77,6 +79,9 @@ class CameraHandler_spatial(QRunnable):
         self.orca.acqtime_spatial=acq_s
 
         self.signals.camsignal.emit(img)
+        #self.signals.complete_signal.emit(True)
+        if self.event:
+            self.event.set()
 
 
 
@@ -201,20 +206,19 @@ class Orca():
             self.auto_exposure_activated=False
             self.autobtn.setStyleSheet("background-color:lightgrey")
         else:
-            self.window = self.app.entrymask3(self.app,"auto_spatial")#device,roi
+            labellist=["Start (s)","Min (s)","Max (s)"]
+            defaultlist=[self.auto_expose_start,self.auto_expose_min,self.auto_expose_max]
             heading_string="Turn on AutoExposure with the following settings: "
             heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
             heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
-            self.window.setHeading(heading_string)
-            self.window.setLabels(["Start (s)","Min (s)","Max (s)"])
-            self.window.setDefaults([self.auto_expose_start,self.auto_expose_min,self.auto_expose_max])
+            self.window = self.app.entrymask3(self.app,"auto_spatial",defaultlist,labellist,heading_string)
             self.window.location_on_the_screen()
             self.window.show()
 
 
 
     def set_resolution(self):
-        self.window = self.app.buttonmask3(self.app,["2048x2048","1024x1024","512x512"],"resolution")#device,roi
+        self.window = self.app.buttonmask3(self.app,["2048x2048","1024x1024","512x512"],"resolution")
         self.window.setHeading("Set the resolution of the saved image from the Orca spatial camera")
         self.window.location_on_the_screen()
         self.window.show()
@@ -334,16 +338,19 @@ class Orca():
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 
-    def acquire_clicked_spatial(self):
+    def acquire_clicked_spatial(self,event=None):
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
-        self.app.metadata_spatial["stage_x"]=xacq
-        self.app.metadata_spatial["stage_y"]=yacq
+        self.app.metadata_spatial["stage_x_mm"]=xacq
+        self.app.metadata_spatial["stage_y_mm"]=yacq
         self.app.metadata_spatial["unsaved"]=True
+        if self.app.keysight.output_on:
+            self.app.metadata_spatial["current_A"]=self.app.keysight.currentA_actual
+            self.app.metadata_spatial["voltage_V"]=self.app.keysight.voltage_actual
         if not self.live_mode_running:
             self.app.add_log("spatial img Acq. started")
-        self.camera_handler =CameraHandler_spatial(self) 
+        self.camera_handler =CameraHandler_spatial(self,event) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spatial)
         self.app.threadpool.start(self.camera_handler)
 

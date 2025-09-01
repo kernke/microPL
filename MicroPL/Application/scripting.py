@@ -1,17 +1,107 @@
 from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication,QVBoxLayout
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer,pyqtSignal,QRunnable,pyqtSlot,QObject
 import numpy as np
 import time
+import threading
+
+class Update_Signal(QObject):
+
+    update = pyqtSignal(bool)   
+
+class Grid_Mapping(QRunnable):
+
+    def __init__(self, stage,orca,pixis,spatial_bool,spectral_bool,stagex,stagey):
+        super().__init__()
+        self.stage = stage
+        self.orca=orca
+        self.pixis=pixis
+        self.stagex=stagex
+        self.stagey=stagey
+        self.spectral_bool=spectral_bool
+        self.spatial_bool=spatial_bool
+        self.signals=Update_Signal()
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.stage.xpos=self.stagex
+        self.stage.ypos=self.stagey
+        self.stage.stage_goto()      
+
+        done_event = threading.Event()
+        self.stage.thread_task(done_event)
+        done_event.wait()
+                
+        if self.spectral_bool:
+            done_event = threading.Event()
+            self.pixis.acquire_clicked_spectral(done_event)
+            done_event.wait()
+        
+        if self.spatial_bool:
+            done_event = threading.Event()
+            self.porca.acquire_clicked_spatial(done_event)
+            done_event.wait()
+
+        self.signals.update.emit(True)
+ 
+
+class IV_Measurement(QRunnable):
+
+    def __init__(self, stage):
+        super().__init__()
+        self.stage = stage
+        self.signals=Update_Signal()
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        x,y =self.stage.get_position()
+        stage_status_string="Stage X: "+str(x)+ " mm\n"
+        stage_status_string+="Stage Y: "+str(y)+ " mm"
+
+        self.signals.string_update.emit((stage_status_string,x,y))
+ 
+
+
 
 class Scripting:
     def __init__(self,app):
         self.app=app
         
         # stage mapping
-        self.script_x_entries=None
-        self.script_y_entries=None
+        self.script_x_entries=[0,50,10]
+        self.script_y_entries=[0,50,10]
+
+        self.grid_spatial=True
+        self.grid_spectral=False
+
         self.script_execution=False
+        self.script_selected=0
         self.script_index=None
+        self.script_settings_prepared=False
+
+        self.IV_end_voltage=10
+        self.IV_start_voltage=0
+        self.IV_step_voltage=0.25
+        self.IV_settling_time=0.05
+
+        self.IV_spatial=True
+        self.IV_spectral=True
+
+    def grid_mapping_on_thread(self,step_done):
+        if step_done:
+            self.script_index +=1
+
+            if self.script_index==self.number_of_points:
+                self.script_end()
+            elif not self.script_execution:
+                return None
+            else:
+                self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
+                stagex=self.script_positions_x[self.script_index]
+                stagey=self.script_positions_y[self.script_index]
+                self.grid_mapper =Grid_Mapping(self.app.stage,self.app.orca,self.app.pixis,
+                                            self.grid_spatial,self.grid_spectral,stagex,stagey) 
+                self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
+                self.app.threadpool.start(self.grid_mapper)
 
 
     def expand(self):
@@ -28,13 +118,12 @@ class Scripting:
 
         self.dropdown=QVBoxLayout()
 
-        self.labelscr = QLabel("")
-        self.labelscr.setStyleSheet("color:white")
-        self.labelscr.setFixedWidth(100)
+        #self.labelscr = QLabel("")
+        #self.labelscr.setStyleSheet("color:white")
+        #self.labelscr.setFixedWidth(100)
         
         widget = QComboBox()
-        self.script_selected=0
-        widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve"])
+        widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve","calibrate spatial camera via stage"])
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.currentIndexChanged.connect(self.script_changed )        
@@ -42,14 +131,14 @@ class Scripting:
 
         layoutscriptbuttons=QHBoxLayout()
 
-        self.btnexec = self.app.normal_button(layoutscriptbuttons,"Execute",self.script_button_execute)
-        #self.btnexec.set
+        self.btnexec = self.app.normal_button(layoutscriptbuttons,"Set",self.script_button_set)
 
         layoutscriptbuttons.addStretch()
-        label = QLabel("click only once ->\n(wait one acq-time)")
-        label.setStyleSheet("color:white")
-        label.setWordWrap(True)
-        layoutscriptbuttons.addWidget(label)
+        self.btnstart = self.app.normal_button(layoutscriptbuttons,"Start",self.script_button_start)
+
+
+        layoutscriptbuttons.addStretch()
+
         
         self.btnpause = self.app.normal_button(layoutscriptbuttons,"Pause",self.script_button_pause)
         
@@ -58,7 +147,9 @@ class Scripting:
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)
 
-
+    def script_changed(self,i):
+        self.script_selected=i
+        self.script_settings_prepared=False
 
     def script_button_pause(self):
         if self.script_execution:
@@ -70,39 +161,67 @@ class Scripting:
             if self.script_selected==1:
                 self.script_from_txt()
             elif self.script_selected==2:
-                self.entry_window_script_grid()
+                self.grid_mapping_script()
+            elif self.script_selected==2:
+                self.grid_mapping_script()
 
     def script_end(self):
         self.script_execution=False
         self.script_index=None
         self.app.h5saving.save_on_acquire()
-        self.btnexec.setText("Execute")
-        self.labelscr.setText("")
+        self.btnstart.setText("Start")
     
-    def script_button_execute(self):
-        if self.app.pixis.live_mode_running or self.app.orca.live_mode_running:
-            print("Live mode needs to be stopped before executing scripts")
+    def script_button_set(self):
+        if self.script_selected==0:
+            self.app.add_log("no script selected for setting parameters")            
+        elif self.script_selected==1:
+            self.script_from_txt_window()
+        elif self.script_selected==2:
+            self.grid_mapping_window()
+        elif self.script_selected==3:
+            self.acquire_IV_window()
+        elif self.script_selected==4:
+            pass
+
+    def script_button_start(self):
+        if self.script_execution:
+            self.script_end()
         else:
             if self.script_selected==0:
-                print("no script selected to execute")
-                
-            elif self.script_selected==1:
-                if not self.script_execution and self.script_index is None:
-                    self.script_from_txt()
-                else:
-                    self.script_end()
+                self.app.add_log("no script selected to execute")
+                return None
+            if not self.script_settings_prepared:
+                self.app.add_log("use 'Set' to initialize the script first")
+                return None
 
+            self.btnstart.setText("Cancel")
+            self.script_index=0
+
+            if self.app.pixis.live_mode_running:
+                self.app.pixis.timer.stop()
+                self.app.pixis.live_mode_running=False
+            if self.app.orca.live_mode_running:
+                self.app.orca.timer.stop()
+                self.app.orca.live_mode_running=False
+            if self.app.keysight.live_mode_running:
+                self.app.keysight.timer.stop()
+                self.app.keysight.live_mode_running=False
+            if self.app.stage.live_mode_running:
+                self.app.stage.timer.stop()
+                self.app.stage.live_mode_running=False
+
+            if not self.app.h5saving.save_on_acquire_bool:
+                self.app.h5saving.save_on_acquire()
+
+            if self.script_selected==1:
+                self.script_from_txt()
+        
             elif self.script_selected==2:
-                if not self.script_execution and self.script_index is None:
-                    self.entry_window_script_grid()
-                else:
-                    self.script_end()
-            else:
-                if not self.script_execution and self.script_index is None:
-                    self.acquire_IV()
-                else:
-                    self.script_end()
-
+                self.grid_mapping_script()
+            elif self.script_selected==3:
+                self.acquire_IV()
+            elif self.script_selected==4:
+                pass
 
     def sleep_method(self,time_seconds):
         self.sleep_timer=QTimer()
@@ -115,22 +234,25 @@ class Scripting:
 
     def check_script(self,fname):
         settings_list=[]
-        double_format_keys=["spatial_acquisition_time_seconds",
-                            "spectral_acquisition_time_seconds",
+        double_format_keys=["spatial_acquisition_time_s",
+                            "spectral_acquisition_time_s",
                             "center_wavelength_nm",
                             "stage_x_mm",
                             "stage_y_mm",
-                            "sleep_seconds"]
-        int_format_keys=["grating_position_int"]
-        bool_format_keys=["save_spectral_image_bool"]
-        comment_required=["sleep_seconds"]
+                            "sleep_s,"
+                            "voltage_V",
+                            "current_A"]
+        int_format_keys=["grating_position_int","spatial_binning_int",]
+        bool_format_keys=["save_spectral_image_bool","spatial_auto_exposure"]
+
+        comment_required=["sleep_s"]
         spectral_required=["spectral_acquisition_time_seconds",
                            "center_wavelength_nm",
                            "grating_position_int",
                            "save_spectral_image_bool",
                            "stage_x_mm",
                            "stage_y_mm"]
-        spatial_required=["spatial_acquisition_time_seconds",
+        spatial_required=["spatial_acquisition_time_s",
                           "stage_x_mm",
                           "stage_y_mm"]
         
@@ -179,12 +301,14 @@ class Scripting:
             settings_list.append(settings)
         return settings_list
 
-    def script_from_txt(self):
-        fname,ftype = QFileDialog.getOpenFileName(self, 'Open file', 
+    def script_from_txt_window(self):
+        self.fname,ftype = QFileDialog.getOpenFileName(self.app, 'Open file', 
                self.app.h5saving.save_folder,"settings list (*.txt)")
         #print(fname)
-        if fname:
-            settings_list=self.check_script(fname)
+
+    def script_from_txt(self):
+        if self.fname:
+            settings_list=self.check_script(self.fname)
             if settings_list is None:
                 print("script includes errors")
             else:
@@ -211,7 +335,7 @@ class Scripting:
                         sleep_time=settings["sleep_seconds"]*1000
                         self.sleep_method(sleep_time)
                     elif settings["mode"]=="spectral":
-                        self.app.pixis.acqtime_spectral=settings["spectral_acquisition_time_seconds"]
+                        self.app.pixis.acqtime_spectral=settings["spectral_acquisition_time_s"]
                         self.app.monochromator.wavelength=settings["center_wavelength_nm"]
                         self.app.monochromator.wavelength_edited() ###################################################
                         self.app.pixis.save_full_image=settings["save_spectral_image_bool"]
@@ -251,70 +375,45 @@ class Scripting:
                     
                 self.script_end()
 
+    def grid_mapping_window(self):
+        #if self.script_index is None:
+        text="Measurement grid with current settings\nChoose the grid via start position (min), "
+        text+="end position (max)\nand number of points (num) in each dimension"
+        labellist=["X min","Y min","X max","Y max","X num","Y num"]
+        defaultlist=[self.script_x_entries[0],self.script_y_entries[0],self.script_x_entries[1],
+                        self.script_y_entries[1],self.script_x_entries[2],self.script_y_entries[2]]
+        self.w = self.app.entrymaskmapping(self.app,defaultlist,labellist,text)
+        self.w.location_on_the_screen()
+        self.w.show()
+
+    def grid_mapping_script(self):
             
-    def script_changed(self,i):
-        self.script_selected=i
+        self.number_of_points=len(self.script_positions_x)
+        self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
+        stagex=self.script_positions_x[self.script_index]
+        stagey=self.script_positions_y[self.script_index]
+        self.grid_mapper =Grid_Mapping(self.app.stage,self.app.orca,self.app.pixis,
+                                       self.grid_spatial,self.grid_spectral,stagex,stagey) 
+        self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
+        self.app.threadpool.start(self.grid_mapper)
 
-            
-    def entry_window_script_grid(self):
-        if self.script_index is None:
-            self.w = self.app.entrymask6(self.app)
-            self.w.location_on_the_screen()
-            self.w.exec()
 
-        # execute script
-        if self.script_execution:
-            if self.script_index is None:
-                self.script_index=0
-            self.btnexec.setText("Cancel")
-            if not self.app.h5saving.save_on_acquire_bool:
-                self.app.h5saving.save_on_acquire()
-            number_of_points=len(self.script_positions_x)        
-            for i in range(self.script_index,number_of_points):
-                self.app.stage.xpos=self.script_positions_x[i]
-                self.app.stage.ypos=self.script_positions_y[i]
-                self.app.stage.stage_goto()      
-                xcheck,ycheck=self.app.stage.get_position()
-                print("check position: "+str(xcheck)+","+str(ycheck))
-                
-                QApplication.processEvents()
-                if not self.script_execution:
-                    return None
-                
-                if self.script_selected==2:
-                    self.app.orca.acquire_clicked_spatial()
-                elif self.script_selected==3:
-                    self.app.pixis.acquire_clicked_spectral()
-                else:
-                    self.app.orca.acquire_clicked_spatial()
-                    self.app.threadpool.waitForDone()
-                    self.app.pixis.acquire_clicked_spectral()
-                
-                self.app.threadpool.waitForDone()
-                self.script_index+=1
-                print(str(i+1)+" from "+str(number_of_points))
-                self.labelscr.setText(str(i+1)+"/"+str(number_of_points))
-                QApplication.processEvents()
-                if not self.script_execution:
-                    return None
-                    
-            self.script_end()
 
+
+    def acquire_IV_window(self):
+        heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
+        heading_string+=" and measuring the corresponding current after a given settling time. "
+        heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
+        heading_string+="to start the measurement."
+        defaultlist=[self.IV_start_voltage,self.IV_step_voltage,self.IV_end_voltage,self.IV_settling_time]
+        labellist=["Voltage-Start (V)","Voltage-Step (V)","Voltage-End (V)","Settling Time (s)"]
+        self.window = self.app.entrymaskiv(self.app,defaultlist,labellist,heading_string)
+        self.window.location_on_the_screen()
+        self.window.show()
 
     def acquire_IV(self):
-        if not self.IV_settings_prepared:
-            self.window = self.app.entrymask4b(self.app,"IVcurve")#device,roi
-            heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
-            heading_string+=" and measuring the corresponding current after a given settling time. "
-            heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
-            heading_string+="to start the measurement."
-            self.window.setHeading(heading_string)
-            self.window.setLabels(["Voltage-Start (V)","Voltage-Step (V)","Voltage-End (V)","Settling Time (s)"])
-            defaultlist=[self.IV_start_voltage,self.IV_step_voltage,self.IV_end_voltage,self.IV_settling_time]
-            self.window.setDefaults(defaultlist)
-            self.window.location_on_the_screen()
-            self.window.show()
-        else:
+
+        if self.script_execution:
             self.app.add_log("(wait) Acquiring I-V-Curve")
             self.acqivbtn.setStyleSheet("background-color:LightGray")
             self.IV_settings_prepared=False

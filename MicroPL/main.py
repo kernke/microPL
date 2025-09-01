@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QScrollArea,QListView,QSpacerItem,QSizePolicy
 from PyQt5.QtGui import QIcon 
 #import os
 
-from .Application.gui_utility import ButtonMask3,EntryMask3,EntryMask4,EntryMask6,WarnWindow
-from .Application.gui_utility import EntryMask4b,normal_button,set_layout_visible,heading_label
+from .Application.gui_utility import ButtonMask3,EntryMask3,EntryMask4,EntryMaskMapping,WarnWindow
+from .Application.gui_utility import EntryMaskIV,normal_button,set_layout_visible,heading_label
 
 from .Application.saving import Saving
 from .Application.scripting import Scripting
@@ -39,15 +39,13 @@ class MainWindow(QMainWindow):
         self.normal_button=normal_button
         self.set_layout_visible=set_layout_visible
         self.heading_label=heading_label
-        #self.temporary_3values=None
-        #self.buttons3_selected=None
 
         self.warnwindow=WarnWindow
         self.buttonmask3=ButtonMask3
         self.entrymask3=EntryMask3
         self.entrymask4=EntryMask4
-        self.entrymask4b=EntryMask4b
-        self.entrymask6=EntryMask6
+        self.entrymaskiv=EntryMaskIV
+        self.entrymaskmapping=EntryMaskMapping
         self.vspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.threadpool = QThreadPool() 
@@ -67,8 +65,8 @@ class MainWindow(QMainWindow):
         self.metadata_spectral=dict()
         self.metadata_spectral["unsaved"]=True
         
-        self.metadata_electrical=dict()
-        self.metadata_electrical["unsaved"]=True
+        self.metadata_timeline=dict()
+        self.metadata_timeline["unsaved"]=True
 
         layoutmain = QHBoxLayout() # whole window
         layoutleft=QVBoxLayout() # left containing info and log

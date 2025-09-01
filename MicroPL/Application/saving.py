@@ -82,6 +82,7 @@ class Saving:
                 self.write_to_h5(self.app.metadata_spectral)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""
+                self.app.metadata_timeline["comment"]=""
                 self.widgetcomment.setText("")
 
 
@@ -96,18 +97,35 @@ class Saving:
                 self.write_to_h5(self.app.metadata_spatial)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""
+                self.app.metadata_timeline["comment"]=""
                 self.widgetcomment.setText("")
+
+    def save_to_h5_timeline(self):
+        condition=self.app.keysight.last_saved_timline_length != len(self.app.keysight.timeline_list)
+
+        if self.app.metadata_timeline["unsaved"] or condition:
+            if self.check_h5():
+                self.app.metadata_timeline["time_s"]=self.app.keysight.timeline_list
+                self.app.metadata_timeline["voltage_V"]=self.app.keysight.voltage_list
+                self.app.metadata_timeline["current_A"]=self.app.keysight.currentA_list
+                self.write_to_h5(self.app.metadata_spatial)
+                self.app.metadata_spatial["comment"]=""
+                self.app.metadata_spectral["comment"]=""
+                self.app.metadata_timeline["comment"]=""
+                self.widgetcomment.setText("")
+        else:
+            self.app.add_log("already saved before")
 
     # saving methods ######################################################
     def save_comment(self):
         if self.check_h5():
-            self.app.metadata_spectral["mode"]="comment"
-            self.write_to_h5(self.app.metadata_spectral)
-            self.app.metadata_spectral["unsaved"]=True
+            self.app.metadata_timeline["mode"]="comment"
+            self.write_to_h5(self.app.metadata_timeline)
+            self.app.metadata_timeline["unsaved"]=True
             self.app.metadata_spatial["comment"]=""
             self.app.metadata_spectral["comment"]=""
+            self.app.metadata_timeline["comment"]=""
             self.widgetcomment.setText("")
-
 
     
     def save_on_acquire(self):
@@ -148,7 +166,7 @@ class Saving:
      
     def set_filepath(self):
         filename, _ = QFileDialog.getSaveFileName(
-            self.app, "Save spectrum", self.filepath, "spectra (*.h5)",
+            self.app, "Save Data", self.filepath, "data (*.h5)",
             options=QFileDialog.DontConfirmOverwrite
         )
         if filename:
@@ -159,6 +177,7 @@ class Saving:
         if s:
             self.app.metadata_spatial["comment"]=s
             self.app.metadata_spectral["comment"]=s
+            self.app.metadata_timeline["comment"]=s
 
     def expand(self):
         if not self.expanded:

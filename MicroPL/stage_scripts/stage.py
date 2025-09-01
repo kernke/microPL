@@ -14,13 +14,15 @@ from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 class Update_Signal(QObject):
 
     string_update = pyqtSignal(object)   
+    #complete_signal=pyqtSignal(bool)
 
 class Status_update(QRunnable):
 
-    def __init__(self, stage):
+    def __init__(self, stage,event=None):
         super().__init__()
         self.stage = stage
         self.signals=Update_Signal()
+        self.event=event
 
     @pyqtSlot()
     def run(self): # A slot takes no params
@@ -29,13 +31,17 @@ class Status_update(QRunnable):
         stage_status_string+="Stage Y: "+str(y)+ " mm"
 
         self.signals.string_update.emit((stage_status_string,x,y))
+        if self.event:
+            self.event.set()
+        #self.signals.complete_signal.emit(True)
  
 
 class Homing(QRunnable):
-    def __init__(self, stageclass):
+    def __init__(self, stageclass,event=None):
         super().__init__()
         self.stageclass = stageclass
         self.signals=Update_Signal()
+        self.event=event
 
     @pyqtSlot()
     def run(self): # A slot takes no params
@@ -72,8 +78,11 @@ class Homing(QRunnable):
         stage_status_string="Stage X: "+str(x)+ " mm\n"
         stage_status_string+="Stage Y: "+str(y)+ " mm"
 
-        self.signals.string_update.emit((stage_status_string,x,y))
 
+        self.signals.string_update.emit((stage_status_string,x,y))
+        if self.event:
+            self.event.set()
+        #self.signals.complete_signal.emit(True)
 
 class Stage:
     def __init__(self,app):
@@ -161,8 +170,8 @@ class Stage:
         self.cam_size=0.2
 
 
-    def thread_task(self):
-        self.worker=Status_update(self)
+    def thread_task(self,event=None):
+        self.worker=Status_update(self,event)
         self.worker.signals.string_update.connect(self.status_update_from_thread)
         self.app.threadpool.start(self.worker)
 
@@ -348,10 +357,10 @@ class Stage:
         layout.addWidget(self.plot,2)
 
     def set_step_size(self):
-        self.window = self.app.entrymask3(self.app,"step_size")#device,roi
-        self.window.setHeading("Set step widths of the navigation tool")
-        self.window.setLabels(["small (\u03BCm)","medium (\u03BCm)","large (\u03BCm)"])
-        self.window.setDefaults([self.step_small_micron,self.step_medium_micron,self.step_large_micron])
+        text="Set step widths of the navigation tool"
+        labellist=["small (\u03BCm)","medium (\u03BCm)","large (\u03BCm)"]
+        defaultlist=[self.step_small_micron,self.step_medium_micron,self.step_large_micron]
+        self.window = self.app.entrymask3(self.app,"step_size",defaultlist,labellist,text)
         self.window.location_on_the_screen()
         self.window.show()
 
@@ -577,8 +586,10 @@ class Stage:
 
     # stage ui  methods ##########################################################
     def entry_window_limits(self):
-        self.w = self.app.entrymask4(False,self.app)#device,roi
-        self.w.setHeading("Stage safety limits (position in mm)")
+        text="Stage safety limits (position in mm)"
+        labellist=["X min","Y min","X max","Y max"]
+        defaultlist=[self.xlimit[0],self.ylimit[0],self.xlimit[1],self.ylimit[1]]
+        self.w = self.app.entrymask4(self.app,"stage_limits",defaultlist,labellist,text)
         self.w.location_on_the_screen()
         self.w.show()
         

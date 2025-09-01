@@ -60,20 +60,16 @@ class Keysight:
         self.voltage_list=[]
         self.currentA_list=[]
         self.timeline_list=[]
+        self.last_saved_timeline_length=0
         self.timeline_time=0
         self.timeline_start=time.time()
         self.timeline_start_date=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.timeline_reset_pressed=False
         self.maximized=False
 
-        self.IV_settings_prepared=False
-        self.IV_end_voltage=10
-        self.IV_start_voltage=0
-        self.IV_step_voltage=0.25
-        self.IV_settling_time=0.05
-
         self.IV_curve_voltages=[0]
         self.IV_curve_currents=[0]
+        self.IV_optical_spatial=[0]
 
     def disconnect(self):
         if self.live_mode_running:
@@ -308,10 +304,10 @@ class Keysight:
         layoutright.addItem(self.app.vspace)
 
     def set_safety(self):
-        self.window = self.app.entrymask3(self.app,"safety")
-        self.window.setHeading("Set safety limits to the output of the electric power supply")
-        self.window.setLabels(["Voltage (V)","Current (mA)","Power (mW)"])
-        self.window.setDefaults([self.max_voltage,self.max_currentmA,self.max_powermW])
+        text="Set safety limits to the output of the electric power supply"
+        defaultlist=[self.max_voltage,self.max_currentmA,self.max_powermW]
+        labellist=["Voltage (V)","Current (mA)","Power (mW)"]
+        self.window = self.app.entrymask3(self.app,"safety",defaultlist,labellist,text)
         self.window.location_on_the_screen()
         self.window.show()
 
@@ -360,7 +356,7 @@ class Keysight:
         btn=self.app.normal_button(layouttimeline,"Reset Timeline",self.reset_pressed)
         btn.setFixedWidth(110)
         layouttimeline.addStretch()
-        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.maximize) ################
+        btn=self.app.normal_button(layouttimeline,"Save Timeline",self.app.h5saving.save_to_h5_timeline)
         btn.setFixedWidth(110)
         self.dropdown2.addLayout(layouttimeline)
 

@@ -18,27 +18,27 @@ from msl.equipment import (
 
 class Finish_Signal(QObject):
 
-    grating_update = pyqtSignal(object)   
+    grating_update = pyqtSignal(object)
+    #complete_signal=pyqtSignal(bool)
 
 class Grating_changer(QRunnable):
 
-    def __init__(self, mono,pos):
+    def __init__(self, mono,pos,event=None):
         super().__init__()
         self.mono = mono
         self.pos=pos
         self.signals=Finish_Signal()
+        self.event=event
 
     @pyqtSlot()
     def run(self): # A slot takes no params
         self.mono.set_mono_grating(self.pos)
         grating_pos=self.mono.get_mono_grating()
-        #voltage_actual= float(self.psu.query("MEAS:VOLT?").strip())
-        #statusstring="Voltage: "+str(np.round(voltage_actual,3))+" V\n"
-        #currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
-        #statusstring+="Current: "+str(np.round(currentA_actual*1000,2))+" mA"
 
         self.signals.grating_update.emit(grating_pos)
- 
+        if self.event:
+            self.event.set()
+        #self.signals.complete_signal.emit(True)
 
 
 class SCT320():
@@ -108,19 +108,6 @@ class SCT320():
             #print('Grating: {}, Density: {}, Blaze: {}'.format(index, density, blaze))
         return indices,densities,blazes
             
-    #def get_wavelength(self):
-        # Wavelength information (centerwavelength)
-    #    nm = self.mono.get_mono_wavelength_nm()
-        #min_nm = self.mono.get_mono_wavelength_min_nm()
-        #cutoff_nm = self.mono.get_mono_wavelength_cutoff_nm()
-        #print('Wavelength at {} nm (Min: {} nm, Max: {} nm)'.format(nm, min_nm, cutoff_nm))
-    #    return nm
-
-    #def set_wavelength(self, WL):
-    #    #print('Setting the wavelength to '+ str(WL) +'nm...')
-    #    self.mono.set_mono_wavelength_nm(WL)
-        #print('  Wavelength at {} nm'.format(self.mono.get_mono_wavelength_nm()))
-
     def grating_changed(self,grating_pos):
         self.grating_pos=grating_pos    
         self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
@@ -243,6 +230,20 @@ class SCT320():
         new_lamda=new_lamda*1E6 #convert from mm to nm
         return new_lamda
 
+
+
+    #def get_wavelength(self):
+        # Wavelength information (centerwavelength)
+    #    nm = self.mono.get_mono_wavelength_nm()
+        #min_nm = self.mono.get_mono_wavelength_min_nm()
+        #cutoff_nm = self.mono.get_mono_wavelength_cutoff_nm()
+        #print('Wavelength at {} nm (Min: {} nm, Max: {} nm)'.format(nm, min_nm, cutoff_nm))
+    #    return nm
+
+    #def set_wavelength(self, WL):
+    #    #print('Setting the wavelength to '+ str(WL) +'nm...')
+    #    self.mono.set_mono_wavelength_nm(WL)
+        #print('  Wavelength at {} nm'.format(self.mono.get_mono_wavelength_nm()))
 
 #pprint.pp(dir(self.mono))
 

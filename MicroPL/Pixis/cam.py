@@ -12,14 +12,17 @@ import datetime
 class CameraSignalspectral(QObject):
 
     camsignal = pyqtSignal(object)   
+    #complete_signal = pyqtSignal(bool)
 
 class CameraHandler_spectral(QRunnable):
 
-    def __init__(self, device):
+    def __init__(self, device,event=None):
         super().__init__()
 
         self.pixis = device
         self.signals = CameraSignalspectral()
+        self.event=event
+        
 
     
     @pyqtSlot()
@@ -81,7 +84,9 @@ class CameraHandler_spectral(QRunnable):
         self.pixis.acqtime_spectral=acq_s
 
         self.signals.camsignal.emit(img)
-
+        if self.event:
+            self.event.set()
+        #self.signals.complete_signal.emit(True)
 
 
 
@@ -290,19 +295,18 @@ class Pixis():
             self.auto_exposure_activated=False
             self.autobtn.setStyleSheet("background-color:lightgrey")
         else:
-            self.window = self.app.entrymask3(self.app,"auto_spectral")#device,roi
+            labellist=["Start (s)","Min (s)","Max (s)"]
+            defaultlist=[self.auto_expose_start,self.auto_expose_min,self.auto_expose_max]
             heading_string="Turn on AutoExposure with the following settings: "
             heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
             heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
-            self.window.setHeading(heading_string)
-            self.window.setLabels(["Start (s)","Min (s)","Max (s)"])
-            self.window.setDefaults([self.auto_expose_start,self.auto_expose_min,self.auto_expose_max])
+            self.window = self.app.entrymask3(self.app,"auto_spectral",defaultlist,labellist,heading_string)
             self.window.location_on_the_screen()
             self.window.show()
 
 
     def shutter_setting(self):
-        self.window = self.app.buttonmask3(self.app,["Normal","Open","Closed"],"shutter")#device,roi
+        self.window = self.app.buttonmask3(self.app,["Normal","Open","Closed"],"shutter")
         heading_string="Set the mechanical shutter of the spectrometer/camera. "
         heading_string+="(Normal: opens and closes the shutter on acquisition)"
         self.window.setHeading(heading_string)
@@ -398,24 +402,30 @@ class Pixis():
         self.max_at_wavelength=self.app.monochromator.spectrum_x_axis[np.argmax(spectrum_y_axis)]
         
     def entry_window_roi(self):
-        self.w = self.app.entrymask4(True,self.app)
-        self.w.setHeading("ROI in Pixels with chip dimension 1024x256\nY increases from top to bottom\n(entries must be integers)")
+        defaultlist=[int(self.roi.pos()[0]),int(self.roi.pos()[1]),
+                int(self.roi.pos()[0]+self.roi.size()[0]),int(self.roi.pos()[1]+self.roi.size()[1])]
+        text="ROI in Pixels with chip dimension 1024x256\nY increases from top to bottom\n(entries must be integers)"
+        labellist=["X min","Y min","X max","Y max"]
+        self.w = self.app.entrymask4(self.app,'roi',defaultlist,labellist,text)
         self.w.location_on_the_screen()
         self.w.show()  
 
-    def acquire_clicked_spectral(self):
+    def acquire_clicked_spectral(self,event=None):
         self.app.metadata_spectral["mode"]="spectral"
-        self.app.metadata_spectral["ROI_origin"]=(self.roi.pos()[0],self.roi.pos()[1])
-        self.app.metadata_spectral["ROI_extent"]=(self.roi.size()[0],self.roi.size()[1])
+        self.app.metadata_spectral["ROI_origin_pixel"]=(self.roi.pos()[0],self.roi.pos()[1])
+        self.app.metadata_spectral["ROI_extent_pixel"]=(self.roi.size()[0],self.roi.size()[1])
         self.app.metadata_spectral["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
-        self.app.metadata_spectral["center_wavelength"]=self.app.monochromator.wavelength
+        self.app.metadata_spectral["center_wavelength_nm"]=self.app.monochromator.wavelength
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
-        self.app.metadata_spectral["stage_x"]=xacq
-        self.app.metadata_spectral["stage_y"]=yacq
+        self.app.metadata_spectral["stage_x_mm"]=xacq
+        self.app.metadata_spectral["stage_y_mm"]=yacq
+        if self.app.keysight.output_on:
+            self.app.metadata_spectral["current_A"]=self.app.keysight.currentA_actual
+            self.app.metadata_spectral["voltage_V"]=self.app.keysight.voltage_actual
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
         self.app.metadata_spectral["unsaved"]=True
         self.app.add_log("spectral img "+str(self.counter)+ " Acq. start")
-        self.camera_handler =CameraHandler_spectral(self) 
+        self.camera_handler =CameraHandler_spectral(self,event) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spectral)
         self.app.threadpool.start(self.camera_handler)
 
