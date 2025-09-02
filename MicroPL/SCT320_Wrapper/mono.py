@@ -59,13 +59,12 @@ class SCT320():
         try:
             # Connect to the monochromator
             self.mono = record.connect()
-            print("mono connected")
-            self.app.add_log("SCT320 connected")
-            self.connected=True
             self.wavelength=np.round(self.mono.get_mono_wavelength_nm(),2)
             self.grating_pos=self.mono.get_mono_grating()#[0]
             self.grating_idx,self.densities,self.blazes=self.gratings()
-
+            self.connected=True
+            print("mono connected")
+            self.app.add_log("SCT320 connected")
         except:
             print("monochromator dummy mode")
             self.app.add_log("SCT320 dummy mode")

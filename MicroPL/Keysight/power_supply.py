@@ -12,10 +12,11 @@ class Update_Signal(QObject):
 
 class Status_update(QRunnable):
 
-    def __init__(self, psu):
+    def __init__(self, psu,event=None):
         super().__init__()
         self.psu = psu
         self.signals=Update_Signal()
+        self.event=event
 
     @pyqtSlot()
     def run(self): # A slot takes no params
@@ -25,7 +26,9 @@ class Status_update(QRunnable):
         statusstring+="Current: "+str(np.round(currentA_actual*1000,2))+" mA"
 
         self.signals.string_update.emit((statusstring,voltage_actual,currentA_actual))
- 
+        if self.event:
+            self.event.set()
+
 class Keysight:
     def __init__(self,app):
         self.app=app
@@ -67,9 +70,6 @@ class Keysight:
         self.timeline_reset_pressed=False
         self.maximized=False
 
-        self.IV_curve_voltages=[0]
-        self.IV_curve_currents=[0]
-        self.IV_optical_spatial=[0]
 
     def disconnect(self):
         if self.live_mode_running:
@@ -79,8 +79,8 @@ class Keysight:
         self.psu.close() 
         print("Keysight disconnected")
 
-    def thread_task(self):
-        self.worker=Status_update(self.psu)
+    def thread_task(self,event=None):
+        self.worker=Status_update(self.psu,event)
         self.worker.signals.string_update.connect(self.status_update_from_thread)
         self.app.threadpool.start(self.worker)
 
@@ -105,15 +105,31 @@ class Keysight:
             self.timeline_list.append(self.timeline_time)
             
         if self.output_on:
+            stsh=self.voltwidget.styleSheet()
             if np.isclose(self.voltage,self.voltage_actual,rtol=0.01,atol=0.01):
-                self.voltwidget.setStyleSheet("background-color: cyan")
+                if "red" in stsh:
+                    self.voltwidget.setStyleSheet("color:red;background-color: cyan;")
+                else:
+                    self.voltwidget.setStyleSheet("color:black;background-color: cyan;")
             else:
-                self.voltwidget.setStyleSheet("background-color: lightGray")
+                if "red" in stsh:
+                    self.voltwidget.setStyleSheet("color:red;background-color: lightGray;")
+                else:
+                    self.voltwidget.setStyleSheet("color:black;background-color: lightGray;")
+                #self.voltwidget.setStyleSheet("background-color: lightGray;")
 
+            stsh=self.currentwidget.styleSheet()
             if np.isclose(self.current/1000,self.currentA_actual,rtol=0.01,atol=0.001):
-                self.currentwidget.setStyleSheet("background-color: cyan")
+                if "red" in stsh:
+                    self.currentwidget.setStyleSheet("color:red;background-color: cyan;")
+                else:
+                    self.currentwidget.setStyleSheet("color:black;background-color: cyan;")
             else:
-                self.currentwidget.setStyleSheet("background-color: lightGray")
+                if "red" in stsh:
+                    self.currentwidget.setStyleSheet("color:red;background-color: lightGray;")
+                else:
+                    self.currentwidget.setStyleSheet("color:black;background-color: lightGray;")
+
         self.Acurve.setData(self.timeline_list,self.currentA_list)
         self.Vcurve.setData(self.timeline_list,self.voltage_list)
         self.p1.setXRange(0,self.timeline_time)
@@ -145,7 +161,13 @@ class Keysight:
             if itsanumber:
                 self.voltage=np.double(s)
                 if self.output_on:
-                    self.voltwidget.setStyleSheet("background-color: lightGray;color: red")
+                    stsh=self.voltwidget.styleSheet()
+                    if "cyan" in stsh:
+                        self.voltwidget.setStyleSheet("color:red;background-color: cyan;")
+                    else:
+                        self.voltwidget.setStyleSheet("color:red;background-color: lightGray;")
+
+                    #self.voltwidget.setStyleSheet("color: red;")#background-color: lightGray
 
 
     def setvoltage_confirmed(self):
@@ -156,7 +178,7 @@ class Keysight:
                 self.timer.start(int(self.refresh_rate*1000))
             else:
                 self.psu.write(f"SOUR:VOLT {self.voltage}")
-            self.voltwidget.setStyleSheet("background-color: lightGray;color: black")
+            self.voltwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.voltage,3))+" V")
 
 
@@ -168,7 +190,7 @@ class Keysight:
                 self.timer.start(int(self.refresh_rate*1000))
             else:
                 self.psu.write(f"SOUR:CURR {self.current/1000}")
-            self.currentwidget.setStyleSheet("background-color: lightGray;color: black")
+            self.currentwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.current,1))+" mA")
 
 
@@ -182,7 +204,12 @@ class Keysight:
             if itsanumber:
                 self.current=np.double(s)
                 if self.output_on:
-                    self.currentwidget.setStyleSheet("background-color: lightGray;color: red")
+                    stsh=self.currentwidget.styleSheet()
+                    if "cyan" in stsh:
+                        self.currentwidget.setStyleSheet("color:red;background-color: cyan;")
+                    else:
+                        self.currentwidget.setStyleSheet("color:red;background-color: lightGray;")
+                    #self.currentwidget.setStyleSheet("color: red;")
 
 
     def power_on(self):
@@ -195,6 +222,8 @@ class Keysight:
             else:
                 self.psu.write("OUTP OFF")
             self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
+            self.voltwidget.setStyleSheet("background-color: lightGray")
+            self.currentwidget.setStyleSheet("background-color: lightGray")
             self.app.add_log("Electric Power Output OFF")
         else:
             cond0=self.voltage<self.max_voltage
@@ -217,8 +246,9 @@ class Keysight:
                 self.app.add_log("set: "+str(np.round(self.voltage,3))+" V ; "+str(np.round(self.current,1))+" mA")
                 self.app.add_log("Electric Power Output ON")
             else:
-                self.app.add_log("Safety limits violated")
                 self.app.add_log("Electric Power not turned ON")
+                self.app.add_log("Safety limits violated")
+
 
 
     def refreshrate_edited(self,s):
@@ -415,7 +445,7 @@ class Keysight:
         self.pw2.setLabel('left', 'Current', units='A')
         #pw2vb = pg.ViewBox()
         #pw2p1 = self.pw.
-        self.IVcurveplot=pg.PlotCurveItem(self.IV_curve_voltages,self.IV_curve_currents)
+        self.IVcurveplot=pg.PlotCurveItem(self.app.scripting.IV_curve_voltages,self.app.scripting.IV_curve_currents)
         self.pw2.addItem(self.IVcurveplot)#plot([1,2,4,8,16,32])
         layout.addWidget(self.pw2)
         self.pw2.setHidden(True)

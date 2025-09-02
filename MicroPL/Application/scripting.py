@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication,QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplication,QVBoxLayout,QApplication
 from PyQt5.QtCore import QTimer,pyqtSignal,QRunnable,pyqtSlot,QObject
 import numpy as np
 import time
@@ -10,11 +10,12 @@ class Update_Signal(QObject):
 
 class Grid_Mapping(QRunnable):
 
-    def __init__(self, stage,orca,pixis,spatial_bool,spectral_bool,stagex,stagey):
+    def __init__(self, stage,keysight,orca,pixis,spatial_bool,spectral_bool,stagex,stagey):
         super().__init__()
         self.stage = stage
         self.orca=orca
         self.pixis=pixis
+        self.keysight=keysight
         self.stagex=stagex
         self.stagey=stagey
         self.spectral_bool=spectral_bool
@@ -23,49 +24,92 @@ class Grid_Mapping(QRunnable):
 
     @pyqtSlot()
     def run(self): # A slot takes no params
-        self.stage.xpos=self.stagex
-        self.stage.ypos=self.stagey
+
+        self.stage.xpos_set=self.stagex
+        self.stage.ypos_set=self.stagey
         self.stage.stage_goto()      
 
         done_event = threading.Event()
         self.stage.thread_task(done_event)
         done_event.wait()
-                
+        if self.keysight.connected:
+            if self.keysight.output_on:
+                done_event = threading.Event()
+                self.keysight.thread_task(done_event)
+                done_event.wait()
+
+        QApplication.processEvents()
+
+        if self.spatial_bool:
+            done_event = threading.Event()
+            self.orca.acquire_clicked_spatial(done_event)
+            done_event.wait()
+            QApplication.processEvents()
+
         if self.spectral_bool:
             done_event = threading.Event()
             self.pixis.acquire_clicked_spectral(done_event)
             done_event.wait()
-        
-        if self.spatial_bool:
-            done_event = threading.Event()
-            self.porca.acquire_clicked_spatial(done_event)
-            done_event.wait()
+            QApplication.processEvents()
 
         self.signals.update.emit(True)
  
 
 class IV_Measurement(QRunnable):
 
-    def __init__(self, stage):
+    def __init__(self, keysight,orca,pixis,spatial_bool,spectral_bool,set_volt,settling_time):
         super().__init__()
-        self.stage = stage
+        self.orca=orca
+        self.pixis=pixis
+        self.keysight=keysight
+        self.spectral_bool=spectral_bool
+        self.spatial_bool=spatial_bool
+        self.set_volt=set_volt
+        self.settling_time=settling_time
         self.signals=Update_Signal()
 
     @pyqtSlot()
     def run(self): # A slot takes no params
-        x,y =self.stage.get_position()
-        stage_status_string="Stage X: "+str(x)+ " mm\n"
-        stage_status_string+="Stage Y: "+str(y)+ " mm"
+        self.keysight.voltage=self.set_volt
+        self.keysight.setvoltage_confirmed()
+        time.sleep(self.settling_time)
 
-        self.signals.string_update.emit((stage_status_string,x,y))
- 
+        done_event = threading.Event()
+        self.keysight.thread_task(done_event)
+        done_event.wait()
+        
+        QApplication.processEvents()
 
+
+        if self.spatial_bool:
+            done_event = threading.Event()
+            self.orca.acquire_clicked_spatial(done_event)
+            done_event.wait()
+            QApplication.processEvents()
+
+        if self.spectral_bool:
+            done_event = threading.Event()
+            self.pixis.acquire_clicked_spectral(done_event)
+            done_event.wait()
+            QApplication.processEvents()
+
+            
+        self.signals.update.emit(True)
 
 
 class Scripting:
     def __init__(self,app):
         self.app=app
-        
+
+        self.script_canceled=False
+        self.script_selected=0
+        self.script_index=None
+        self.script_settings_prepared=False
+        self.script_paused=False
+
+        self.sleep_start=None
+        self.sleep_duration=0
+
         # stage mapping
         self.script_x_entries=[0,50,10]
         self.script_y_entries=[0,50,10]
@@ -73,10 +117,6 @@ class Scripting:
         self.grid_spatial=True
         self.grid_spectral=False
 
-        self.script_execution=False
-        self.script_selected=0
-        self.script_index=None
-        self.script_settings_prepared=False
 
         self.IV_end_voltage=10
         self.IV_start_voltage=0
@@ -86,23 +126,28 @@ class Scripting:
         self.IV_spatial=True
         self.IV_spectral=True
 
+        self.IV_curve_voltages=[0]
+        self.IV_curve_currents=[0]
+        self.IV_optical_spatial=[0]
+
     def grid_mapping_on_thread(self,step_done):
         if step_done:
+            if self.script_canceled:
+                self.script_end()
             self.script_index +=1
-
             if self.script_index==self.number_of_points:
                 self.script_end()
-            elif not self.script_execution:
+            elif self.script_paused:
+                self.app.add_log("script paused")
                 return None
             else:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
                 stagex=self.script_positions_x[self.script_index]
                 stagey=self.script_positions_y[self.script_index]
-                self.grid_mapper =Grid_Mapping(self.app.stage,self.app.orca,self.app.pixis,
+                self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                             self.grid_spatial,self.grid_spectral,stagex,stagey) 
                 self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
                 self.app.threadpool.start(self.grid_mapper)
-
 
     def expand(self):
         if not self.expanded:
@@ -123,7 +168,7 @@ class Scripting:
         #self.labelscr.setFixedWidth(100)
         
         widget = QComboBox()
-        widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve","calibrate spatial camera via stage"])
+        widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve","calibrate spatial camera via stage (not implemented)"])
         widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.currentIndexChanged.connect(self.script_changed )        
@@ -150,14 +195,22 @@ class Scripting:
     def script_changed(self,i):
         self.script_selected=i
         self.script_settings_prepared=False
+        if i>0:
+            self.btnexec.setStyleSheet("background-color:cyan;")
+            self.btnstart.setStyleSheet("background-color:lightgrey;")
+        else:
+            self.btnexec.setStyleSheet("background-color:lightgrey;")
+            self.btnstart.setStyleSheet("background-color:lightgrey;")
 
     def script_button_pause(self):
-        if self.script_execution:
+        if not self.script_paused:
             self.btnpause.setText("Continue")
-            self.script_execution=False
+            #self.script_execution=False
+            self.script_paused=True
         else:
             self.btnpause.setText("Pause")
-            self.script_execution=True
+            self.script_paused=False
+            #self.script_execution=True
             if self.script_selected==1:
                 self.script_from_txt()
             elif self.script_selected==2:
@@ -166,9 +219,32 @@ class Scripting:
                 self.grid_mapping_script()
 
     def script_end(self):
-        self.script_execution=False
         self.script_index=None
+        if self.app.pixis.connected:
+            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", self.app.pixis.remember_shutter)
+            if self.app.pixis.remember_shutter == "Always Open":
+                self.app.pixis.shutterbtn.setText("Shutter (Open)")
+            elif self.app.pixis.remember_shutter == "Always Closed":
+                self.app.pixis.shutterbtn.setText("Shutter (Closed)")
+            elif self.app.pixis.remember_shutter == "Normal":
+                self.app.pixis.shutterbtn.setText("Shutter (Normal)")
+
+        if self.script_selected==3: # turn off after IV curve
+            self.app.keysight.current=0       
+            self.app.keysight.voltage=0
+            self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+            self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+            if self.app.keysight.output_on:
+                self.app.keysight.power_on() # turn off
+
         self.app.h5saving.save_on_acquire()
+
+        if self.app.stage.connected:
+            self.app.stage.live_mode()#_running=True
+        if self.app.keysight.connected:
+            self.app.keysight.live_mode()
+
+        self.app.add_log("script ended")
         self.btnstart.setText("Start")
     
     def script_button_set(self):
@@ -184,8 +260,9 @@ class Scripting:
             pass
 
     def script_button_start(self):
-        if self.script_execution:
-            self.script_end()
+        self.btnstart.setStyleSheet("background-color:lightgrey;")
+        if self.script_paused:
+            self.script_canceled=True
         else:
             if self.script_selected==0:
                 self.app.add_log("no script selected to execute")
@@ -194,31 +271,39 @@ class Scripting:
                 self.app.add_log("use 'Set' to initialize the script first")
                 return None
 
+            #self.script_execution=True
             self.btnstart.setText("Cancel")
             self.script_index=0
 
             if self.app.pixis.live_mode_running:
-                self.app.pixis.timer.stop()
-                self.app.pixis.live_mode_running=False
+                self.app.pixis.live_mode()
             if self.app.orca.live_mode_running:
-                self.app.orca.timer.stop()
-                self.app.orca.live_mode_running=False
+                self.app.orca.live_mode()
             if self.app.keysight.live_mode_running:
-                self.app.keysight.timer.stop()
-                self.app.keysight.live_mode_running=False
+                self.app.keysight.live_mode()
             if self.app.stage.live_mode_running:
-                self.app.stage.timer.stop()
-                self.app.stage.live_mode_running=False
+                self.app.stage.live_mode()
+
+            self.app.threadpool.waitForDone()
 
             if not self.app.h5saving.save_on_acquire_bool:
                 self.app.h5saving.save_on_acquire()
 
             if self.script_selected==1:
+                #if self.grid_spectral:
+                self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.script_from_txt()
         
             elif self.script_selected==2:
+                if self.grid_spectral:
+                    self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.grid_mapping_script()
             elif self.script_selected==3:
+                if self.IV_spectral:
+                    self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.acquire_IV()
             elif self.script_selected==4:
                 pass
@@ -313,7 +398,7 @@ class Scripting:
                 print("script includes errors")
             else:
 
-                self.script_execution=True
+                #self.script_execution=True
                 if self.script_index is None:
                     self.script_index=0
                 self.btnexec.setText("Cancel")
@@ -378,7 +463,8 @@ class Scripting:
     def grid_mapping_window(self):
         #if self.script_index is None:
         text="Measurement grid with current settings\nChoose the grid via start position (min), "
-        text+="end position (max)\nand number of points (num) in each dimension"
+        text+="end position (max)\nand number of points (num) in each dimension. "
+        text+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         labellist=["X min","Y min","X max","Y max","X num","Y num"]
         defaultlist=[self.script_x_entries[0],self.script_y_entries[0],self.script_x_entries[1],
                         self.script_y_entries[1],self.script_x_entries[2],self.script_y_entries[2]]
@@ -387,86 +473,79 @@ class Scripting:
         self.w.show()
 
     def grid_mapping_script(self):
-            
+        self.app.add_log("grid mapping script starting")
+
         self.number_of_points=len(self.script_positions_x)
         self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
         stagex=self.script_positions_x[self.script_index]
         stagey=self.script_positions_y[self.script_index]
-        self.grid_mapper =Grid_Mapping(self.app.stage,self.app.orca,self.app.pixis,
+        self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                        self.grid_spatial,self.grid_spectral,stagex,stagey) 
         self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
         self.app.threadpool.start(self.grid_mapper)
 
-
-
-
     def acquire_IV_window(self):
         heading_string="Acquire I-V-Curve by stepwise increasing the voltage from 0 to the set maximum value"
         heading_string+=" and measuring the corresponding current after a given settling time. "
-        heading_string+="After pressing 'Confirm', which closes this window, press 'Acq. I-V-Curve' in the main window again "
-        heading_string+="to start the measurement."
-        defaultlist=[self.IV_start_voltage,self.IV_step_voltage,self.IV_end_voltage,self.IV_settling_time]
-        labellist=["Voltage-Start (V)","Voltage-Step (V)","Voltage-End (V)","Settling Time (s)"]
+        heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
+        defaultlist=[self.IV_start_voltage,self.IV_end_voltage,self.IV_step_voltage,self.IV_settling_time]
+        labellist=["Voltage-Start (V)","Voltage-End (V)","Voltage-Step (V)","Settling Time (s)"]
         self.window = self.app.entrymaskiv(self.app,defaultlist,labellist,heading_string)
         self.window.location_on_the_screen()
         self.window.show()
 
+    def iv_curve_on_thread(self,step_done):
+        if step_done:
+            if self.script_canceled:
+                self.script_end()
+            self.script_index +=1
+            if self.script_index==self.number_of_points:
+                self.script_end()
+            elif self.script_paused:
+                self.app.add_log("script paused")
+                return None
+            else:
+                self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
+
+                self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
+                self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+
+                set_volt=self.IV_set_voltages[self.script_index]
+                self.iv_worker=IV_Measurement(self.app.keysight,self.app.orca,self.app.pixis,
+                                              self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
+                self.iv_worker.signals.update.connect(self.iv_curve_on_thread)
+                self.app.threadpool.start(self.iv_worker)
+
     def acquire_IV(self):
 
-        if self.script_execution:
-            self.app.add_log("(wait) Acquiring I-V-Curve")
-            self.acqivbtn.setStyleSheet("background-color:LightGray")
-            self.IV_settings_prepared=False
-            
-            self.show_IV()
+        self.app.add_log("(wait) Acquiring I-V-Curve")
 
-            self.IV_curve_voltages=[]
-            self.IV_curve_currents=[]
-            if self.live_mode_running:
-                self.timer.stop()
-            if self.app.orca.live_mode_running:
-                self.app.orca.timer.stop()
-                self.app.orca.live_mode_running=False
-            if self.app.pixis.live_mode_running:
-                self.app.pixis.timer.stop()
-                self.app.pixis.live_mode_running=False
-            if self.app.stage.live_mode_running:
-                self.app.stage.timer.stop()
+        self.app.keysight.show_IV()
 
-            self.psu.write("OUTP OFF")
-            self.psu.write(f"SOUR:CURR {self.max_currentmA/1000}")
-            self.psu.write(f"SOUR:VOLT {0}")
-            self.psu.write("OUTP ON")
+        self.IV_curve_voltages=[]
+        self.IV_curve_currents=[]
+        if self.app.orca.connected:
+            self.IV_optical_spatial=[]
+        
+        if self.app.keysight.output_on:
+            self.app.keysight.power_on() #turn off any output
+        time.sleep(0.1) # give atleast 100ms between switching off and on
+        self.app.keysight.current=self.app.keysight.max_currentmA -0.01       
+        self.app.keysight.voltage=0
+        self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+        self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+        self.app.keysight.power_on() #turn on
 
-            number_of_steps=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)
-            for i in range(number_of_steps):
-                IV_set_voltage=self.IV_start_voltage+i*self.IV_step_voltage
-                self.psu.write(f"SOUR:VOLT {IV_set_voltage}")
-                time.sleep(self.IV_settling_time)
-                self.currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
-                self.voltage_actual=float(self.psu.query("MEAS:VOLT?").strip())
-                self.timeline_time = time.time()-self.timeline_start
-                
-                self.IV_curve_currents.append(self.currentA_actual)        
-                self.IV_curve_voltages.append(self.voltage_actual)
-                
-                self.voltage_list.append(self.voltage_actual)
-                self.currentA_list.append(self.currentA_actual)
 
-                self.timeline_list.append(self.timeline_time)
-                
-                self.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+        self.number_of_points=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)   
 
-            
-            self.psu.write(f"SOUR:CURR {0}")
-            self.psu.write(f"SOUR:VOLT {0}")
-            self.psu.write("OUTP OFF")
-            
-            self.voltwidget.setText("0")
-            self.currentwidget.setText("0")
+        self.IV_set_voltages=[]
+        for i in range(self.number_of_points):
+            self.IV_set_voltages.append(self.IV_start_voltage+i*self.IV_step_voltage)
 
-            self.app.add_log("(continue) I-V-Curve finished")
-            if self.live_mode_running:
-                self.timer.start(int(self.refresh_rate)*1000)
-            if self.app.stage.live_mode_running:
-                self.app.stage.timer.start(int(self.app.stage.refresh_rate)*1000)
+        set_volt=self.IV_set_voltages[self.script_index]
+        self.iv_worker=IV_Measurement(self.app.keysight,self.app.orca,self.app.pixis,
+                                      self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
+        self.iv_worker.signals.update.connect(self.iv_curve_on_thread)
+        self.app.threadpool.start(self.iv_worker)

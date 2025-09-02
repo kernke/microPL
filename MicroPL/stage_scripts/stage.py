@@ -133,11 +133,9 @@ class Stage:
 
 
             print("TANGO is now successfully connected to DLL")
+            self.xpos,self.ypos=self.get_position()
             self.app.add_log("Tango connected")
             self.connected=True
-
-            self.xpos,self.ypos=self.get_position()
-
         except:
             self.connected=False
             self.xpos,self.ypos=25,25
@@ -550,15 +548,15 @@ class Stage:
         btn=self.app.normal_button(layoutstagebuttons2,"Set Limits",self.entry_window_limits)  
         btn.setFixedWidth(110)
         layoutstagebuttons2.addStretch()
-        btn=self.app.normal_button(layoutstagebuttons2,"Calibrate Spatial Cam",self.calibrate_spatial_cam)  
-        btn.setStyleSheet("background-color: dimgrey")
-        btn.setFixedWidth(130)
+        #btn=self.app.normal_button(layoutstagebuttons2,"Calibrate Spatial Cam",self.calibrate_spatial_cam)  
+        #btn.setStyleSheet("background-color: dimgrey")
+        #btn.setFixedWidth(130)
 
-        layoutstagebuttons3=QHBoxLayout()
-        self.btnlive=self.app.normal_button(layoutstagebuttons3,"Status Live",self.live_mode)
+        #layoutstagebuttons3=QHBoxLayout()
+        #self.btnlive=self.app.normal_button(layoutstagebuttons3,"Status Live",self.live_mode)
 
         self.dropdown.addLayout(layoutstagebuttons2)
-        self.dropdown.addLayout(layoutstagebuttons3)
+        #self.dropdown.addLayout(layoutstagebuttons3)
 
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
@@ -568,20 +566,20 @@ class Stage:
         if self.connected:
             self.live_mode()
 
-    def calibrate_spatial_cam(self):
-        pass
+    #def calibrate_spatial_cam(self):
+    #    pass
 
 
     def live_mode(self):
         if not self.live_mode_running:
             self.live_mode_running=True
             self.timer.start(int(self.refresh_rate)*1000)
-            self.btnlive.setStyleSheet("background-color: green;color: black")
+            #self.btnlive.setStyleSheet("background-color: green;color: black")
         else:
 
             self.live_mode_running=False
             self.timer.stop()
-            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+            #self.btnlive.setStyleSheet("background-color: lightGray;color: black")
 
 
     # stage ui  methods ##########################################################

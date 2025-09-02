@@ -46,7 +46,7 @@ class Multi_entry(QWidget):
         setattr(self,widgetname,QLineEdit())
         widget=getattr(self,widgetname)
         widget.setStyleSheet("background-color: lightGray")
-        widget.setMaxLength(5)
+        widget.setMaxLength(7)
         widget.setFixedWidth(50)
         widget.setText(widgettext)
         layout.addWidget(widget)
@@ -161,6 +161,7 @@ class ButtonMask3(QWidget):
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Normal)")
             self.app.pixis.shutter_value="Normal"
+            self.app.pixis.remember_shutter="Normal"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
         self.close()
 
@@ -171,6 +172,7 @@ class ButtonMask3(QWidget):
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Open)")
             self.app.pixis.shutter_value="Always Open"
+            self.app.pixis.remember_shutter="Always Open"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
         self.close()
 
@@ -181,6 +183,7 @@ class ButtonMask3(QWidget):
         elif self.keyword=="shutter":
             self.app.pixis.shutterbtn.setText("Shutter (Closed)")
             self.app.pixis.shutter_value="Always Closed"
+            self.app.pixis.remember_shutter="Always Closed"
             self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Closed')
 
         self.close()
@@ -381,6 +384,8 @@ class EntryMaskIV(Multi_entry):
         self.app.scripting.IV_spatial=self.spatial
         self.app.scripting.IV_spectral=self.spectral
         self.app.scripting.script_settings_prepared=True
+        self.app.scripting.btnexec.setStyleSheet("background-color:lightgrey;")
+        self.app.scripting.btnstart.setStyleSheet("background-color:cyan;")
         self.close()
 
 class EntryMask4(Multi_entry):
@@ -558,7 +563,6 @@ class EntryMaskMapping(Multi_entry):
         layout.addLayout(layoutclosing)
         self.setLayout(layout)    
     
-
     def location_on_the_screen(self):
         ag = QDesktopWidget().availableGeometry()
         x=ag.width()//2-175
@@ -605,5 +609,7 @@ class EntryMaskMapping(Multi_entry):
         self.app.scripting.grid_spectral=self.spectral        
         self.app.scripting.script_positions_x=newx
         self.app.scripting.script_positions_y=newy  
-        self.app.scripting.script_execution=True
+        self.app.scripting.script_settings_prepared=True
+        self.app.scripting.btnexec.setStyleSheet("background-color:lightgrey;")
+        self.app.scripting.btnstart.setStyleSheet("background-color:cyan;")
         self.close()

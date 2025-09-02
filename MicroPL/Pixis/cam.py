@@ -116,6 +116,7 @@ class Pixis():
         self.live_mode_running=False
         self.maximized=False
         self.shutter_value="Normal"
+        self.remember_shutter="Normal"#self.shutter_value
         self.live_mode_just_stopped=False
 
         self.auto_exposure_activated=False
@@ -424,7 +425,8 @@ class Pixis():
             self.app.metadata_spectral["voltage_V"]=self.app.keysight.voltage_actual
         self.app.metadata_spectral["grating"]=self.app.monochromator.grating_actual
         self.app.metadata_spectral["unsaved"]=True
-        self.app.add_log("spectral img "+str(self.counter)+ " Acq. start")
+        if not self.live_mode_running:
+            self.app.add_log("spectral img "+str(self.counter)+ " Acq. start")
         self.camera_handler =CameraHandler_spectral(self,event) 
         self.camera_handler.signals.camsignal.connect(self.image_from_thread_spectral)
         self.app.threadpool.start(self.camera_handler)
