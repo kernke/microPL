@@ -162,10 +162,6 @@ class Scripting:
         self.app.heading_label(layoutright,"Scripts   ",self.expand)
 
         self.dropdown=QVBoxLayout()
-
-        #self.labelscr = QLabel("")
-        #self.labelscr.setStyleSheet("color:white")
-        #self.labelscr.setFixedWidth(100)
         
         widget = QComboBox()
         widget.addItems(["choose script","from settings txt","grid mapping","I-V-curve","calibrate spatial camera via stage (not implemented)"])
@@ -318,147 +314,133 @@ class Scripting:
         self.sleep_timer.stop()
 
     def check_script(self,fname):
-        settings_list=[]
-        double_format_keys=["spatial_acquisition_time_s",
+        float_keys=set(["spatial_acquisition_time_s",
                             "spectral_acquisition_time_s",
                             "center_wavelength_nm",
                             "stage_x_mm",
                             "stage_y_mm",
                             "sleep_s,"
-                            "voltage_V",
-                            "current_A"]
-        int_format_keys=["grating_position_int","spatial_binning_int",]
-        bool_format_keys=["save_spectral_image_bool","spatial_auto_exposure"]
+                            "voltage_volt",
+                            "current_ampere"])
+        bool_keys=set(["save_spectral_image_bool"])
 
-        comment_required=["sleep_s"]
-        spectral_required=["spectral_acquisition_time_seconds",
-                           "center_wavelength_nm",
-                           "grating_position_int",
-                           "save_spectral_image_bool",
-                           "stage_x_mm",
-                           "stage_y_mm"]
-        spatial_required=["spatial_acquisition_time_s",
-                          "stage_x_mm",
-                          "stage_y_mm"]
+        string_keys_any=set(["comment","group_name","acquisition_name"])
+        string_keys=dict()
+        string_keys["shutter_mode"]=set(["normal","open","closed"])
+        string_keys["grating"]=set(["1","2","3","4","5","6"])
+        string_keys["spatial_resolution"]=set(["2048","1024","512"])
+        none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
+                       "spatial_acquire"])#"show_timeline","show_iv_curve"
+        object_keys=dict()
+        object_keys["spatial_auto_exposure"]=["start_s,min_s,max_s"]
+        object_keys["spectral_auto_exposure"]=["start_s,min_s,max_s"]
+        object_keys["stage_mapping"]=["spectral_bool","spatial_bool","x_min_mm","x_max_mm",
+                                          "x_num_int","y_min_mm","y_max_mm","y_num_int"]
+        object_keys["measure_iv_curve"]=["spectral_bool","spatial_bool","start_voltage_volt",
+                                             "end_voltage_volt","step_voltage_volt","settling_time_s"]
+        object_keys["spectral_roi"]=["x_min_int","x_max_int","y_min_int","y_max_int"]
+ 
+        #"electric_safety_limits"
+        #"stage_limits"
         
         with open(fname, "r") as f:
             lines=f.read().splitlines()
-        for line in lines:
-            settings=dict()
-            expressions=line.split(",")
-            for expr in expressions:
-                try:
-                    key,value=expr.split(":")
-                except ValueError:
-                    print("ERROR missing ':'")
-                    return None
-                if key in double_format_keys:
-                    settings[key]=np.double(value)
-                elif key in int_format_keys:
-                    settings[key]=int(value)
-                elif key in bool_format_keys:
-                    settings[key]=bool(value)
+
+        error_found=False
+        for counter,line in enumerate(lines):
+            commands=[]
+            if line[0]=="#":
+                pass
+            else: 
+                expressions=line.split(",")
+                if len(expressions)==1:
+                    key_value=expressions.split(":")
+                    if len(key_value)==1:
+                        if key_value in none_keys:
+                            commands.append(key_value)
+                        else:
+                            self.app.add_log("Error in line "+str(counter+1))
+                            error_found=True
+                    elif len(key_value)>2:
+                        self.app.add_log("Error in line "+str(counter+1))
+                        error_found=True
+                    else:
+                        key,value=key_value
+                        if key in float_keys:
+                            try:
+                                num_value=np.double(value)
+                                if num_value>0:
+                                    commands.append((key,num_value))
+                                else:
+                                    self.app.add_log("Error in line "+str(counter+1))
+                                    error_found=True
+
+                            except:
+                                self.app.add_log("Error in line "+str(counter+1))
+                                error_found=True
+                        elif key in bool_keys:
+                            try:
+                                commands.append((key,bool(value)))
+                            except:
+                                self.app.add_log("Error in line "+str(counter+1))
+                                error_found=True
+                        elif key in string_keys_any:
+                            commands.append((key,value))
+                        elif key in string_keys:
+                            if value in string_keys[key]:
+                                commands.append((key,value))
+                            else:
+                                self.app.add_log("Error in line "+str(counter+1))
+                                error_found=True
                 else:
-                    settings[key]=value
-            if "mode" not in settings:
-                print("mode is necessary in every line")
-                return None
-            check=True
-            if settings["mode"]=="comment":
-                for requirement in comment_required:
-                    if requirement not in settings:
-                        check=False
-                        print("sleep false")
-            elif settings["mode"]=="spectral":
-                for requirement in spectral_required:
-                    if requirement not in settings:
-                        check=False
-                        print("spectral false")
-            elif settings["mode"]=="spatial":
-                for requirement in spatial_required:
-                    if requirement not in settings:
-                        check=False
-                        print("spatial false")
-            if not check:
-                print("settings requirements not fulfilled")
-                return None
-            
-            settings_list.append(settings)
-        return settings_list
+                    method=expressions[0]
+                    if method in object_keys:
+                        try:
+                            method_dict=dict()
+                            for expr in expressions[1:]:
+                                key,value=expr.split(":")
+                                if key == "spectral_bool" or key=="spatial_bool":
+                                    method_dict[key]=bool(value)
+                                else:
+                                    num_value=np.double(value)
+                                    if num_value<0:
+                                        self.app.add_log("Error in line "+str(counter+1))
+                                        error_found=True
+                                    else:
+                                        method_dict[key]=num_value
+                            if method_dict.keys() == set(object_keys[method]):
+                                commands.append((method,method_dict))
+                            else:
+                                self.app.add_log("Error in line "+str(counter+1))
+                                error_found=True
+
+                        except:
+                            self.app.add_log("Error in line "+str(counter+1))
+                            error_found=True
+                            
+                    else:
+                        self.app.add_log("Error in line "+str(counter+1))
+                        error_found=True
+
+        if error_found:
+            commands=None
+        return commands
 
     def script_from_txt_window(self):
         self.fname,ftype = QFileDialog.getOpenFileName(self.app, 'Open file', 
                self.app.h5saving.save_folder,"settings list (*.txt)")
         #print(fname)
+        if self.fname:
+            self.script_settings_prepared=True
+            self.btnexec.setStyleSheet("background-color:lightgrey;")
+            self.btnstart.setStyleSheet("background-color:cyan;")
 
     def script_from_txt(self):
         if self.fname:
             settings_list=self.check_script(self.fname)
-            if settings_list is None:
-                print("script includes errors")
-            else:
+            if settings_list is not None:
+                self.number_of_points=len(settings_list)
 
-                #self.script_execution=True
-                if self.script_index is None:
-                    self.script_index=0
-                self.btnexec.setText("Cancel")
-                    
-                if not self.app.h5saving.save_on_acquire_bool:
-                    self.app.h5saving.save_on_acquire()
-                
-                
-                number_of_points=len(settings_list)        
-                for i in range(self.script_index,number_of_points):
-                    settings=settings_list[i]
-                    if "comment_text" in settings:
-                        self.app.h5saving.widgetcomment.setText(settings["comment_text"])
-                        self.app.h5saving.comment_edited(settings["comment_text"])
-                    if "heading_text" in settings:
-                        self.app.h5saving.group=settings["heading_text"]
-                        self.app.h5saving.widgeth5group.setText(self.app.h5saving.group)
-                    if settings["mode"]=="comment":
-                        sleep_time=settings["sleep_seconds"]*1000
-                        self.sleep_method(sleep_time)
-                    elif settings["mode"]=="spectral":
-                        self.app.pixis.acqtime_spectral=settings["spectral_acquisition_time_s"]
-                        self.app.monochromator.wavelength=settings["center_wavelength_nm"]
-                        self.app.monochromator.wavelength_edited() ###################################################
-                        self.app.pixis.save_full_image=settings["save_spectral_image_bool"]
-                        self.app.pixis.checkbox.setChecked(self.app.pixis.save_full_image)
-                        self.app.monochromatorgrating_changed(settings["grating_position_int"]-1)
-                        self.app.stage.xpos=settings["stage_x_mm"]
-                        self.app.stage.ypos=settings["stage_y_mm"]
-                        self.app.stage.stage_goto()
-
-                        QApplication.processEvents()
-                        if not self.script_execution:
-                            return None            
-                        
-                        self.app.pixis.acquire_clicked_spectral()
-
-
-                    elif settings["mode"]=="spatial":
-                        self.app.pixis.acqtime_spectral=settings["spatial_acquisition_time_seconds"]
-                        self.app.stage.xpos=settings["stage_x_mm"]
-                        self.app.stage.ypos=settings["stage_y_mm"]
-                        self.app.stage.stage_goto()
-
-                        QApplication.processEvents()
-                        if not self.script_execution:
-                            return None            
-
-                        self.app.orca.acquire_clicked_spatial()
-
-                    
-                    self.script_index+=1
-                    print(str(i+1)+" from "+str(number_of_points))
-                    self.labelscr.setText(str(i+1)+"/"+str(number_of_points))
-                    
-                    QApplication.processEvents()
-                    if not self.script_execution:
-                        return None
-                    
-                self.script_end()
 
     def grid_mapping_window(self):
         #if self.script_index is None:
@@ -519,7 +501,7 @@ class Scripting:
 
     def acquire_IV(self):
 
-        self.app.add_log("(wait) Acquiring I-V-Curve")
+        self.app.add_log("Acquiring I-V-Curve")
 
         self.app.keysight.show_IV()
 

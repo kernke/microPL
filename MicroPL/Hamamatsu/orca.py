@@ -338,6 +338,9 @@ class Orca():
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 
+        if self.live_mode_running:
+            self.acquire_clicked_spatial()
+
     def acquire_clicked_spatial(self,event=None):
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
@@ -379,15 +382,17 @@ class Orca():
     def live_mode(self):
         if not self.live_mode_running:
             self.app.add_log("spatial camera Live mode started")
-            self.timer=QTimer()
-            self.timer.timeout.connect(self.acquire_clicked_spatial)
+            #self.timer=QTimer()
+            #self.timer.timeout.connect(self.acquire_clicked_spatial)
             self.live_mode_running=True
-            self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
+            #self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
+
+            self.acquire_clicked_spatial()
         else:
             self.app.add_log("spatial camera Live mode stopped")
             self.live_mode_running=False
-            self.timer.stop()
+            #self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")

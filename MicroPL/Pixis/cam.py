@@ -126,16 +126,11 @@ class Pixis():
 
         self.counter=0
 
-
-           
     def chip_temp(self):
         temp = self.cam.get_attribute_value("Sensor Temperature Reading")
         self.app.add_log("Sensor Temperature: " + str(temp))
         temp_status = self.cam.get_attribute_value("Sensor Temperature Status")
         self.app.add_log("Temperature status: " + str(temp_status))
-
-
-
 
     def close(self):
         if self.live_mode_running:
@@ -145,8 +140,6 @@ class Pixis():
         self.cam.close()
 
         print("Camera disconnected")
-        
-
 
     def spectral_camera_show(self,layoutv):
         #self.layoutv=QVBoxLayout()
@@ -259,8 +252,8 @@ class Pixis():
         layoutacqbutton.addStretch()
 
         self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
-        self.timer=QTimer()
-        self.timer.timeout.connect(self.acquire_clicked_spectral)
+        #self.timer=QTimer()
+        #self.timer.timeout.connect(self.acquire_clicked_spectral)
 
 
         self.dropdown.addLayout(layoutacqbutton)
@@ -305,7 +298,6 @@ class Pixis():
             self.window.location_on_the_screen()
             self.window.show()
 
-
     def shutter_setting(self):
         self.window = self.app.buttonmask3(self.app,["Normal","Open","Closed"],"shutter")
         heading_string="Set the mechanical shutter of the spectrometer/camera. "
@@ -330,18 +322,20 @@ class Pixis():
         if not self.live_mode_running:
             self.remember_shutter=self.shutter_value
             self.live_mode_running=True
-            self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
+            #self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.shutterbtn.setText("Shutter (Open)")
             self.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
             self.btnlive.setStyleSheet("background-color: green;color: black")
             self.app.add_log("Spectral camera shutter opened permanently")
             self.app.add_log("spectral camera Live mode started")
+
+            self.acquire_clicked_spectral()
         else:
 
             self.live_mode_running=False
             self.live_mode_just_stopped=True
-            self.timer.stop()
+            #self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
 
@@ -471,5 +465,8 @@ class Pixis():
         self.app.status_mono.setText(statustext2)
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spectral()
+        
+        if self.live_mode_running:
+            self.acquire_clicked_spectral()
 
 
