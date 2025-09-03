@@ -318,12 +318,13 @@ class Orca():
         if not self.live_mode_running:
             if self.live_mode_just_stopped:
                 self.live_mode_just_stopped=False
+                self.acqwidget.setText(str(self.acqtime_spatial))
             else:
                 self.app.update_log("spatial img "+str(self.counter)+ " acquired")
                 self.counter+=1
             if self.auto_exposure_activated:
                 self.app.add_log("auto exposure (s):"+str(self.acqtime_spatial))
-        self.acqwidget.setText(str(self.acqtime_spatial))
+                self.acqwidget.setText(str(self.acqtime_spatial))
 
         if imgmax>65534:
             self.app.update_log("Warning: spatial img oversaturation")

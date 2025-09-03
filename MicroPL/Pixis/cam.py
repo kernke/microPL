@@ -436,12 +436,15 @@ class Pixis():
         self.updateRoi()
 
         if not self.live_mode_running:
-            if not self.live_mode_just_stopped:
+            if self.live_mode_just_stopped:
+                self.acqwidget.setText(str(self.acqtime_spectral))
+            else:
                 self.app.update_log("spectral img "+str(self.counter)+ " acquired")    
                 self.counter+=1
                 if self.auto_exposure_activated:
                     self.app.add_log("auto exposure (s):"+str(self.acqtime_spectral))
-        self.acqwidget.setText(str(self.acqtime_spectral))
+                    self.acqwidget.setText(str(self.acqtime_spectral))
+
 
         
         if imgmax>65534:

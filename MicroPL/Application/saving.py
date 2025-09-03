@@ -49,7 +49,11 @@ class Saving:
                 if i == "unsaved":
                     data[i]=False
                 else:
-                    hf[self.h5struc+"/"+i]=data[i]
+                    dt = h5py.string_dtype(encoding='utf-8')
+                    if isinstance(data[i], str):
+                        hf.create_dataset(self.h5struc+"/"+i, data=data[i], dtype=dt)
+                    else:
+                        hf[self.h5struc+"/"+i]=data[i]
             
         self.acq_number+=1
         self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
@@ -113,6 +117,7 @@ class Saving:
                 self.app.metadata_spectral["comment"]=""
                 self.app.metadata_timeline["comment"]=""
                 self.widgetcomment.setText("")
+                self.app.last_saved_timeline_length=len(self.app.keysight.timeline_list)
         else:
             self.app.add_log("already saved before")
 
