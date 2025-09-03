@@ -268,11 +268,14 @@ class EntryMask3(Multi_entry):
             self.app.pixis.auto_expose_max=self.c
             self.app.pixis.autobtn.setStyleSheet("background-color:green")
         elif self.keyword=="auto_spatial":
+            if self.app.orca.live_mode_running:
+                self.app.orca.timer.stop()
             self.app.orca.auto_exposure_activated=True
             self.app.orca.auto_expose_start=self.a
             self.app.orca.auto_expose_min=self.b        
             self.app.orca.auto_expose_max=self.c
             self.app.orca.autobtn.setStyleSheet("background-color:green")
+            
 
         self.close()
 

@@ -3,7 +3,7 @@ from pylablib.devices import DCAM
 from PyQt5.QtWidgets import QHBoxLayout,QVBoxLayout, QLineEdit, QWidget,QLabel,QGridLayout,QPushButton
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
-
+import time
 import pyqtgraph as pg
 import numpy as np
 import datetime
@@ -118,6 +118,7 @@ class Orca():
         self.binning=1
         self.crosshair=False
         self.live_mode_running=False
+        self.live_mode_just_stopped=False
         self.live_mode_latency=300
         self.maximized=False
 
@@ -146,6 +147,9 @@ class Orca():
 
 
     def spatial_camera_ui(self,layoutright):
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.acquire_clicked_spatial)
+
         self.expanded=False
         self.app.heading_label(layoutright,"Spatial Camera",self.expand)
 
@@ -205,6 +209,8 @@ class Orca():
         if self.auto_exposure_activated:
             self.auto_exposure_activated=False
             self.autobtn.setStyleSheet("background-color:lightgrey")
+            if self.live_mode_running:
+                self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
         else:
             labellist=["Start (s)","Min (s)","Max (s)"]
             defaultlist=[self.auto_expose_start,self.auto_expose_min,self.auto_expose_max]
@@ -310,11 +316,14 @@ class Orca():
 
         self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
         if not self.live_mode_running:
-            self.app.update_log("spatial img "+str(self.counter)+ " acquired")
-            self.counter+=1
+            if self.live_mode_just_stopped:
+                self.live_mode_just_stopped=False
+            else:
+                self.app.update_log("spatial img "+str(self.counter)+ " acquired")
+                self.counter+=1
             if self.auto_exposure_activated:
                 self.app.add_log("auto exposure (s):"+str(self.acqtime_spatial))
-                self.acqwidget.setText(str(self.acqtime_spatial))
+        self.acqwidget.setText(str(self.acqtime_spatial))
 
         if imgmax>65534:
             self.app.update_log("Warning: spatial img oversaturation")
@@ -338,7 +347,7 @@ class Orca():
         if self.app.h5saving.save_on_acquire_bool:
             self.app.h5saving.save_to_h5_spatial()
 
-        if self.live_mode_running:
+        if self.live_mode_running and self.auto_exposure_activated:
             self.acquire_clicked_spatial()
 
     def acquire_clicked_spatial(self,event=None):
@@ -382,17 +391,19 @@ class Orca():
     def live_mode(self):
         if not self.live_mode_running:
             self.app.add_log("spatial camera Live mode started")
-            #self.timer=QTimer()
-            #self.timer.timeout.connect(self.acquire_clicked_spatial)
             self.live_mode_running=True
-            #self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
             self.btnlive.setText("stop")
             self.btnlive.setStyleSheet("background-color: green;color: black")
+            if self.auto_exposure_activated:
+                self.acquire_clicked_spatial()
+            else:
+                self.timer.start(int(self.acqtime_spatial*1000+self.live_mode_latency))
 
-            self.acquire_clicked_spatial()
         else:
             self.app.add_log("spatial camera Live mode stopped")
             self.live_mode_running=False
-            #self.timer.stop()
+            self.live_mode_just_stopped=True
+            if not self.auto_exposure_activated:
+                self.timer.stop()
             self.btnlive.setText("Live")
             self.btnlive.setStyleSheet("background-color: lightGray;color: black")
