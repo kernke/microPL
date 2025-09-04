@@ -135,7 +135,7 @@ class Pixis():
     def close(self):
         if self.live_mode_running:
             self.live_mode_running=False
-            self.timer.stop()
+            #self.timer.stop()
         
         self.cam.close()
 

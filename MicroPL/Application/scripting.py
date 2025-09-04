@@ -7,6 +7,26 @@ import threading
 class Update_Signal(QObject):
 
     update = pyqtSignal(bool)   
+    update_empty = pyqtSignal()
+    #update_with_event=pyqtSignal(object)
+
+class Sleep_Worker(QRunnable):
+    def __init__(self,sleep_duration):#,event=None):
+        super().__init__()
+        self.sleep_duration=sleep_duration
+        self.signals=Update_Signal()
+        #self.event=event
+
+    @pyqtSlot()
+    def run(self):
+        time.sleep(self.sleep_duration)
+        #
+        self.signals.update_empty.emit()
+        #QApplication.processEvents()
+        #if self.event:
+        #    self.signals.update_with_event.emit(self.event)
+        
+        #QApplication.processEvents()
 
 class Grid_Mapping(QRunnable):
 
@@ -30,12 +50,12 @@ class Grid_Mapping(QRunnable):
         self.stage.stage_goto()      
 
         done_event = threading.Event()
-        self.stage.thread_task(done_event)
+        self.stage.thread_task_script(done_event)
         done_event.wait()
         if self.keysight.connected:
             if self.keysight.output_on:
                 done_event = threading.Event()
-                self.keysight.thread_task(done_event)
+                self.keysight.thread_task_script(done_event)
                 done_event.wait()
 
         QApplication.processEvents()
@@ -71,13 +91,20 @@ class IV_Measurement(QRunnable):
     @pyqtSlot()
     def run(self): # A slot takes no params
         self.keysight.voltage=self.set_volt
-        self.keysight.setvoltage_confirmed()
+
+        done_event = threading.Event()
+        self.keysight.thread_set_voltage_script(done_event)
+        done_event.wait()
+
+        #self.keysight.setvoltage_confirmed()
+
         time.sleep(self.settling_time)
 
         done_event = threading.Event()
-        self.keysight.thread_task(done_event)
+        print("read volt wait")
+        self.keysight.thread_task_script(done_event)
         done_event.wait()
-        
+        print("continue")
         QApplication.processEvents()
 
 
@@ -95,7 +122,7 @@ class IV_Measurement(QRunnable):
 
             
         self.signals.update.emit(True)
-
+        #QApplication.processEvents()
 
 class Scripting:
     def __init__(self,app):
@@ -482,6 +509,10 @@ class Scripting:
                 self.script_end()
             self.script_index +=1
             if self.script_index==self.number_of_points:
+                self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
+                self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
+                self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.script_end()
             elif self.script_paused:
                 self.app.add_log("script paused")
@@ -491,6 +522,7 @@ class Scripting:
 
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                print(self.IV_curve_voltages)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_volt=self.IV_set_voltages[self.script_index]
@@ -512,7 +544,7 @@ class Scripting:
         
         if self.app.keysight.output_on:
             self.app.keysight.power_on() #turn off any output
-        time.sleep(0.1) # give atleast 100ms between switching off and on
+        #time.sleep(0.1) # give atleast 100ms between switching off and on
         self.app.keysight.current=self.app.keysight.max_currentmA -0.01       
         self.app.keysight.voltage=0
         self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
@@ -520,12 +552,12 @@ class Scripting:
         self.app.keysight.power_on() #turn on
 
 
-        self.number_of_points=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)   
+        self.number_of_points=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)+1 
 
         self.IV_set_voltages=[]
         for i in range(self.number_of_points):
             self.IV_set_voltages.append(self.IV_start_voltage+i*self.IV_step_voltage)
-
+        print(self.IV_set_voltages)
         set_volt=self.IV_set_voltages[self.script_index]
         self.iv_worker=IV_Measurement(self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)

@@ -90,7 +90,8 @@ class WarnWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Warning")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")
         self.setFixedSize(QSize(300, 150))
         button = QPushButton("Close")
@@ -117,7 +118,8 @@ class ButtonMask3(QWidget):
         self.app=app
         self.keyword=keyword
         self.setWindowTitle("Choose")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")##1e1e1e;") 
         self.setFixedSize(QSize(350, 200))    
 
@@ -199,7 +201,8 @@ class EntryMask3(Multi_entry):
         self.keyword=keyword
 
         self.setWindowTitle("Enter Values")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;") 
         self.setFixedSize(QSize(550, 200))    
 
@@ -292,7 +295,8 @@ class EntryMaskIV(Multi_entry):
 
         #self.keyword=keyword
         self.setWindowTitle("Enter Values")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;") 
         self.setFixedSize(QSize(500, 350))    
 
@@ -398,7 +402,8 @@ class EntryMask4(Multi_entry):
         self.keyword=keyword
 
         self.setWindowTitle("Enter Values")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color: dimgray")#1e1e1e;border: 1px solid black") 
         self.setFixedSize(QSize(300, 200))
 
@@ -479,7 +484,8 @@ class EntryMaskMapping(Multi_entry):
         super().__init__()
         self.app=app
         self.setWindowTitle("Enter Values")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))
+        #self.setWindowIcon(QIcon('MicroPL/Logo.png'))
         self.setStyleSheet("background-color:dimgray")# #1e1e1e;") 
         self.setFixedSize(QSize(500, 350))
 

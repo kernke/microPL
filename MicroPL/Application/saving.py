@@ -59,6 +59,7 @@ class Saving:
         self.acq_name=self.acq_name_prefix+str(self.acq_number).zfill(5)
         self.h5struc=self.group+"/"+self.acq_name#+str(self.acq_number).zfill(5)
         self.widgeth5name.setText(self.acq_name)
+        self.app.add_log("(in "+self.group+")")
         self.app.add_log(self.acq_name+" saved")
         print("saved")
 
@@ -68,6 +69,7 @@ class Saving:
             if self.h5struc in hf:
                 self.app.save_warning()
                 check=False
+                print("oij")
         return check
 
 
@@ -105,9 +107,7 @@ class Saving:
                 self.widgetcomment.setText("")
 
     def save_to_h5_timeline(self):
-        condition=self.app.keysight.last_saved_timline_length != len(self.app.keysight.timeline_list)
-
-        if self.app.metadata_timeline["unsaved"] or condition:
+        if self.app.metadata_timeline["unsaved"]:
             if self.check_h5():
                 self.app.metadata_timeline["time_s"]=self.app.keysight.timeline_list
                 self.app.metadata_timeline["voltage_V"]=self.app.keysight.voltage_list

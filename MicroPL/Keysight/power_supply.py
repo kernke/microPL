@@ -3,12 +3,65 @@ import datetime
 import numpy as np
 import time
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QApplication
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 
 class Update_Signal(QObject):
 
     string_update = pyqtSignal(object)   
+    update = pyqtSignal()
+
+class PSU_voltage(QRunnable):
+    def __init__(self, psu,voltage,event=None):
+        super().__init__()
+        self.psu = psu
+        self.voltage=voltage
+        self.signals=Update_Signal()
+        self.event=event
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.psu.write(f"SOUR:VOLT {self.voltage}")
+        self.signals.update.emit()
+        if self.event:
+            self.event.set()
+
+class PSU_current(QRunnable):
+    def __init__(self, psu,current,event=None):
+        super().__init__()
+        self.psu = psu
+        self.current=current
+        self.signals=Update_Signal()
+        self.event=event
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.psu.write(f"SOUR:CURR {self.current/1000}")
+        self.signals.update.emit()
+        if self.event:
+            self.event.set()
+
+class PSU_power(QRunnable):
+    def __init__(self, psu,on_bool,voltage,current,event=None):
+        super().__init__()
+        self.psu = psu
+        self.on_bool=on_bool
+        self.voltage=voltage
+        self.current=current
+        self.signals=Update_Signal()
+        self.event=event
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        if self.on_bool:
+            self.psu.write(f"SOUR:VOLT {self.voltage}")
+            self.psu.write(f"SOUR:CURR {self.current/1000}")
+            self.psu.write("OUTP ON")
+        else:
+            self.psu.write("OUTP OFF")
+        self.signals.update.emit()
+        if self.event:
+            self.event.set()
 
 class Status_update(QRunnable):
 
@@ -48,7 +101,6 @@ class Keysight:
             print("dummy mode for keysight")
             self.app.add_log("Keysight dummy mode")
 
-
         self.voltage=0
         self.current=0
         self.output_on=False
@@ -56,33 +108,141 @@ class Keysight:
         self.max_currentmA=500
         self.max_powermW=5000
 
-        self.refresh_rate=1.
+        self.refresh_rate=0.55
         self.voltage_actual=0
         self.currentA_actual=0
 
         self.voltage_list=[]
         self.currentA_list=[]
         self.timeline_list=[]
-        self.last_saved_timeline_length=0
         self.timeline_time=0
         self.timeline_start=time.time()
         self.timeline_start_date=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
         self.timeline_reset_pressed=False
         self.maximized=False
 
+        self.latency_time=0.3
+        self.communication_running=False
 
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
-            self.timer.stop()
-        self.psu.write("OUTP OFF")
+        if self.communication_running:
+            self.psleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.psleep_worker.signals.update_empty.connect(self.disconnect)
+            self.app.threadpool.start(self.psleep_worker)
+            self.app.add_log("wait shortly for keysight to finish")
+            print("wait shortly for keysight to finish")
+            return None
+        else:
+            self.psu.write("OUTP OFF")
+
         self.psu.close() 
         print("Keysight disconnected")
 
-    def thread_task(self,event=None):
+    def live_mode(self):
+        if not self.live_mode_running:
+            self.live_mode_running=True
+            self.btnlive.setStyleSheet("background-color: green;color: black")
+            self.thread_task()
+        else:
+
+            self.live_mode_running=False
+            self.btnlive.setStyleSheet("background-color: lightGray;color: black")
+
+    def thread_task(self):#,event):#=False,event=None):
+        if self.communication_running:
+            self.sleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.sleep_worker.signals.update_empty.connect(self.thread_task)
+            self.app.threadpool.start(self.sleep_worker)
+        else:  
+            self.communication_running=True
+            self.worker=Status_update(self.psu)
+            self.worker.signals.string_update.connect(self.status_update_from_thread)
+            self.app.threadpool.start(self.worker)
+
+    def thread_task_script(self,event):
+        while self.communication_running:
+            time.sleep(0.1)
+            QApplication.processEvents()
+            
+        self.communication_running=True
         self.worker=Status_update(self.psu,event)
         self.worker.signals.string_update.connect(self.status_update_from_thread)
         self.app.threadpool.start(self.worker)
+
+    def thread_set_current_script(self,event):
+        while self.communication_running:
+            time.sleep(0.1)
+            QApplication.processEvents()
+        self.communication_running=True
+        self.cworker=PSU_current(self.psu,self.current,event)
+        self.cworker.signals.update.connect(self.thread_done_empty)
+        self.app.threadpool.start(self.cworker)
+
+    def thread_set_voltage_script(self,event):
+        while self.communication_running:
+            time.sleep(0.1)
+            QApplication.processEvents()
+        self.communication_running=True
+        self.vworker=PSU_voltage(self.psu,self.voltage,event)
+        self.vworker.signals.update.connect(self.thread_done_empty)
+        self.app.threadpool.start(self.vworker)
+
+    def thread_power_script(self,event):
+        while self.communication_running:
+            time.sleep(0.1)
+            QApplication.processEvents()
+        self.communication_running=True
+        self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
+        self.pworker.signals.update.connect(self.thread_done_empty)
+        self.app.threadpool.start(self.pworker)
+
+    def thread_done_empty(self):
+        self.communication_running=False
+
+
+    def thread_set_voltage(self):
+        if self.communication_running:
+            self.vsleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.vsleep_worker.signals.update_empty.connect(self.thread_set_voltage)
+            self.app.threadpool.start(self.vsleep_worker)            
+        else:
+            self.communication_running=True
+            self.vworker=PSU_voltage(self.psu,self.voltage)
+            self.vworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.vworker)
+
+
+    def thread_set_current(self):
+        if self.communication_running:
+            self.csleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.csleep_worker.signals.update_empty.connect(self.thread_set_current)
+            self.app.threadpool.start(self.csleep_worker)            
+        else:
+            self.communication_running=True
+            self.cworker=PSU_current(self.psu,self.current)
+            self.cworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.cworker)
+
+    
+
+    def thread_power_on_off(self):
+        if self.communication_running:
+            self.psleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.psleep_worker.signals.update_empty.connect(self.thread_power_on_off)
+            self.app.threadpool.start(self.psleep_worker)
+        else:                         
+            self.communication_running=True
+            self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current)
+            self.pworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.pworker)
+
+
+    def thread_sleep(self):
+        self.sleep_worker=self.app.sleep_worker_class(self.refresh_rate)
+        self.sleep_worker.signals.update_empty.connect(self.thread_task)
+        self.app.threadpool.start(self.sleep_worker)        
 
 
     def status_update_from_thread(self,string_volt_curr_tuple):
@@ -129,11 +289,13 @@ class Keysight:
                     self.currentwidget.setStyleSheet("color:red;background-color: lightGray;")
                 else:
                     self.currentwidget.setStyleSheet("color:black;background-color: lightGray;")
-
+        self.app.metadata_timeline["unsaved"]=True
         self.Acurve.setData(self.timeline_list,self.currentA_list)
         self.Vcurve.setData(self.timeline_list,self.voltage_list)
         self.p1.setXRange(0,self.timeline_time)
-
+        self.communication_running=False
+        if self.live_mode_running:
+            self.thread_sleep()
 
     def expand(self):
         if not self.expanded:
@@ -169,30 +331,17 @@ class Keysight:
 
                     #self.voltwidget.setStyleSheet("color: red;")#background-color: lightGray
 
-
     def setvoltage_confirmed(self):
         if self.voltage<self.max_voltage and self.voltage*self.current<self.max_powermW:
-            if self.live_mode_running:
-                self.timer.stop()
-                self.psu.write(f"SOUR:VOLT {self.voltage}")
-                self.timer.start(int(self.refresh_rate*1000))
-            else:
-                self.psu.write(f"SOUR:VOLT {self.voltage}")
+            self.thread_set_voltage()
             self.voltwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.voltage,3))+" V")
 
-
     def setcurrent_confirmed(self):
         if self.current<self.max_currentmA and self.voltage*self.current<self.max_powermW:
-            if self.live_mode_running:
-                self.timer.stop()
-                self.psu.write(f"SOUR:CURR {self.current/1000}")
-                self.timer.start(int(self.refresh_rate*1000))
-            else:
-                self.psu.write(f"SOUR:CURR {self.current/1000}")
+            self.thread_set_current()
             self.currentwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.current,1))+" mA")
-
 
     def setcurrent_edited(self,s):
         if s:
@@ -211,16 +360,10 @@ class Keysight:
                         self.currentwidget.setStyleSheet("color:red;background-color: lightGray;")
                     #self.currentwidget.setStyleSheet("color: red;")
 
-
     def power_on(self):
         if self.output_on:
             self.output_on=False
-            if self.live_mode_running:
-                self.timer.stop()
-                self.psu.write("OUTP OFF")
-                self.timer.start(int(self.refresh_rate*1000))
-            else:
-                self.psu.write("OUTP OFF")
+            self.thread_power_on_off()
             self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
             self.voltwidget.setStyleSheet("background-color: lightGray")
             self.currentwidget.setStyleSheet("background-color: lightGray")
@@ -231,16 +374,7 @@ class Keysight:
             cond2=self.current<self.max_currentmA
             if cond0 and cond1 and cond2:
                 self.output_on=True
-                if self.live_mode_running:
-                    self.timer.stop()
-                    self.psu.write(f"SOUR:CURR {self.current/1000}")
-                    self.psu.write(f"SOUR:VOLT {self.voltage}")
-                    self.psu.write("OUTP ON")
-                    self.timer.start(int(self.refresh_rate*1000))
-                else:
-                    self.psu.write(f"SOUR:CURR {self.current/1000}")
-                    self.psu.write(f"SOUR:VOLT {self.voltage}")
-                    self.psu.write("OUTP ON")
+                self.thread_power_on_off()
 
                 self.powerbtn.setStyleSheet("background-color: green;color: black")
                 self.app.add_log("set: "+str(np.round(self.voltage,3))+" V ; "+str(np.round(self.current,1))+" mA")
@@ -248,8 +382,6 @@ class Keysight:
             else:
                 self.app.add_log("Electric Power not turned ON")
                 self.app.add_log("Safety limits violated")
-
-
 
     def refreshrate_edited(self,s):
         if s:
@@ -264,11 +396,6 @@ class Keysight:
                 else:
                     self.refresh_rate=np.double(s)
                     
-                if self.live_mode_running:
-                    self.timer.stop()
-                    self.timer.start(int(1000*self.refresh_rate))
-
-
 
     def power_ui(self,layoutright):
 
@@ -341,7 +468,6 @@ class Keysight:
         self.window.location_on_the_screen()
         self.window.show()
 
-
     def timeline_ui(self,layoutright):
         self.expanded2=False
         self.app.heading_label(layoutright,"Timeline / I-V-Curve",self.expand2)
@@ -402,8 +528,6 @@ class Keysight:
         self.app.set_layout_visible(self.dropdown2,False)
         layoutright.addItem(self.app.vspace)
 
-        self.timer=QTimer()
-        self.timer.timeout.connect(self.thread_task)
         self.live_mode_running=False
         if self.connected:
             self.live_mode()
@@ -477,8 +601,6 @@ class Keysight:
         self.p1.setXRange(0,1)#self.timeline_time)
         layout.addWidget(self.pw,2)
 
-
-
     def maximize(self):
         if self.maximized:
             self.maximized=False
@@ -490,16 +612,3 @@ class Keysight:
             self.app.stage.plot.setHidden(True)
             self.app.midright.setHidden(True)
             self.maxbtn.setText("Minimize View")
-
-    def live_mode(self):
-        if not self.live_mode_running:
-            self.live_mode_running=True
-            self.timer.start(int(self.refresh_rate)*1000)
-            #self.btnlive.setText("Status Live")
-            self.btnlive.setStyleSheet("background-color: green;color: black")
-        else:
-
-            self.live_mode_running=False
-            self.timer.stop()
-            #self.btnlive.setText("StatLive")
-            self.btnlive.setStyleSheet("background-color: lightGray;color: black")

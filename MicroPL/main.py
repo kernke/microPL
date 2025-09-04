@@ -9,7 +9,7 @@ from .Application.gui_utility import ButtonMask3,EntryMask3,EntryMask4,EntryMask
 from .Application.gui_utility import EntryMaskIV,normal_button,set_layout_visible,heading_label
 
 from .Application.saving import Saving
-from .Application.scripting import Scripting
+from .Application.scripting import Scripting,Sleep_Worker
 from .Pixis.cam import Pixis
 from .stage_scripts.stage import Stage
 from .SCT320_Wrapper.mono import SCT320
@@ -26,7 +26,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MicroPL App")
-        self.setWindowIcon(QIcon('MicroPL/Logo.png'))
+
+        self.setWindowIcon(QIcon(r"C:\Users\user\Documents\Python\microPL\MicroPL/Logo.png"))#'MicroPL/Logo.png'))
         #print(os.listdir())
         self.setStyleSheet("background-color: #1e1e1e;")
         self.move(0,0)
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.entrymask4=EntryMask4
         self.entrymaskiv=EntryMaskIV
         self.entrymaskmapping=EntryMaskMapping
+        self.sleep_worker_class=Sleep_Worker
         self.vspace = QSpacerItem(0, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.threadpool = QThreadPool() 
