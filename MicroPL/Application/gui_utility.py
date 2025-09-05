@@ -283,9 +283,10 @@ class EntryMask3(Multi_entry):
         self.close()
 
 class EntryMaskIV(Multi_entry):
-    def __init__(self,app,defaults,labels,text):
+    def __init__(self,app,keyword,defaults,labels,text):
         super().__init__()
         self.app=app
+        self.keyword=keyword
         self.a=defaults[0]
         self.b=defaults[1]
         self.c=defaults[2]
@@ -384,9 +385,15 @@ class EntryMaskIV(Multi_entry):
 
 
     def confirm_and_close(self):
-        self.app.scripting.IV_start_voltage=self.a
-        self.app.scripting.IV_end_voltage=self.b
-        self.app.scripting.IV_step_voltage=self.c
+        if self.keyword=="set_voltages":
+            self.app.scripting.IV_start_voltage=self.a
+            self.app.scripting.IV_end_voltage=self.b
+            self.app.scripting.IV_step_voltage=self.c
+        elif self.keyword=="set_currents":
+            self.app.scripting.IV_start_current_mA=self.a
+            self.app.scripting.IV_end_current_mA=self.b
+            self.app.scripting.IV_step_current_mA=self.c
+
         self.app.scripting.IV_settling_time=self.d
         self.app.scripting.IV_spatial=self.spatial
         self.app.scripting.IV_spectral=self.spectral
