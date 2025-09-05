@@ -69,7 +69,6 @@ class Saving:
             if self.h5struc in hf:
                 self.app.save_warning()
                 check=False
-                print("oij")
         return check
 
 
@@ -109,6 +108,7 @@ class Saving:
     def save_to_h5_timeline(self):
         if self.app.metadata_timeline["unsaved"]:
             if self.check_h5():
+                self.app.metadata_timeline["mode"]="timeline"
                 self.app.metadata_timeline["time_s"]=self.app.keysight.timeline_list
                 self.app.metadata_timeline["voltage_V"]=self.app.keysight.voltage_list
                 self.app.metadata_timeline["current_A"]=self.app.keysight.currentA_list

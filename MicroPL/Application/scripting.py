@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QHBoxLayout,QFileDialog,QLabel,QComboBox,QApplicatio
 from PyQt5.QtCore import QTimer,pyqtSignal,QRunnable,pyqtSlot,QObject
 import numpy as np
 import time
+import pyqtgraph as pg
 import threading
 
 class Update_Signal(QObject):
@@ -108,10 +109,10 @@ class IV_Measurement(QRunnable):
         time.sleep(self.settling_time)
 
         done_event = threading.Event()
-        print("read volt wait")
+        #print("read volt wait")
         self.keysight.thread_task_script(done_event)
         done_event.wait()
-        print("continue")
+        #print("continue")
         QApplication.processEvents()
 
 
@@ -152,38 +153,119 @@ class Master_Script(QRunnable):
             self.app.monochromator.wavelength=self.command[1]
             self.app.monochromator.wavelength_edited()
         elif self.command[0]=="stage_x_mm":
-
+            self.app.stage.xpos_set=self.command[1]
+            self.app.stage.stage_goto()      
+            done_event = threading.Event()
+            self.app.stage.thread_task_script(done_event)
+            done_event.wait()
         elif self.command[0]=="stage_y_mm":
-
+            self.app.stage.ypos_set=self.command[1]
+            self.app.stage.stage_goto()      
+            done_event = threading.Event()
+            self.app.stage.thread_task_script(done_event)
+            done_event.wait()            
         elif self.command[0]=="sleep_s":
-
+            self.sleep_long_script(self.command[1])
         elif self.command[0]=="voltage_volt":
-
-        elif self.command[0]=="current_ampere":
+            self.app.keysight.voltage=self.command[1]
+            done_event = threading.Event()
+            self.app.keysight.thread_set_voltage_script(done_event)
+            done_event.wait()
+            self.app.keysight.voltwidget.setText(str(self.command[1]))
+        elif self.command[0]=="current_milliampere":
+            self.app.keysight.voltage=self.command[1]
+            done_event = threading.Event()
+            self.app.keysight.thread_set_current_script(done_event)
+            done_event.wait()
+            self.app.keysight.currentwidget.setText(str(self.command[1]))
 
 
 
         elif self.command[0]=="save_spectral_image_bool":
-
+            self.app.pixis.save_full_image=self.command[1]
+            self.app.pixis.checkbox.setChecked(self.command[1])
 
         elif self.command[0]=="comment":
+            self.app.metadata_spatial["comment"]=self.command[1]
+            self.app.metadata_spectral["comment"]=self.command[1]
+            self.app.metadata_timeline["comment"]=self.command[1]
+            self.app.h5saving.widgetcomment.setText(self.command[1])
 
         elif self.command[0]=="group_name":
-
+            self.app.h5saving.group=self.command[1]
         elif self.command[0]=="acquistion_name":
-
+            self.app.h5saving.acq_name=self.command[1]
 
         elif self.command[0]=="shutter_mode":
+            if self.command[1]=="open":
+                self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                self.app.pixis.shutter_value="Always Open"
+                self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+            elif self.command[1]=="closed":
+                self.app.pixis.shutterbtn.setText("Shutter (Closed)")
+                self.app.pixis.shutter_value="Always Closed"
+                self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Closed')
+            elif self.command[1]=="normal":
+                self.app.pixis.shutterbtn.setText("Shutter (Normal)")
+                self.app.pixis.shutter_value="Normal"
+                self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
 
         elif self.command[0]=="grating":
+            done_event = threading.Event()
+            self.app.monochromator.grating_change_script(int(self.command[1]),done_event)
+            done_event.wait()
 
         elif self.command[0]=="spatial_resolution":
+            if self.command[1]=="2048":
+                self.app.orca.binning=1  
+                self.app.orca.resbtn.setText("Resolution (2048)")
 
+            elif self.command[1]=="1024":
+                self.app.orca.binning=2  
+                self.app.orca.resbtn.setText("Resolution (1024)")
+
+            elif self.command[1]=="512":
+                self.app.orca.binning=4  
+                self.app.orca.resbtn.setText("Resolution (512)")
 
         elif self.command[0]=="save_timeline":
+            self.app.h5saving.save_to_h5_timeline()
 
         elif self.command[0]=="reset_timeline":
+            self.app.keysight.reset_pressed()
 
+        elif self.command[0]=="pause_timeline":
+            self.app.keysight.live_mode()
+            self.app.keysight.live_mode_running=False
+
+        elif self.command[0]=="continue_timeline":
+            self.app.keysight.live_mode()
+            self.app.keysight.live_mode_running=True
+
+
+        elif self.command[0]=="spectral_roi":
+            params=self.command[1]
+            self.app.pixis.roi.setPos(pg.Point([int(params["x_min_int"]),int(params["y_min_int"])]))
+            deltax=int(params["x_max_int"])-int(params["x_min_int"])
+            deltay=int(params["y_max_int"])-int(params["y_min_int"])
+            self.app.pixis.roi.setSize([deltax,deltay])
+
+
+        elif self.command[0]=="spectral_auto_exposure":
+            params=self.command[1]
+            self.app.pixis.auto_exposure_activated=True
+            self.app.pixis.auto_expose_start=params["start_s"]
+            self.app.pixis.auto_expose_min=params["min_s"]
+            self.app.pixis.auto_expose_max=params["max_s"]
+            self.app.pixis.autobtn.setStyleSheet("background-color:green")
+
+        elif self.command[0]=="spatial_auto_exposure":
+            params=self.command[1]
+            self.app.orca.auto_exposure_activated=True
+            self.app.orca.auto_expose_start=params["start_s"]
+            self.app.orca.auto_expose_min=params["min_s"]
+            self.app.orca.auto_expose_max=params["max_s"]
+            self.app.orca.autobtn.setStyleSheet("background-color:green")
 
         QApplication.processEvents()    
         self.signals.update.emit(True)
@@ -237,7 +319,7 @@ class Scripting:
                             "stage_y_mm",
                             "sleep_s,"
                             "voltage_volt",
-                            "current_ampere"])
+                            "current_milliampere"])
         self.bool_keys=set(["save_spectral_image_bool"])
 
         self.string_keys_any=set(["comment","group_name","acquisition_name"])
@@ -246,7 +328,7 @@ class Scripting:
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
         self.string_keys["spatial_resolution"]=set(["2048","1024","512"])
         self.none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
-                       "spatial_acquire"])#"show_timeline","show_iv_curve"
+                       "spatial_acquire","pause_timeline","continue_timeline"])#"show_timeline","show_iv_curve"
         self.object_keys=dict()
         self.object_keys["spatial_auto_exposure"]=set(["start_s,min_s,max_s"])
         self.object_keys["spectral_auto_exposure"]=set(["start_s,min_s,max_s"])
@@ -258,6 +340,7 @@ class Scripting:
                                              "end_current_mA","step_current_mA","settling_time_s"])
         self.object_keys["spectral_roi"]=set(["x_min_int","x_max_int","y_min_int","y_max_int"])
  
+        self.sub_script_keys=set(["measure_iv_curve_set_currents","measure_iv_curve_set_voltages","stage_mapping"])
 
 
 
@@ -267,7 +350,11 @@ class Scripting:
                 self.script_end()
             self.script_index +=1
             if self.script_index==self.number_of_points:
-                self.script_end()
+                if self.master_script_index is None:
+                    self.script_end()
+                else:
+                    self.master_script_thread(True)
+                #self.script_end()
             elif self.script_paused:
                 self.app.add_log("script paused")
                 return None
@@ -340,7 +427,7 @@ class Scripting:
             self.script_paused=False
             #self.script_execution=True
             if self.script_selected==1:
-                self.script_from_txt()
+                self.master_script_thread(True)
             elif self.script_selected==2:
                 self.grid_mapping_script()
             elif self.script_selected==3:
@@ -423,7 +510,7 @@ class Scripting:
                 #if self.grid_spectral:
                 self.app.pixis.shutterbtn.setText("Shutter (Open)")
                 self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
-                self.script_from_txt()
+                self.master_script_thread(True)
         
             elif self.script_selected==2:
                 if self.grid_spectral:
@@ -442,14 +529,13 @@ class Scripting:
                 self.acquire_IV_currents()
                 
 
-    def sleep_method(self,time_seconds):
-        self.sleep_timer=QTimer()
-        self.sleep_timer.timeout.connect(self.end_sleep)
-        timer_time=int(time_seconds*1000)
-        self.sleep_timer.start(timer_time)
-
-    def end_sleep(self):
-        self.sleep_timer.stop()
+    def sleep_long_script(self,time_seconds):
+        self.sleep_start=time.time()
+        self.sleep_duration=time_seconds
+        while self.sleep_duration>0:
+            time.sleep(0.5)
+            self.sleep_duration -= 0.5
+            QApplication.processEvents()
 
     def check_script(self,fname):
         
@@ -571,8 +657,66 @@ class Scripting:
 
                 command=self.settings_list[self.master_script_index]
 
-                if command[0] in self.object_keys:
-                    pass
+                if command[0] in self.sub_script_keys:
+                    params=command[1]
+                    if command[0]=="stage_mapping":
+                        xmin=params["x_min_mm"]
+                        xmax=params["x_max_mm"]
+                        xnum=int(params["x_num_int"])
+
+                        ymin=params["y_min_mm"]
+                        ymax=params["y_max_mm"]
+                        ynum=int(params["y_num_int"])
+
+                        xcoords=np.linspace(xmin,xmax,xnum)
+                        ycoords=np.linspace(ymin,ymax,int(ynum))
+                        xx,yy=np.meshgrid(xcoords,ycoords)
+
+                        newx=np.zeros(xx.shape[0]*xx.shape[1])
+                        newy=np.zeros(yy.shape[0]*yy.shape[1])
+                        counter=0
+                        orderbool=True
+                        for i in range(xx.shape[0]):
+                            orderbool=not orderbool
+                            for j in range(xx.shape[1]):
+                                if orderbool:
+                                    jnum=xx.shape[1]-1-j
+                                else:
+                                    jnum=j        
+                                newx[counter]=xx[i,jnum]
+                                newy[counter]=yy[i,jnum]
+                                counter+=1
+
+                        self.grid_spatial=params["spatial_bool"]
+                        self.grid_spectral=params["spectral_bool"]
+                        self.script_positions_x=newx
+                        self.script_positions_y=newy  
+                        self.script_settings_prepared=True
+                        self.btnexec.setStyleSheet("background-color:lightgrey;")
+                        self.btnstart.setStyleSheet("background-color:cyan;")
+
+                    elif command[0]=="measure_iv_curve_set_currents":
+
+                        self.IV_start_current_mA=params["start_current_mA"]
+                        self.IV_end_current_mA=params["end_current_mA"]
+                        self.IV_step_current_mA=params["step_current_mA"]
+
+                        self.IV_settling_time=params["settling_time_s"]
+                        self.IV_spatial=params["spatial_bool"]
+                        self.IV_spectral=params["spectral_bool"]
+                        self.acquire_IV_currents()
+
+                    elif command[0]=="measure_iv_curve_set_voltages":
+
+                        self.IV_start_current_mA=params["start_voltage_volt"]
+                        self.IV_end_current_mA=params["end_voltage_volt"]
+                        self.IV_step_current_mA=params["step_voltage_volt"]
+            
+                        self.IV_settling_time=params["settling_time_s"]
+                        self.IV_spatial=params["spatial_bool"]
+                        self.IV_spectral=params["spectral_bool"]
+                        self.acquire_IV_voltages()
+
                 else:
                     self.mworker=Master_Script(self.app,command)
                     self.mworker.signals.update.connect(self.master_script_thread)
@@ -634,7 +778,10 @@ class Scripting:
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
-                self.script_end()
+                if self.master_script_index is None:
+                    self.script_end()
+                else:
+                    self.master_script_thread(True)
             elif self.script_paused:
                 self.app.add_log("script paused")
                 return None
@@ -662,7 +809,12 @@ class Scripting:
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
-                self.script_end()
+
+                if self.master_script_index is None:
+                    self.script_end()
+                else:
+                    self.master_script_thread(True)
+
             elif self.script_paused:
                 self.app.add_log("script paused")
                 return None

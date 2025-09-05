@@ -187,6 +187,13 @@ class SCT320():
         self.widgetwave.setStyleSheet("background-color: lightGray;color: black")
         self.app.add_log("wavelength at "+str(self.wavelength)+" nm")
 
+    def grating_change_script(self,i,event=None):
+        self.app.add_log("start grating change ...")
+        self.app.add_log("(wait ~ 40 seconds)")
+        self.grating_changer =Grating_changer(self.mono,int(i),event) 
+        self.grating_changer.signals.grating_update.connect(self.grating_changed)
+        self.app.threadpool.start(self.grating_changer)
+
     def grating_changing(self, i): # i is an int
         self.app.add_log("start grating change ...")
         self.app.add_log("(wait ~ 40 seconds)")
