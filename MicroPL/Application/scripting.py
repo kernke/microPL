@@ -778,6 +778,9 @@ class Scripting:
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
+                self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
+                self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                self.app.h5saving.save_to_h5_timeline()
                 if self.master_script_index is None:
                     self.script_end()
                 else:
@@ -809,7 +812,9 @@ class Scripting:
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
-
+                self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
+                self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                self.app.h5saving.save_to_h5_timeline()
                 if self.master_script_index is None:
                     self.script_end()
                 else:

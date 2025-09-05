@@ -121,7 +121,7 @@ class Saving:
         else:
             self.app.add_log("already saved before")
 
-    # saving methods ######################################################
+
     def save_comment(self):
         if self.check_h5():
             self.app.metadata_timeline["mode"]="comment"
@@ -194,7 +194,7 @@ class Saving:
 
     def save_ui(self,layoutright):
         self.expanded=False
-        self.app.heading_label(layoutright,"Saving   ",self.expand)#################################################
+        self.app.heading_label(layoutright,"Saving   ",self.expand)
         
         self.dropdown=QVBoxLayout()
 
@@ -221,10 +221,6 @@ class Saving:
         label.setStyleSheet("color:white")
         layoutsavelabels.addWidget(label)
 
-        #label = QLabel(" ")
-        #label.setStyleSheet("color:white;font-size: 5pt")
-        #self.dropdown.addWidget(label)
-
         self.dropdown.addLayout(layoutsavelabels)
 
         layoutsaveh5=QHBoxLayout()        
@@ -246,10 +242,6 @@ class Saving:
         self.widgeth5name.textEdited.connect(self.h5name_edited)
 
         self.dropdown.addLayout(layoutsaveh5)
-
-
-
-
 
         layoutcomment=QHBoxLayout()
         self.widgetcomment = QLineEdit()
