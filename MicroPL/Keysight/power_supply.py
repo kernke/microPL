@@ -127,6 +127,14 @@ class Keysight:
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
+            self.psleep_worker=self.app.sleep_worker_class(self.latency_time)
+            self.psleep_worker.signals.update_empty.connect(self.disconnect)
+            self.app.threadpool.start(self.psleep_worker)
+            self.app.add_log("wait shortly for keysight to finish")
+            print("wait shortly for keysight to finish")
+            return None
+
+
         if self.communication_running:
             self.psleep_worker=self.app.sleep_worker_class(self.latency_time)
             self.psleep_worker.signals.update_empty.connect(self.disconnect)
@@ -135,8 +143,10 @@ class Keysight:
             print("wait shortly for keysight to finish")
             return None
         else:
+
             self.psu.write("OUTP OFF")
 
+        #self.app.threadpool.waitForDone()
         self.psu.close() 
         print("Keysight disconnected")
 
@@ -175,28 +185,47 @@ class Keysight:
         while self.communication_running:
             time.sleep(0.1)
             QApplication.processEvents()
-        self.communication_running=True
-        self.cworker=PSU_current(self.psu,self.current,event)
-        self.cworker.signals.update.connect(self.thread_done_empty)
-        self.app.threadpool.start(self.cworker)
+
+        if not self.current>self.max_currentmA and not self.voltage*self.current>self.max_powermW:
+            self.communication_running=True
+            self.cworker=PSU_current(self.psu,self.current,event)
+            self.cworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.cworker)
+        else:
+            self.app.add_log("Current not changed")
+            self.app.add_log("Safety limits violated")
+
 
     def thread_set_voltage_script(self,event):
         while self.communication_running:
             time.sleep(0.1)
             QApplication.processEvents()
-        self.communication_running=True
-        self.vworker=PSU_voltage(self.psu,self.voltage,event)
-        self.vworker.signals.update.connect(self.thread_done_empty)
-        self.app.threadpool.start(self.vworker)
+        if not self.voltage>self.max_voltage and not self.voltage*self.current>self.max_powermW:
+            self.communication_running=True
+            self.vworker=PSU_voltage(self.psu,self.voltage,event)
+            self.vworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.vworker)
+        else:
+            self.app.add_log("Voltage not changed")
+            self.app.add_log("Safety limits violated")
+
 
     def thread_power_script(self,event):
         while self.communication_running:
             time.sleep(0.1)
             QApplication.processEvents()
-        self.communication_running=True
-        self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
-        self.pworker.signals.update.connect(self.thread_done_empty)
-        self.app.threadpool.start(self.pworker)
+        cond1=self.voltage>self.max_voltage
+        cond2=self.current>self.max_currentmA
+        cond3=self.voltage*self.current>self.max_powermW
+        if not cond1 and not cond2 and not cond3:
+            self.communication_running=True
+            self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
+            self.pworker.signals.update.connect(self.thread_done_empty)
+            self.app.threadpool.start(self.pworker)
+        else:
+            self.app.add_log("Electric Power not turned ON")
+            self.app.add_log("Safety limits violated")
+
 
     def thread_done_empty(self):
         self.communication_running=False
@@ -332,13 +361,13 @@ class Keysight:
                     #self.voltwidget.setStyleSheet("color: red;")#background-color: lightGray
 
     def setvoltage_confirmed(self):
-        if self.voltage<self.max_voltage and self.voltage*self.current<self.max_powermW:
+        if not self.voltage>self.max_voltage and not self.voltage*self.current>self.max_powermW:
             self.thread_set_voltage()
             self.voltwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.voltage,3))+" V")
 
     def setcurrent_confirmed(self):
-        if self.current<self.max_currentmA and self.voltage*self.current<self.max_powermW:
+        if not self.current>self.max_currentmA and self.voltage*self.current>self.max_powermW:
             self.thread_set_current()
             self.currentwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.current,1))+" mA")
@@ -369,10 +398,10 @@ class Keysight:
             self.currentwidget.setStyleSheet("background-color: lightGray")
             self.app.add_log("Electric Power Output OFF")
         else:
-            cond0=self.voltage<self.max_voltage
-            cond1=self.voltage*self.current<self.max_powermW
-            cond2=self.current<self.max_currentmA
-            if cond0 and cond1 and cond2:
+            cond0=self.voltage>self.max_voltage
+            cond1=self.voltage*self.current>self.max_powermW
+            cond2=self.current>self.max_currentmA
+            if not cond0 and not cond1 and not cond2:
                 self.output_on=True
                 self.thread_power_on_off()
 

@@ -99,20 +99,18 @@ class IV_Measurement(QRunnable):
             self.keysight.thread_set_voltage_script(done_event)
             done_event.wait()
         elif self.keyword == "set_currents":
-            self.keysight.voltage=self.set_value
+            self.keysight.current=self.set_value
 
             done_event = threading.Event()
             self.keysight.thread_set_current_script(done_event)
             done_event.wait()
-        #self.keysight.setvoltage_confirmed()
+
 
         time.sleep(self.settling_time)
 
         done_event = threading.Event()
-        #print("read volt wait")
         self.keysight.thread_task_script(done_event)
         done_event.wait()
-        #print("continue")
         QApplication.processEvents()
 
 
@@ -165,25 +163,48 @@ class Master_Script(QRunnable):
             self.app.stage.thread_task_script(done_event)
             done_event.wait()            
         elif self.command[0]=="sleep_s":
-            self.sleep_long_script(self.command[1])
-        elif self.command[0]=="voltage_volt":
+            self.app.scripting.sleep_long_script(self.command[1])
+        elif self.command[0]=="voltage_V":
             self.app.keysight.voltage=self.command[1]
             done_event = threading.Event()
             self.app.keysight.thread_set_voltage_script(done_event)
             done_event.wait()
             self.app.keysight.voltwidget.setText(str(self.command[1]))
-        elif self.command[0]=="current_milliampere":
+        elif self.command[0]=="current_mA":
             self.app.keysight.voltage=self.command[1]
             done_event = threading.Event()
             self.app.keysight.thread_set_current_script(done_event)
             done_event.wait()
             self.app.keysight.currentwidget.setText(str(self.command[1]))
 
+        elif self.command=="spatial_acquire":
+            done_event = threading.Event()
+            self.app.orca.acquire_clicked_spatial(done_event)
+            done_event.wait()
+            
+        elif self.command=="spectral_acquire":
+            done_event = threading.Event()
+            self.app.pixis.acquire_clicked_spectral(done_event)
+            done_event.wait()
+
+        elif self.command=="spectral_auto_exposure_stop":
+            self.app.pixis.auto_exposure_activated=False
+            self.app.pixis.autobtn.setStyleSheet("background-color:lightGray")
+
+        elif self.command=="spatial_auto_exposure_stop":
+            self.app.orca.auto_exposure_activated=False
+            self.app.orca.autobtn.setStyleSheet("background-color:lightGray")
 
 
         elif self.command[0]=="save_spectral_image_bool":
             self.app.pixis.save_full_image=self.command[1]
             self.app.pixis.checkbox.setChecked(self.command[1])
+
+        elif self.command[0]=="electric_output_bool":
+            self.app.keysight.output_on=self.command[1]
+            done_event = threading.Event()
+            self.app.keysight.thread_power_script(done_event)
+            done_event.wait()
 
         elif self.command[0]=="comment":
             self.app.metadata_spatial["comment"]=self.command[1]
@@ -228,17 +249,17 @@ class Master_Script(QRunnable):
                 self.app.orca.binning=4  
                 self.app.orca.resbtn.setText("Resolution (512)")
 
-        elif self.command[0]=="save_timeline":
+        elif self.command=="save_timeline":
             self.app.h5saving.save_to_h5_timeline()
 
-        elif self.command[0]=="reset_timeline":
+        elif self.command=="reset_timeline":
             self.app.keysight.reset_pressed()
 
-        elif self.command[0]=="pause_timeline":
+        elif self.command=="pause_timeline":
             self.app.keysight.live_mode()
             self.app.keysight.live_mode_running=False
 
-        elif self.command[0]=="continue_timeline":
+        elif self.command=="continue_timeline":
             self.app.keysight.live_mode()
             self.app.keysight.live_mode_running=True
 
@@ -266,6 +287,9 @@ class Master_Script(QRunnable):
             self.app.orca.auto_expose_min=params["min_s"]
             self.app.orca.auto_expose_max=params["max_s"]
             self.app.orca.autobtn.setStyleSheet("background-color:green")
+        
+        elif self.command[0]=="save_comment_only":
+            self.app.h5saving.save_comment()
 
         QApplication.processEvents()    
         self.signals.update.emit(True)
@@ -317,10 +341,10 @@ class Scripting:
                             "center_wavelength_nm",
                             "stage_x_mm",
                             "stage_y_mm",
-                            "sleep_s,"
-                            "voltage_volt",
-                            "current_milliampere"])
-        self.bool_keys=set(["save_spectral_image_bool"])
+                            "sleep_s",
+                            "voltage_V",
+                            "current_mA"])
+        self.bool_keys=set(["save_spectral_image_bool","electric_output_bool"])
 
         self.string_keys_any=set(["comment","group_name","acquisition_name"])
         self.string_keys=dict()
@@ -328,14 +352,14 @@ class Scripting:
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
         self.string_keys["spatial_resolution"]=set(["2048","1024","512"])
         self.none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
-                       "spatial_acquire","pause_timeline","continue_timeline"])#"show_timeline","show_iv_curve"
+                       "spatial_acquire","pause_timeline","continue_timeline","spatial_auto_exposure_stop","spectral_auto_exposure_stop"])#"show_timeline","show_iv_curve"
         self.object_keys=dict()
-        self.object_keys["spatial_auto_exposure"]=set(["start_s,min_s,max_s"])
-        self.object_keys["spectral_auto_exposure"]=set(["start_s,min_s,max_s"])
+        self.object_keys["spatial_auto_exposure"]=set(["start_s","min_s","max_s"])
+        self.object_keys["spectral_auto_exposure"]=set(["start_s","min_s","max_s"])
         self.object_keys["stage_mapping"]=set(["spectral_bool","spatial_bool","x_min_mm","x_max_mm",
                                           "x_num_int","y_min_mm","y_max_mm","y_num_int"])
-        self.object_keys["measure_iv_curve_set_voltages"]=set(["spectral_bool","spatial_bool","start_voltage_volt",
-                                             "end_voltage_volt","step_voltage_volt","settling_time_s"])
+        self.object_keys["measure_iv_curve_set_voltages"]=set(["spectral_bool","spatial_bool","start_voltage_V",
+                                             "end_voltage_V","step_voltage_V","settling_time_s"])
         self.object_keys["measure_iv_curve_set_currents"]=set(["spectral_bool","spatial_bool","start_current_mA",
                                              "end_current_mA","step_current_mA","settling_time_s"])
         self.object_keys["spectral_roi"]=set(["x_min_int","x_max_int","y_min_int","y_max_int"])
@@ -348,6 +372,7 @@ class Scripting:
         if step_done:
             if self.script_canceled:
                 self.script_end()
+                return None
             self.script_index +=1
             if self.script_index==self.number_of_points:
                 if self.master_script_index is None:
@@ -446,7 +471,7 @@ class Scripting:
             elif self.app.pixis.remember_shutter == "Normal":
                 self.app.pixis.shutterbtn.setText("Shutter (Normal)")
 
-        if self.script_selected==3: # turn off after IV curve
+        if self.script_selected==3 or self.script_selected==4: # turn off after IV curve
             self.app.keysight.current=0       
             self.app.keysight.voltage=0
             self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
@@ -543,20 +568,27 @@ class Scripting:
             lines=f.read().splitlines()
 
         error_found=False
+        commands=[]
         for counter,line in enumerate(lines):
-            commands=[]
-            if line[0]=="#":
+            if len(line)==0:#line in ['\n', '\r\n']:
+                #empty lines
+                pass
+            elif line[0]=="#":
                 pass
             else: 
                 expressions=line.split(",")
                 if len(expressions)==1:
-                    key_value=expressions.split(":")
+                    key_value=expressions[0].split(":")
                     if len(key_value)==1:
-                        if key_value in self.none_keys:
-                            commands.append(key_value)
+                        if key_value[0].strip() in self.none_keys:
+                            commands.append(key_value[0].strip())
+                        elif len(key_value.strip())==0:
+                            #just white spaces
+                            pass
                         else:
                             self.app.add_log("Error in line "+str(counter+1))
                             error_found=True
+
                     elif len(key_value)>2:
                         self.app.add_log("Error in line "+str(counter+1))
                         error_found=True
@@ -575,39 +607,49 @@ class Scripting:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
                         elif key in self.bool_keys:
-                            try:
-                                commands.append((key,bool(value)))
-                            except:
+                            if value.strip()=="True" or value.strip()=="1":
+                                commands.append((key,True))
+                            elif value.strip()=="False" or value.strip()=="0":
+                                commands.append((key,False))
+                            else:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
                         elif key in self.string_keys_any:
-                            commands.append((key,value))
+                            commands.append((key,value.strip()))
                         elif key in self.string_keys:
-                            if value in self.string_keys[key]:
-                                commands.append((key,value))
+                            if value.strip() in self.string_keys[key]:
+                                commands.append((key,value.strip()))
                             else:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
                 else:
-                    method=expressions[0]
+                    method=expressions[0].strip()
                     if method in self.object_keys:
                         try:
                             method_dict=dict()
                             for expr in expressions[1:]:
                                 key,value=expr.split(":")
-                                if key == "spectral_bool" or key=="spatial_bool":
-                                    method_dict[key]=bool(value)
+
+                                if key.strip() == "spectral_bool" or key.strip()=="spatial_bool":
+                                    if value.strip()=="True" or value.strip()=="1":
+                                        method_dict[key.strip()]=True
+                                    elif value.strip()=="False" or value.strip()=="0":
+                                        method_dict[key.strip()]=False
+                                    else:
+                                        self.app.add_log("Error (bool) in line "+str(counter+1))
+                                        error_found=True
                                 else:
                                     num_value=np.double(value)
                                     if num_value<0:
-                                        self.app.add_log("Error in line "+str(counter+1))
+                                        self.app.add_log("Error (float) in line "+str(counter+1))
                                         error_found=True
                                     else:
-                                        method_dict[key]=num_value
-                            if method_dict.keys() == self.object_keys[method]:
+                                        method_dict[key.strip()]=num_value
+
+                            if set(method_dict.keys()) == self.object_keys[method]:
                                 commands.append((method,method_dict))
                             else:
-                                self.app.add_log("Error in line "+str(counter+1))
+                                self.app.add_log("Error (invalid args) in line "+str(counter+1))
                                 error_found=True
 
                         except:
@@ -615,11 +657,14 @@ class Scripting:
                             error_found=True
                             
                     else:
-                        self.app.add_log("Error in line "+str(counter+1))
+                        self.app.add_log("Error (invalid method) in line "+str(counter+1))
                         error_found=True
 
         if error_found:
             commands=None
+        else:
+            for i in commands:
+                print(i)
         return commands
 
     def script_from_txt_window(self):
@@ -641,6 +686,7 @@ class Scripting:
         if step_done:
             if self.script_canceled:
                 self.script_end()
+                return None
             self.master_script_index +=1
             if self.master_script_index==self.master_number_of_points:
                 self.app.add_log(str(self.master_script_index)+" from "+str(self.master_number_of_points))
@@ -708,9 +754,9 @@ class Scripting:
 
                     elif command[0]=="measure_iv_curve_set_voltages":
 
-                        self.IV_start_current_mA=params["start_voltage_volt"]
-                        self.IV_end_current_mA=params["end_voltage_volt"]
-                        self.IV_step_current_mA=params["step_voltage_volt"]
+                        self.IV_start_voltage=params["start_voltage_V"]
+                        self.IV_end_voltage=params["end_voltage_V"]
+                        self.IV_step_voltage=params["step_voltage_V"]
             
                         self.IV_settling_time=params["settling_time_s"]
                         self.IV_spatial=params["spatial_bool"]
@@ -772,6 +818,7 @@ class Scripting:
         if step_done:
             if self.script_canceled:
                 self.script_end()
+                return None
             self.script_index +=1
             if self.script_index==self.number_of_points:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
@@ -780,10 +827,34 @@ class Scripting:
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
                 self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
+                #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
+                #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
                 self.app.h5saving.save_to_h5_timeline()
                 if self.master_script_index is None:
                     self.script_end()
                 else:
+
+                    self.app.keysight.current=0       
+                    self.app.keysight.voltage=0
+                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_current_script(done_event)
+                    done_event.wait()
+
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_voltage_script(done_event)
+                    done_event.wait()
+
+
+                    self.app.keysight.output_on=False
+                    done_event = threading.Event()
+                    self.app.keysight.thread_power_script(done_event)
+                    done_event.wait()
+
+
                     self.master_script_thread(True)
             elif self.script_paused:
                 self.app.add_log("script paused")
@@ -793,10 +864,11 @@ class Scripting:
 
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
-                print(self.IV_curve_voltages)
+                #print(self.IV_curve_voltages)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_volt=self.IV_set_voltages[self.script_index]
+                self.app.keysight.voltwidget.setText(str(set_volt))
                 self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
@@ -806,6 +878,7 @@ class Scripting:
         if step_done:
             if self.script_canceled:
                 self.script_end()
+                return None
             self.script_index +=1
             if self.script_index==self.number_of_points:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
@@ -814,10 +887,33 @@ class Scripting:
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
                 self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
+                #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
+                #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
                 self.app.h5saving.save_to_h5_timeline()
                 if self.master_script_index is None:
                     self.script_end()
                 else:
+
+                    self.app.keysight.current=0       
+                    self.app.keysight.voltage=0
+                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_current_script(done_event)
+                    done_event.wait()
+
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_voltage_script(done_event)
+                    done_event.wait()
+
+
+                    self.app.keysight.output_on=False
+                    done_event = threading.Event()
+                    self.app.keysight.thread_power_script(done_event)
+                    done_event.wait()
+
                     self.master_script_thread(True)
 
             elif self.script_paused:
@@ -828,10 +924,11 @@ class Scripting:
 
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
-                print(self.IV_curve_voltages)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_current_mA=self.IV_set_currents_mA[self.script_index]
+
+                self.app.keysight.currentwidget.setText(str(set_current_mA))
                 self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
@@ -851,22 +948,30 @@ class Scripting:
             self.IV_optical_spatial=[]
         
         if self.app.keysight.output_on:
-            self.app.keysight.power_on() #turn off any output
-        #time.sleep(0.1) # give atleast 100ms between switching off and on
-        self.app.keysight.current=self.app.keysight.max_currentmA -0.01       
+            self.app.keysight.output_on =False
+            done_event = threading.Event()
+            self.app.keysight.thread_power_script(done_event)
+            done_event.wait()
+
+        self.app.keysight.current=self.app.keysight.max_currentmA #-0.01       
         self.app.keysight.voltage=0
         self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
         self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
-        self.app.keysight.power_on() #turn on
 
+        self.app.keysight.powerbtn.setStyleSheet("background-color: green;color: black")
+        self.app.keysight.output_on =True
+
+        done_event = threading.Event()
+        self.app.keysight.thread_power_script(done_event)
+        done_event.wait()        
 
         self.number_of_points=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)+1 
 
         self.IV_set_voltages=[]
         for i in range(self.number_of_points):
             self.IV_set_voltages.append(self.IV_start_voltage+i*self.IV_step_voltage)
-        #print(self.IV_set_voltages)
         set_volt=self.IV_set_voltages[self.script_index]
+        self.app.keysight.voltwidget.setText(str(set_volt))
         self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
@@ -884,21 +989,28 @@ class Scripting:
             self.IV_optical_spatial=[]
         
         if self.app.keysight.output_on:
-            self.app.keysight.power_on() #turn off any output
-        #time.sleep(0.1) # give atleast 100ms between switching off and on
-        self.app.keysight.current=0#self.app.keysight.max_currentmA -0.01       
-        self.app.keysight.voltage=self.app.keysight.max_voltage -0.01
+            self.app.keysight.output_on =False
+            done_event = threading.Event()
+            self.app.keysight.thread_power_script(done_event)
+            done_event.wait()
+
+        self.app.keysight.current=0      
+        self.app.keysight.voltage=self.app.keysight.max_voltage# -0.01
         self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
         self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
-        self.app.keysight.power_on() #turn on
 
+        self.app.keysight.powerbtn.setStyleSheet("background-color: green;color: black")
+        self.app.keysight.output_on =True
 
+        done_event = threading.Event()
+        self.app.keysight.thread_power_script(done_event)
+        done_event.wait()
         self.number_of_points=int((self.IV_end_current_mA-self.IV_start_current_mA)/self.IV_step_current_mA)+1 
 
         self.IV_set_currents_mA=[]
         for i in range(self.number_of_points):
             self.IV_set_currents_mA.append(self.IV_start_current_mA+i*self.IV_step_current_mA)
-        #print(self.IV_set_voltages)
+        #print(self.IV_set_currents_mA)
         set_current_mA=self.IV_set_currents_mA[self.script_index]
         self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)

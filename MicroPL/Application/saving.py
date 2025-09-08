@@ -79,8 +79,14 @@ class Saving:
         else:
             if self.check_h5():
                 profile = self.app.pixis.roi.getArrayRegion(self.app.pixis.img.image, img=self.app.pixis.img)
-                self.app.metadata_spectral["intensity"]=profile.mean(axis=-1)
+                y=profile.mean(axis=-1)
+                self.app.metadata_spectral["intensity"]=y
                 self.app.metadata_spectral["wavelength"]=self.app.monochromator.spectrum_x_axis
+                #self.app.metadata_spectral["spectrum"]=np.zeros([len(y),2])
+                #self.app.metadata_spectral["spectrum"][:,0]=self.app.monochromator.spectrum_x_axis
+                #self.app.metadata_spectral["spectrum"][:,1]=y
+
+
                 if self.app.pixis.save_full_image:
                     self.app.metadata_spectral["image"]=self.app.pixis.img_data#.image
 
@@ -98,7 +104,7 @@ class Saving:
             self.app.add_log("already saved before")
         else:
             if self.check_h5():
-                self.app.metadata_spatial["image"]=self.app.orca.img_data#.image
+                self.app.metadata_spatial["image"]=self.app.orca.img_data.T[::-1,:]#.image
                 self.write_to_h5(self.app.metadata_spatial)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""
@@ -112,7 +118,7 @@ class Saving:
                 self.app.metadata_timeline["time_s"]=self.app.keysight.timeline_list
                 self.app.metadata_timeline["voltage_V"]=self.app.keysight.voltage_list
                 self.app.metadata_timeline["current_A"]=self.app.keysight.currentA_list
-                self.write_to_h5(self.app.metadata_spatial)
+                self.write_to_h5(self.app.metadata_timeline)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""
                 self.app.metadata_timeline["comment"]=""
