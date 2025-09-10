@@ -140,10 +140,14 @@ class Master_Script(QRunnable):
     @pyqtSlot()
     def run(self): # A slot takes no params    
         if self.command[0]=="spatial_acquisition_time_s":
-            self.app.pixis.acqtime_spectral=self.command[1]
+            if self.app.pixis.auto_exposure_activated:
+                self.app.pixis.auto_exposure_activated=False
+                self.app.pixis.acqtime_spectral=self.command[1]
             self.app.pixis.cam.set_exposure(self.command[1])
             self.app.pixis.acqwidget.setText(str(self.command[1]))
         elif self.command[0]=="spectral_acquisition_time_s":
+            if self.app.orca.auto_exposure_activated:
+                self.app.orca.auto_exposure_activated=False
             self.app.orca.acqtime_spatial=self.command[1]
             self.app.orca.cam.set_exposure(self.command[1])
             self.app.orca.acqwidget.setText(str(self.command[1]))
@@ -176,6 +180,11 @@ class Master_Script(QRunnable):
             self.app.keysight.thread_set_current_script(done_event)
             done_event.wait()
             self.app.keysight.currentwidget.setText(str(self.command[1]))
+
+        elif self.command=="electric_measurement_to_timeline":
+            done_event = threading.Event()
+            self.keysight.thread_task_script(done_event)
+            done_event.wait()
 
         elif self.command=="spatial_acquire":
             done_event = threading.Event()
@@ -217,7 +226,7 @@ class Master_Script(QRunnable):
         elif self.command[0]=="acquistion_name":
             self.app.h5saving.acq_name=self.command[1]
 
-        elif self.command[0]=="shutter_mode":
+        elif self.command[0]=="spectral_shutter_mode":
             if self.command[1]=="open":
                 self.app.pixis.shutterbtn.setText("Shutter (Open)")
                 self.app.pixis.shutter_value="Always Open"
@@ -348,11 +357,12 @@ class Scripting:
 
         self.string_keys_any=set(["comment","group_name","acquisition_name"])
         self.string_keys=dict()
-        self.string_keys["shutter_mode"]=set(["normal","open","closed"])
+        self.string_keys["spectral_shutter_mode"]=set(["normal","open","closed"])
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
         self.string_keys["spatial_resolution"]=set(["2048","1024","512"])
         self.none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
-                       "spatial_acquire","pause_timeline","continue_timeline","spatial_auto_exposure_stop","spectral_auto_exposure_stop"])#"show_timeline","show_iv_curve"
+                       "spatial_acquire","pause_timeline","continue_timeline","spatial_auto_exposure_stop",
+                       "spectral_auto_exposure_stop","electric_measurement_to_timeline"])#"show_timeline","show_iv_curve"
         self.object_keys=dict()
         self.object_keys["spatial_auto_exposure"]=set(["start_s","min_s","max_s"])
         self.object_keys["spectral_auto_exposure"]=set(["start_s","min_s","max_s"])
