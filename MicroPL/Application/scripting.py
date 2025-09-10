@@ -174,12 +174,18 @@ class Master_Script(QRunnable):
             self.app.keysight.thread_set_voltage_script(done_event)
             done_event.wait()
             self.app.keysight.voltwidget.setText(str(self.command[1]))
+            done_event = threading.Event()
+            self.keysight.thread_task_script(done_event)
+            done_event.wait()
         elif self.command[0]=="current_mA":
             self.app.keysight.voltage=self.command[1]
             done_event = threading.Event()
             self.app.keysight.thread_set_current_script(done_event)
             done_event.wait()
             self.app.keysight.currentwidget.setText(str(self.command[1]))
+            done_event = threading.Event()
+            self.keysight.thread_task_script(done_event)
+            done_event.wait()
 
         elif self.command=="electric_measurement_to_timeline":
             done_event = threading.Event()
@@ -214,6 +220,10 @@ class Master_Script(QRunnable):
             done_event = threading.Event()
             self.app.keysight.thread_power_script(done_event)
             done_event.wait()
+            done_event = threading.Event()
+            self.keysight.thread_task_script(done_event)
+            done_event.wait()
+
 
         elif self.command[0]=="comment":
             self.app.metadata_spatial["comment"]=self.command[1]
