@@ -93,9 +93,9 @@ Note, that the mechanical shutter of the spectrometer is per default set to "Alw
 Finally, an overview of the supported commands:
 
 commands that are single keywords:
-save_timeline, reset_timeline, save_comment_only, spectral_acquire, spatial_acquire,
-pause_timeline, continue_timeline, spatial_auto_exposure_stop, spectral_auto_exposure_stop,
-electric_measurement_to_timeline
+    save_timeline, reset_timeline, save_comment_only, spectral_acquire, spatial_acquire,
+    pause_timeline, continue_timeline, spatial_auto_exposure_stop, spectral_auto_exposure_stop,
+    electric_measurement_to_timeline
 
 commands that take any positive floating number:
 spatial_acquisition_time_s, spectral_acquisition_time_s, center_wavelength_nm, stage_x_mm, 
