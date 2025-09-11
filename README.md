@@ -85,9 +85,9 @@ Keywords that end with "bool" take either "True" and "False" or "1" and "0".
 Keywords that take a number typically specify the unit with the last letters.  
 Comments need to fill their own line starting with "#", comments after a command are not supported.  
 During script execution the otherwise automatically once per second refreshing timeline of current and voltage is stopped.  
-However, any command changing the state of the electric power supply, as well as any image acquisition, is followed with an update of the timeline. If the voltage and current are supposed to be read out at any other point during the script execution  "electric_measurement_to_timeline" updates the timeline explicitly.  
+However, any command changing the state of the electric power supply, as well as any image acquisition, is followed with an update of the timeline. If the voltage and current are supposed to be read out at any other point during the script execution "electric_measurement_to_timeline" updates the timeline explicitly.  
 Any values that have been set, persist until they are changed, similar to using the interface interactively.  
-Other scripts like "measure_iv_curve_set_currents" can be called as well.   
+Other scripts like "measure_iv_curve_set_currents" can be called as well.  
 Note, that the mechanical shutter of the spectrometer is per default set to "Always Open" before the script execution and returned to "Normal" (opening and closing upon image acquisuition) afterwards.
 
 Finally, an overview of the supported commands:
