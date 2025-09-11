@@ -93,29 +93,35 @@ Note, that the mechanical shutter of the spectrometer is per default set to "Alw
 Finally, an overview of the supported commands:
 
 commands that are single keywords:
+
     save_timeline, reset_timeline, save_comment_only, spectral_acquire, spatial_acquire,
     pause_timeline, continue_timeline, spatial_auto_exposure_stop, spectral_auto_exposure_stop,
     electric_measurement_to_timeline
 
 commands that take any positive floating number:
-spatial_acquisition_time_s, spectral_acquisition_time_s, center_wavelength_nm, stage_x_mm, 
-stage_y_mm, sleep_s, voltage_V, current_mA
+
+    spatial_acquisition_time_s, spectral_acquisition_time_s, center_wavelength_nm, stage_x_mm, 
+    stage_y_mm, sleep_s, voltage_V, current_mA
 
 commands that take a boolean:
-save_spectral_image_bool, electric_output_bool
+
+    save_spectral_image_bool, electric_output_bool
 
 commands that take any (except empty) string:
-comment, group_name, acquisition_name
+
+    comment, group_name, acquisition_name
 
 commands that take a specific string:
-spectral_shutter_mode : normal,open,closed
-grating : 1, 2, 3, 4, 5, 6
-spatial_resolution : 2048, 1024, 512
+
+    spectral_shutter_mode : normal,open,closed
+    grating : 1, 2, 3, 4, 5, 6
+    spatial_resolution : 2048, 1024, 512
 
 commands that take keyword-value pairs:
-spatial_auto_exposure : start_s, min_s, max_s
-spectral_auto_exposure : start_s, min_s, max_s
-stage_mapping : spectral_bool, spatial_bool, x_min_mm, x_max_mm, x_num_int, y_min_mm, y_max_mm, y_num_int
-spectral_roi : x_min_int, x_max_int, y_min_int, y_max_int
-measure_iv_curve_set_currents : spectral_bool, spatial_bool, start_current_mA, end_current_mA, step_current_mA, settling_time_s
-measure_iv_curve_set_voltages : spectral_bool, spatial_bool, start_voltage_V, end_voltage_V, step_voltage_V, settling_time_s
+
+    spatial_auto_exposure : start_s, min_s, max_s
+    spectral_auto_exposure : start_s, min_s, max_s
+    stage_mapping : spectral_bool, spatial_bool, x_min_mm, x_max_mm, x_num_int, y_min_mm, y_max_mm, y_num_int
+    spectral_roi : x_min_int, x_max_int, y_min_int, y_max_int
+    measure_iv_curve_set_currents : spectral_bool, spatial_bool, start_current_mA, end_current_mA, step_current_mA, settling_time_s
+    measure_iv_curve_set_voltages : spectral_bool, spatial_bool, start_voltage_V, end_voltage_V, step_voltage_V, settling_time_s
