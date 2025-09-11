@@ -76,23 +76,19 @@ When no errors are found, the script can be started and from top to bottom the c
     group_name: IV-curve measurement
     measure_iv_curve_set_currents, spectral_bool:0,spatial_bool:1,start_current_mA:0,end_current_mA:100,step_current_mA:5,settling_time_s:0.1
 
-As can be seen in the example, three different types of commands exist. 
-
-First, single keyword commands like "spectral_acquire", 
-
-second, keywords that take a value separated by ":" like "voltage_V",
-
-and third, keywords that take further keywords with values, where each pair is separated by "," , like "spectral_auto_exposure".
-
-Within the line of one command only the keywords and separators matter, white spaces are ignored.\n
-Keywords that end with "bool" take either "True" and "False" or "1" and "0".
-Keywords that take a number typically specify the unit with the last letters.
-Comments need to fill their own line starting with "#", comments after a command are not supported.
-During script execution the otherwise automatically once per second refreshing timeline of current and voltage is stopped.
-However, any command changing the state of the electric power supply, as well as any image acquisition, is followed with an update of the timeline. If the voltage and current are supposed to be read out at any other point during the script execution  "electric_measurement_to_timeline" updates the timeline explicitly.
-Any values that have been set, persist until they are changed, similar to using the interface interactively.
-Other scripts like "measure_iv_curve_set_currents" can be called as well. 
-Note, that the mechanical shutter of the spectrometer is per default set to "Always Open" before the script execution and returned to "Normal" (opening and closing upon image acquisuition) afterwards. 
+As can be seen in the example, three different types of commands exist.  
+First, single keyword commands like "spectral_acquire",  
+second, keywords that take a value separated by ":" like "voltage_V",  
+and third, keywords that take further keywords with values, where each pair is separated by "," , like "spectral_auto_exposure".  
+Within the line of one command only the keywords and separators matter, white spaces are ignored.  
+Keywords that end with "bool" take either "True" and "False" or "1" and "0".  
+Keywords that take a number typically specify the unit with the last letters.  
+Comments need to fill their own line starting with "#", comments after a command are not supported.  
+During script execution the otherwise automatically once per second refreshing timeline of current and voltage is stopped.  
+However, any command changing the state of the electric power supply, as well as any image acquisition, is followed with an update of the timeline. If the voltage and current are supposed to be read out at any other point during the script execution  "electric_measurement_to_timeline" updates the timeline explicitly.  
+Any values that have been set, persist until they are changed, similar to using the interface interactively.  
+Other scripts like "measure_iv_curve_set_currents" can be called as well.   
+Note, that the mechanical shutter of the spectrometer is per default set to "Always Open" before the script execution and returned to "Normal" (opening and closing upon image acquisuition) afterwards.
 
 Finally, an overview of the supported commands:
 
