@@ -274,14 +274,13 @@ class Master_Script(QRunnable):
         elif self.command=="reset_timeline":
             self.app.keysight.reset_pressed()
 
-        elif self.command=="pause_timeline":
-            self.app.keysight.live_mode()
-            self.app.keysight.live_mode_running=False
+        #elif self.command=="pause_timeline":
+        #    self.app.keysight.live_mode()
+        #    self.app.keysight.live_mode_running=False
 
-        elif self.command=="continue_timeline":
-            self.app.keysight.live_mode()
-            self.app.keysight.live_mode_running=True
-
+        #elif self.command=="continue_timeline":
+        #    self.app.keysight.live_mode()
+        #    self.app.keysight.live_mode_running=True
 
         elif self.command[0]=="spectral_roi":
             params=self.command[1]
@@ -371,8 +370,9 @@ class Scripting:
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
         self.string_keys["spatial_resolution"]=set(["2048","1024","512"])
         self.none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
-                       "spatial_acquire","pause_timeline","continue_timeline","spatial_auto_exposure_stop",
-                       "spectral_auto_exposure_stop","electric_measurement_to_timeline"])#"show_timeline","show_iv_curve"
+                       "spatial_acquire","spatial_auto_exposure_stop",
+                       "spectral_auto_exposure_stop","electric_measurement_to_timeline"])
+                        #"show_timeline","show_iv_curve","pause_timeline","continue_timeline"
         self.object_keys=dict()
         self.object_keys["spatial_auto_exposure"]=set(["start_s","min_s","max_s"])
         self.object_keys["spectral_auto_exposure"]=set(["start_s","min_s","max_s"])

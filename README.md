@@ -77,10 +77,14 @@ When no errors are found, the script can be started and from top to bottom the c
     measure_iv_curve_set_currents, spectral_bool:0,spatial_bool:1,start_current_mA:0,end_current_mA:100,step_current_mA:5,settling_time_s:0.1
 
 As can be seen in the example, three different types of commands exist. 
-First, a single keyword like "spectral_acquire", 
+
+First, single keyword commands like "spectral_acquire", 
+
 second, keywords that take a value separated by ":" like "voltage_V",
+
 and third, keywords that take further keywords with values, where each pair is separated by "," , like "spectral_auto_exposure".
-Within the line of one command only the keywords and separators matter, white spaces are ignored.
+
+Within the line of one command only the keywords and separators matter, white spaces are ignored.\n
 Keywords that end with "bool" take either "True" and "False" or "1" and "0".
 Keywords that take a number typically specify the unit with the last letters.
 Comments need to fill their own line starting with "#", comments after a command are not supported.
@@ -95,8 +99,7 @@ Finally, an overview of the supported commands:
 commands that are single keywords:
 
     save_timeline, reset_timeline, save_comment_only, spectral_acquire, spatial_acquire,
-    pause_timeline, continue_timeline, spatial_auto_exposure_stop, spectral_auto_exposure_stop,
-    electric_measurement_to_timeline
+    spatial_auto_exposure_stop, spectral_auto_exposure_stop, electric_measurement_to_timeline
 
 commands that take any positive floating number:
 
