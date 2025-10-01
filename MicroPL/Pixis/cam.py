@@ -407,6 +407,7 @@ class Pixis():
 
     def acquire_clicked_spectral(self,event=None):
         self.app.metadata_spectral["mode"]="spectral"
+        self.app.metadata_spectral["filter"]=self.app.monochromator.filter_pos
         self.app.metadata_spectral["ROI_origin_pixel"]=(self.roi.pos()[0],self.roi.pos()[1])
         self.app.metadata_spectral["ROI_extent_pixel"]=(self.roi.size()[0],self.roi.size()[1])
         self.app.metadata_spectral["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")

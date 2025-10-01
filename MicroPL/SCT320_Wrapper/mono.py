@@ -18,7 +18,7 @@ from msl.equipment import (
 
 class Finish_Signal(QObject):
 
-    grating_update = pyqtSignal(object)
+    index_update = pyqtSignal(object)
     #complete_signal=pyqtSignal(bool)
 
 class Grating_changer(QRunnable):
@@ -35,10 +35,30 @@ class Grating_changer(QRunnable):
         self.mono.set_mono_grating(self.pos)
         grating_pos=self.mono.get_mono_grating()
 
-        self.signals.grating_update.emit(grating_pos)
+        self.signals.index_update.emit(grating_pos)
         if self.event:
             self.event.set()
         #self.signals.complete_signal.emit(True)
+
+
+class Filter_changer(QRunnable):
+
+    def __init__(self, mono,pos,event=None):
+        super().__init__()
+        self.mono = mono
+        self.pos=pos
+        self.signals=Finish_Signal()
+        self.event=event
+
+    @pyqtSlot()
+    def run(self): # A slot takes no params
+        self.mono.set_mono_filter_position(self.pos)
+        filter_pos=self.mono.get_mono_filter_position()
+        #self.app.add_log(f"Filter wheel: position {self.mono.get_mono_filter_position()}"
+
+        self.signals.index_update.emit(filter_pos)
+        if self.event:
+            self.event.set()
 
 
 class SCT320():
@@ -62,6 +82,7 @@ class SCT320():
             self.wavelength=np.round(self.mono.get_mono_wavelength_nm(),2)
             self.grating_pos=self.mono.get_mono_grating()#[0]
             self.grating_idx,self.densities,self.blazes=self.gratings()
+            self.filter_pos=self.mono.get_mono_filter_position()
             self.connected=True
             print("mono connected")
             self.app.add_log("SCT320 connected")
@@ -71,6 +92,7 @@ class SCT320():
             self.connected=False
             self.wavelength=0
             self.grating_pos=1
+            self.filter_pos=0
             self.grating_idx,self.densities,self.blazes=[1],[200],[0]
 
         self.focal_length_mm= 327
@@ -89,6 +111,8 @@ class SCT320():
         
         self.spectrum_x_axis= self.grating_wavelength()
 
+        self.filter_list=["postion "+str(i) for i in range(1,7)]
+
         
     def disconnect(self):
         self.mono.disconnect()
@@ -106,7 +130,11 @@ class SCT320():
             blazes.append(blaze)
             #print('Grating: {}, Density: {}, Blaze: {}'.format(index, density, blaze))
         return indices,densities,blazes
-            
+
+    def filter_changed(self,filter_pos):
+        self.filter_pos=filter_pos
+        self.app.add_log("Filter wheel: position "+str(filter_pos))
+
     def grating_changed(self,grating_pos):
         self.grating_pos=grating_pos    
         self.spectrum_x_axis= self.grating_wavelength(self.app.pixis.roi)
@@ -152,14 +180,29 @@ class SCT320():
         widget.setFixedHeight(25)
         widget.setCurrentIndex(int(self.grating_pos-1))
         widget.currentIndexChanged.connect(self.grating_changing )
-        layoutgrating.addWidget(widget)
 
-        
+        layoutgrating.addWidget(widget)
         label = QLabel("grating")
         label.setStyleSheet("color:white")
         layoutgrating.addWidget(label)
 
         self.dropdown.addLayout(layoutgrating)
+
+
+        layoutfilter=QHBoxLayout()
+        widgetfilter = QComboBox()
+        widgetfilter.addItems(self.filter_list)
+        widgetfilter.setStyleSheet("background-color: lightGray")
+        widgetfilter.setFixedHeight(25)
+        widgetfilter.setCurrentIndex(int(self.filter_pos-1))
+        widgetfilter.currentIndexChanged.connect(self.filter_changing )
+        layoutfilter.addWidget(widgetfilter)
+        
+        label = QLabel("filter")
+        label.setStyleSheet("color:white")
+        layoutfilter.addWidget(label)
+
+        self.dropdown.addLayout(layoutfilter)
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)
@@ -191,7 +234,7 @@ class SCT320():
         self.app.add_log("start grating change ...")
         self.app.add_log("(wait ~ 40 seconds)")
         self.grating_changer =Grating_changer(self.mono,int(i),event) 
-        self.grating_changer.signals.grating_update.connect(self.grating_changed)
+        self.grating_changer.signals.index_update.connect(self.grating_changed)
         self.app.threadpool.start(self.grating_changer)
 
     def grating_changing(self, i): # i is an int
@@ -199,7 +242,7 @@ class SCT320():
         self.app.add_log("(wait ~ 40 seconds)")
 
         self.grating_changer =Grating_changer(self.mono,int(i+1)) 
-        self.grating_changer.signals.grating_update.connect(self.grating_changed)
+        self.grating_changer.signals.index_update.connect(self.grating_changed)
         self.app.threadpool.start(self.grating_changer)
 
 
@@ -236,6 +279,37 @@ class SCT320():
         new_lamda=new_lamda*1E6 #convert from mm to nm
         return new_lamda
 
+    #def filter_present(self):
+    #    return self.mono.get_mono_filter_present()
+
+    #def get_filter_position(self):
+    #    if self.filter_present():
+    #        return self.mono.get_mono_filter_position()
+    #    else:
+    #        print('No filter wheel detected!')
+    #        return None
+    
+    def filter_changing(self,i):
+        self.app.add_log("start filter change ...")
+        self.filter_changer =Filter_changer(self.mono,int(i+1)) 
+        self.filter_changer.signals.index_update.connect(self.filter_changed)
+        self.app.threadpool.start(self.filter_changer)
+
+    def filter_change_script(self,i,event=None):
+        self.app.add_log("start filter change ...")
+        self.filter_changer =Filter_changer(self.mono,int(i),event) 
+        self.filter_changer.signals.index_update.connect(self.filter_changed)
+        self.app.threadpool.start(self.filter_changer)
+
+        #self.mono.set_mono_filter_position(i+1)
+        #self.app.add_log(f"Filter wheel: position {self.mono.get_mono_filter_position()}")
+    #def set_filter_position(self, pos):
+    #    if self.filter_present():
+    #        print(f'Setting filter wheel to position {pos}...')
+    #        self.mono.set_mono_filter_position(pos)
+    #        print(f"Filter wheel now at position {self.get_filter_position()}")
+    #    else:
+    #        print('No filter wheel detected!')
 
 
     #def get_wavelength(self):

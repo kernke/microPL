@@ -354,6 +354,7 @@ class Orca():
     def acquire_clicked_spatial(self,event=None):
         self.app.metadata_spatial["mode"]="spatial"
         self.app.metadata_spatial["time_stamp"]=datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S.%f")
+        self.app.metadata_spatial["filter"]=self.app.monochromator.filter_pos
         xacq,yacq=self.app.stage.xpos,self.app.stage.ypos
         self.app.metadata_spatial["stage_x_mm"]=xacq
         self.app.metadata_spatial["stage_y_mm"]=yacq

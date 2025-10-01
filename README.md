@@ -73,6 +73,9 @@ When no errors are found, the script can be started and from top to bottom the c
     spectral_shutter_mode: closed
     spectral_acquire
 
+    filter : 3
+    grating : 5
+
     group_name: IV-curve measurement
     measure_iv_curve_set_currents, spectral_bool:0,spatial_bool:1,start_current_mA:0,end_current_mA:100,step_current_mA:5,settling_time_s:0.1
 
@@ -114,6 +117,7 @@ commands that take a specific string:
 
     spectral_shutter_mode : normal,open,closed
     grating : 1, 2, 3, 4, 5, 6
+    filter : 1, 2, 3, 4, 5, 6
     spatial_resolution : 2048, 1024, 512
 
 commands that take keyword-value pairs:

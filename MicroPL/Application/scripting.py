@@ -254,6 +254,10 @@ class Master_Script(QRunnable):
             done_event = threading.Event()
             self.app.monochromator.grating_change_script(int(self.command[1]),done_event)
             done_event.wait()
+        elif self.command[0]=="filter":
+            done_event = threading.Event()
+            self.app.monochromator.filter_change_script(int(self.command[1]),done_event)
+            done_event.wait()
 
         elif self.command[0]=="spatial_resolution":
             if self.command[1]=="2048":
@@ -368,6 +372,7 @@ class Scripting:
         self.string_keys=dict()
         self.string_keys["spectral_shutter_mode"]=set(["normal","open","closed"])
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
+        self.string_keys["filter"]=set(["1","2","3","4","5","6"])
         self.string_keys["spatial_resolution"]=set(["2048","1024","512"])
         self.none_keys=set(["save_timeline","reset_timeline","save_comment_only","spectral_acquire",
                        "spatial_acquire","spatial_auto_exposure_stop",
