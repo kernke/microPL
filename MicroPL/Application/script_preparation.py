@@ -1,7 +1,6 @@
 import numpy as np
 
 def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=30):
-    # requires electric output already on, stays on last current after execution
     lines=[]
     filter_wheel_open_position="1"
     filter_wheel_closed_position="2"
@@ -15,6 +14,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
         lines.append("current_mA : "+str(currents_mA[i]))
         if i==0:
             lines.append("voltage_V : "+str(max_voltage_V))
+            lines.append("electric_output_bool : True")
         line="stage_mapping : "
         line+= "spectral_bool : "+str(spectral)+" , "
         line+= "spatial_bool : "+str(spatial)+" , "
@@ -28,13 +28,13 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
         lines.append(line) 
 
 
-
     if spectral:
         lines.append("spectral_shutter_mode : normal")
+    lines.append("electric_output_bool : False")
     return lines
 
 
-def multi_step_IV(steps_mA,boundary_points_mA,spatial=True,spectral=True):
+def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True):
     lines=[]
     filter_wheel_open_position="1"
     filter_wheel_closed_position="2"
@@ -52,7 +52,8 @@ def multi_step_IV(steps_mA,boundary_points_mA,spatial=True,spectral=True):
         line+="step_current_mA : "+str(steps_mA[i])+" , "
         line+="start_current_mA : "+str(bp[0])+" , "
         line+="end_current_mA : "+str(bp[1])+" , "
-        
+        line += "settling_time_s : "+str(settling_time_s)
+
         lines.append(line) 
 
 
@@ -60,27 +61,40 @@ def multi_step_IV(steps_mA,boundary_points_mA,spatial=True,spectral=True):
         lines.append("spectral_shutter_mode : normal")
     return lines
 
-def acq_pause_acq_sequence(timestep_s,timerange_s,spatial=True,spectral=True):
-    #timerange_s should be a multiple of timestep_s
+def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s,
+                            spatial=True,spectral=True,max_voltage_V=30):
+    #timerange_s should be a multiple of timestep_s, which should be a multiple of electric_timestep_s
     lines=[]
     filter_wheel_open_position="1"
     filter_wheel_closed_position="2"
-    lines.append("filter : "+filter_wheel_open_position)
+
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
     else:
         lines.append("spectral_shutter_mode : open")
 
     repetitions=int(timerange_s/timestep_s)
+    elec_repetitions=int(timestep_s/electric_timestep_s)
 
+    lines.append("current_mA : "+str(current_mA))
+    lines.append("voltage_V : "+str(max_voltage_V))
+    lines.append("electric_output_bool : True")
+
+    lines.append("filter : "+filter_wheel_open_position)
     if spatial:
         lines.append("spatial_acquire")
     if spectral:
         lines.append("spectral_acquire")
     lines.append("filter : "+filter_wheel_closed_position)
 
+    lines.append("electric_measurement_to_timeline")
+
     for i in range(repetitions):
-        lines.append("sleep_s : "+str(timestep_s))
+
+        for j in range(elec_repetitions):
+            lines.append("sleep_s : "+str(electric_timestep_s))
+            lines.append("electric_measurement_to_timeline")
+
         lines.append("filter : "+filter_wheel_open_position)
 
         if spatial:
@@ -91,5 +105,5 @@ def acq_pause_acq_sequence(timestep_s,timerange_s,spatial=True,spectral=True):
 
     if spectral:
         lines.append("spectral_shutter_mode : normal")
-
+    lines.append("electric_output_bool : False")
     return lines

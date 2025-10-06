@@ -83,10 +83,11 @@ As can be seen in the example, three different types of commands exist.
 First, single keyword commands like "spectral_acquire",  
 second, keywords that take a value separated by ":" like "voltage_V",  
 and third, keywords that take further keywords with values, where each pair is separated by "," , like "spectral_auto_exposure".  
-Within the line of one command only the keywords and separators matter, white spaces are ignored.  
+In the third case of a command that takes further keywords, this command must be at the beginning of the line, whereas the order of the following keyword-value pairs can be arbitrary.
+Within each line only the keywords and separators matter, white spaces are ignored.   
 Keywords that end with "bool" take either "True" and "False" or "1" and "0".  
 Keywords that take a number typically specify the unit with the last letters.  
-Comments need to fill their own line starting with "#", comments after a command are not supported.  
+Comments need to fill their own line starting with "#", i.e., comments after a command are not supported.  
 During script execution the otherwise automatically once per second refreshing timeline of current and voltage is stopped.
 However, any command changing the state of the electric power supply, as well as any image acquisition, is followed with an update of the timeline. If the voltage and current are supposed to be read out at any other point during the script execution "electric_measurement_to_timeline" updates the timeline explicitly.  
 Any values that have been set, persist until they are changed, similar to using the interface interactively.  
