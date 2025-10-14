@@ -3,7 +3,7 @@ import numpy as np
 def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=30):
     lines=[]
     filter_wheel_open_position="1"
-    filter_wheel_closed_position="2"
+    filter_wheel_closed_position="3"
     lines.append("filter : "+filter_wheel_open_position)
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
@@ -37,7 +37,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
 def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True):
     lines=[]
     filter_wheel_open_position="1"
-    filter_wheel_closed_position="2"
+    filter_wheel_closed_position="3"
     lines.append("filter : "+filter_wheel_open_position)
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
@@ -66,7 +66,7 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
     #timerange_s should be a multiple of timestep_s, which should be a multiple of electric_timestep_s
     lines=[]
     filter_wheel_open_position="1"
-    filter_wheel_closed_position="2"
+    filter_wheel_closed_position="3"
 
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
