@@ -106,7 +106,7 @@ class Keysight:
         self.output_on=False
         self.max_voltage=20
         self.max_currentmA=500
-        self.max_powermW=5000
+        self.max_powermW=10000
 
         self.refresh_rate=0.55
         self.voltage_actual=0
