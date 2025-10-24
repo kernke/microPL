@@ -184,12 +184,12 @@ class Master_Script(QRunnable):
             done_event.wait()
             self.app.keysight.currentwidget.setText(str(self.command[1]))
             done_event = threading.Event()
-            self.keysight.thread_task_script(done_event)
+            self.app.keysight.thread_task_script(done_event)
             done_event.wait()
 
         elif self.command=="electric_measurement_to_timeline":
             done_event = threading.Event()
-            self.keysight.thread_task_script(done_event)
+            self.app.keysight.thread_task_script(done_event)
             done_event.wait()
 
         elif self.command=="spatial_acquire":
@@ -221,7 +221,7 @@ class Master_Script(QRunnable):
             self.app.keysight.thread_power_script(done_event)
             done_event.wait()
             done_event = threading.Event()
-            self.keysight.thread_task_script(done_event)
+            self.app.keysight.thread_task_script(done_event)
             done_event.wait()
 
 
@@ -603,7 +603,9 @@ class Scripting:
             else: 
                 expressions=line.split(",")
                 if len(expressions)==1:
+                    print(expressions[0])
                     key_value=expressions[0].split(":")
+                    print(key_value)
                     if len(key_value)==1:
                         if key_value[0].strip() in self.none_keys:
                             commands.append(key_value[0].strip())
@@ -619,6 +621,8 @@ class Scripting:
                         error_found=True
                     else:
                         key,value=key_value
+                        key=key.strip()
+                        value=value.strip()
                         if key in self.float_keys:
                             try:
                                 num_value=np.double(value)
@@ -632,25 +636,26 @@ class Scripting:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
                         elif key in self.bool_keys:
-                            if value.strip()=="True" or value.strip()=="1":
+                            if value=="True" or value=="1":
                                 commands.append((key,True))
-                            elif value.strip()=="False" or value.strip()=="0":
+                            elif value=="False" or value=="0":
                                 commands.append((key,False))
                             else:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
                         elif key in self.string_keys_any:
-                            commands.append((key,value.strip()))
+                            commands.append((key,value))
                         elif key in self.string_keys:
-                            if value.strip() in self.string_keys[key]:
-                                commands.append((key,value.strip()))
+                            if value in self.string_keys[key]:
+                                commands.append((key,value))
                             else:
                                 self.app.add_log("Error in line "+str(counter+1))
                                 error_found=True
+                        else:
+                            self.app.add_log("Error (invalid keyword)in line "+str(counter+1))
                 else:
                     method=expressions[0].strip()
                     if method in self.object_keys:
-                        self.app.add_log("testinfo")
                         try:
                             method_dict=dict()
                             for expr in expressions[1:]:
@@ -683,14 +688,13 @@ class Scripting:
                             error_found=True
                             
                     else:
-                        print(method)
-                        print(self.object_keys.keys())
                         self.app.add_log("Error (invalid method) in line "+str(counter+1))
                         error_found=True
 
         if error_found:
             commands=None
         else:
+            self.app.add_log("Script containing "+str(len(commands))+" commands")
             for i in commands:
                 print(i)
         return commands
