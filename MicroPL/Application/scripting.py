@@ -650,6 +650,7 @@ class Scripting:
                 else:
                     method=expressions[0].strip()
                     if method in self.object_keys:
+                        self.app.add_log("testinfo")
                         try:
                             method_dict=dict()
                             for expr in expressions[1:]:
@@ -682,6 +683,8 @@ class Scripting:
                             error_found=True
                             
                     else:
+                        print(method)
+                        print(self.object_keys.keys())
                         self.app.add_log("Error (invalid method) in line "+str(counter+1))
                         error_found=True
 

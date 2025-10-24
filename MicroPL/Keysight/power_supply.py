@@ -365,12 +365,16 @@ class Keysight:
             self.thread_set_voltage()
             self.voltwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.voltage,3))+" V")
+        else:
+            self.app.add_log("Safety limits violated")
 
     def setcurrent_confirmed(self):
-        if not self.current>self.max_currentmA and self.voltage*self.current>self.max_powermW:
+        if not self.current>self.max_currentmA and not self.voltage*self.current>self.max_powermW:
             self.thread_set_current()
             self.currentwidget.setStyleSheet("color: black;background-color: lightGray;")
             self.app.add_log("set: "+str(np.round(self.current,1))+" mA")
+        else:
+            self.app.add_log("Safety limits violated")
 
     def setcurrent_edited(self,s):
         if s:
