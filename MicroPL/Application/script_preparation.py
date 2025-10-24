@@ -15,7 +15,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
         if i==0:
             lines.append("voltage_V : "+str(max_voltage_V))
             lines.append("electric_output_bool : True")
-        line="stage_mapping : "
+        line="stage_mapping , "
         line+= "spectral_bool : "+str(spectral)+" , "
         line+= "spatial_bool : "+str(spatial)+" , "
         line+= "x_min_mm : "+str(boundary_points_stage[0])+" , "
@@ -45,7 +45,7 @@ def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spect
         lines.append("spectral_shutter_mode : open")
 
     for i in range(len(steps_mA)):
-        line="measure_iv_curve_set_currents : "
+        line="measure_iv_curve_set_currents , "
         line+= "spectral_bool : "+str(spectral)+" , "
         line+= "spatial_bool : "+str(spatial)+" , "
         bp=boundary_points_mA[i]
