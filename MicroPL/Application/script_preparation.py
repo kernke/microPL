@@ -2,9 +2,7 @@ import numpy as np
 
 def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=20,group_name_prefix="mapping_"):
     lines=[]
-    filter_wheel_open_position="1"
-    filter_wheel_closed_position="3"
-    lines.append("filter : "+filter_wheel_open_position)
+
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
     else:
@@ -37,9 +35,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
 
 def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True,group_name_prefix="IV_current_steps_"):
     lines=[]
-    filter_wheel_open_position="1"
-    filter_wheel_closed_position="3"
-    lines.append("filter : "+filter_wheel_open_position)
+
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
     else:
@@ -64,11 +60,9 @@ def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spect
     return lines
 
 def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s,
-                            spatial=True,spectral=True,max_voltage_V=20):
+                            spatial=True,spectral=True,max_voltage_V=20,filter_open=1,filter_closed=3):
     #timerange_s should be a multiple of timestep_s, which should be a multiple of electric_timestep_s
     lines=[]
-    filter_wheel_open_position="1"
-    filter_wheel_closed_position="3"
 
     if not spectral:
         lines.append("spectral_shutter_mode : normal")
@@ -82,12 +76,12 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
     lines.append("voltage_V : "+str(max_voltage_V))
     lines.append("electric_output_bool : True")
 
-    lines.append("filter : "+filter_wheel_open_position)
+    lines.append("filter : "+filter_open)
     if spatial:
         lines.append("spatial_acquire")
     if spectral:
         lines.append("spectral_acquire")
-    lines.append("filter : "+filter_wheel_closed_position)
+    lines.append("filter : "+filter_closed)
 
     lines.append("electric_measurement_to_timeline")
 
@@ -97,13 +91,13 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
             lines.append("sleep_s : "+str(electric_timestep_s))
             lines.append("electric_measurement_to_timeline")
 
-        lines.append("filter : "+filter_wheel_open_position)
+        lines.append("filter : "+filter_open)
 
         if spatial:
             lines.append("spatial_acquire")
         if spectral:
             lines.append("spectral_acquire")
-        lines.append("filter : "+filter_wheel_closed_position)
+        lines.append("filter : "+filter_closed)
 
     if spectral:
         lines.append("spectral_shutter_mode : normal")
