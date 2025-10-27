@@ -1,6 +1,6 @@
 import numpy as np
 
-def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=30):
+def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=20,group_name_prefix="mapping_"):
     lines=[]
     filter_wheel_open_position="1"
     filter_wheel_closed_position="3"
@@ -11,6 +11,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
         lines.append("spectral_shutter_mode : open")
 
     for i in range(len(currents_mA)):
+        lines.append("group_name : "+group_name_prefix+str(currents_mA[i])+"mA")
         lines.append("current_mA : "+str(currents_mA[i]))
         if i==0:
             lines.append("voltage_V : "+str(max_voltage_V))
@@ -34,7 +35,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
     return lines
 
 
-def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True):
+def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True,group_name_prefix="IV_current_steps_"):
     lines=[]
     filter_wheel_open_position="1"
     filter_wheel_closed_position="3"
@@ -45,6 +46,7 @@ def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spect
         lines.append("spectral_shutter_mode : open")
 
     for i in range(len(steps_mA)):
+        lines.append("group_name : "+group_name_prefix+str(steps_mA[i])+"mA")
         line="measure_iv_curve_set_currents , "
         line+= "spectral_bool : "+str(spectral)+" , "
         line+= "spatial_bool : "+str(spatial)+" , "
@@ -62,7 +64,7 @@ def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spect
     return lines
 
 def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s,
-                            spatial=True,spectral=True,max_voltage_V=30):
+                            spatial=True,spectral=True,max_voltage_V=20):
     #timerange_s should be a multiple of timestep_s, which should be a multiple of electric_timestep_s
     lines=[]
     filter_wheel_open_position="1"

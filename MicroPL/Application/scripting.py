@@ -368,7 +368,7 @@ class Scripting:
                             "current_mA"])
         self.bool_keys=set(["save_spectral_image_bool","electric_output_bool"])
 
-        self.string_keys_any=set(["comment","group_name","acquisition_name"])
+        self.string_keys_any=set(["comment","group_name","acquisition_name"])#,"add_to_acquisition_name"])
         self.string_keys=dict()
         self.string_keys["spectral_shutter_mode"]=set(["normal","open","closed"])
         self.string_keys["grating"]=set(["1","2","3","4","5","6"])
@@ -417,6 +417,7 @@ class Scripting:
                 self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                             self.grid_spatial,self.grid_spectral,stagex,stagey) 
                 self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
+                self.app.saving.acq_name += "_map_"+str(self.script_index)
                 self.app.threadpool.start(self.grid_mapper)
 
     def expand(self):
@@ -829,6 +830,7 @@ class Scripting:
         self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                        self.grid_spatial,self.grid_spectral,stagex,stagey) 
         self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
+        self.app.saving.acq_name += "_map_"+str(self.script_index)
         self.app.threadpool.start(self.grid_mapper)
 
     def acquire_IV_window_voltages(self):
@@ -872,26 +874,26 @@ class Scripting:
                 if self.master_script_index is None:
                     self.script_end()
                 else:
-                    #optionally turn off after
+                    # turn off after
 
-                    #self.app.keysight.current=0       
-                    #self.app.keysight.voltage=0
-                    #self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-                    #self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+                    self.app.keysight.current=0       
+                    self.app.keysight.voltage=0
+                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
 
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_set_current_script(done_event)
-                    #done_event.wait()
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_current_script(done_event)
+                    done_event.wait()
 
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_set_voltage_script(done_event)
-                    #done_event.wait()
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_voltage_script(done_event)
+                    done_event.wait()
 
 
-                    #self.app.keysight.output_on=False
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_power_script(done_event)
-                    #done_event.wait()
+                    self.app.keysight.output_on=False
+                    done_event = threading.Event()
+                    self.app.keysight.thread_power_script(done_event)
+                    done_event.wait()
 
                     self.script_index=0
                     self.master_script_thread(True)
@@ -911,6 +913,7 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
+                self.app.saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
     def iv_curve_on_thread_currents(self,step_done):
@@ -933,26 +936,26 @@ class Scripting:
                 if self.master_script_index is None:
                     self.script_end()
                 else:
-                    #optionally turn off after
+                    # turn off after
                     
-                    #self.app.keysight.current=0       
-                    #self.app.keysight.voltage=0
-                    #self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-                    #self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+                    self.app.keysight.current=0       
+                    self.app.keysight.voltage=0
+                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
 
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_set_current_script(done_event)
-                    #done_event.wait()
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_current_script(done_event)
+                    done_event.wait()
 
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_set_voltage_script(done_event)
-                    #done_event.wait()
+                    done_event = threading.Event()
+                    self.app.keysight.thread_set_voltage_script(done_event)
+                    done_event.wait()
 
 
-                    #self.app.keysight.output_on=False
-                    #done_event = threading.Event()
-                    #self.app.keysight.thread_power_script(done_event)
-                    #done_event.wait()
+                    self.app.keysight.output_on=False
+                    done_event = threading.Event()
+                    self.app.keysight.thread_power_script(done_event)
+                    done_event.wait()
 
                     self.script_index=0
                     self.master_script_thread(True)
@@ -973,6 +976,7 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
+                self.app.saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
 
@@ -1016,6 +1020,7 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
+        self.app.saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
 
     def acquire_IV_currents(self):
@@ -1056,4 +1061,5 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
+        self.app.saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
