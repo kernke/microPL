@@ -76,12 +76,12 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
     lines.append("voltage_V : "+str(max_voltage_V))
     lines.append("electric_output_bool : True")
 
-    lines.append("filter : "+filter_open)
+    lines.append("filter : "+str(filter_open))
     if spatial:
         lines.append("spatial_acquire")
     if spectral:
         lines.append("spectral_acquire")
-    lines.append("filter : "+filter_closed)
+    lines.append("filter : "+str(filter_closed))
 
     lines.append("electric_measurement_to_timeline")
 
@@ -91,13 +91,13 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
             lines.append("sleep_s : "+str(electric_timestep_s))
             lines.append("electric_measurement_to_timeline")
 
-        lines.append("filter : "+filter_open)
+        lines.append("filter : "+str(filter_open))
 
         if spatial:
             lines.append("spatial_acquire")
         if spectral:
             lines.append("spectral_acquire")
-        lines.append("filter : "+filter_closed)
+        lines.append("filter : "+str(filter_closed))
 
     if spectral:
         lines.append("spectral_shutter_mode : normal")
