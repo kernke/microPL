@@ -51,7 +51,7 @@ class Grid_Mapping(QRunnable):
         self.stage.stage_goto()      
 
         done_event = threading.Event()
-        self.stage.thread_task_script(done_event)
+        self.stage.thread_task(done_event)
         done_event.wait()
         if self.keysight.connected:
             if self.keysight.output_on:
@@ -158,13 +158,13 @@ class Master_Script(QRunnable):
             self.app.stage.xpos_set=self.command[1]
             self.app.stage.stage_goto()      
             done_event = threading.Event()
-            self.app.stage.thread_task_script(done_event)
+            self.app.stage.thread_task(done_event)
             done_event.wait()
         elif self.command[0]=="stage_y_mm":
             self.app.stage.ypos_set=self.command[1]
             self.app.stage.stage_goto()      
             done_event = threading.Event()
-            self.app.stage.thread_task_script(done_event)
+            self.app.stage.thread_task(done_event)
             done_event.wait()            
         elif self.command[0]=="sleep_s":
             self.app.scripting.sleep_long_script(self.command[1])
@@ -175,10 +175,10 @@ class Master_Script(QRunnable):
             done_event.wait()
             self.app.keysight.voltwidget.setText(str(self.command[1]))
             done_event = threading.Event()
-            self.keysight.thread_task_script(done_event)
+            self.app.keysight.thread_task_script(done_event)
             done_event.wait()
         elif self.command[0]=="current_mA":
-            self.app.keysight.voltage=self.command[1]
+            self.app.keysight.current=self.command[1]
             done_event = threading.Event()
             self.app.keysight.thread_set_current_script(done_event)
             done_event.wait()
@@ -399,10 +399,12 @@ class Scripting:
                 self.script_end()
                 return None
             self.script_index +=1
+            #print(str(self.script_index)+"   "+str(self.number_of_points))
             if self.script_index==self.number_of_points:
                 if self.master_script_index is None:
                     self.script_end()
                 else:
+                    self.script_index=0
                     self.master_script_thread(True)
                 #self.script_end()
             elif self.script_paused:
@@ -723,6 +725,7 @@ class Scripting:
             if self.master_script_index==self.master_number_of_points:
                 self.app.add_log(str(self.master_script_index)+" from "+str(self.master_number_of_points))
                 #self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
+                self.master_script_index =0
                 self.script_end()
             elif self.script_paused:
                 self.app.add_log("script paused")
@@ -736,8 +739,10 @@ class Scripting:
                 command=self.settings_list[self.master_script_index]
 
                 if command[0] in self.sub_script_keys:
+                    self.app.add_log("sub_script started")
                     params=command[1]
                     if command[0]=="stage_mapping":
+                        #print("this is for test prupose")
                         xmin=params["x_min_mm"]
                         xmax=params["x_max_mm"]
                         xnum=int(params["x_num_int"])
@@ -772,6 +777,7 @@ class Scripting:
                         self.script_settings_prepared=True
                         self.btnexec.setStyleSheet("background-color:lightgrey;")
                         self.btnstart.setStyleSheet("background-color:cyan;")
+                        self.grid_mapping_script()
 
                     elif command[0]=="measure_iv_curve_set_currents":
 
@@ -866,27 +872,28 @@ class Scripting:
                 if self.master_script_index is None:
                     self.script_end()
                 else:
+                    #optionally turn off after
 
-                    self.app.keysight.current=0       
-                    self.app.keysight.voltage=0
-                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+                    #self.app.keysight.current=0       
+                    #self.app.keysight.voltage=0
+                    #self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    #self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
 
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_current_script(done_event)
-                    done_event.wait()
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_set_current_script(done_event)
+                    #done_event.wait()
 
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_voltage_script(done_event)
-                    done_event.wait()
-
-
-                    self.app.keysight.output_on=False
-                    done_event = threading.Event()
-                    self.app.keysight.thread_power_script(done_event)
-                    done_event.wait()
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_set_voltage_script(done_event)
+                    #done_event.wait()
 
 
+                    #self.app.keysight.output_on=False
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_power_script(done_event)
+                    #done_event.wait()
+
+                    self.script_index=0
                     self.master_script_thread(True)
             elif self.script_paused:
                 self.app.add_log("script paused")
@@ -926,26 +933,28 @@ class Scripting:
                 if self.master_script_index is None:
                     self.script_end()
                 else:
+                    #optionally turn off after
+                    
+                    #self.app.keysight.current=0       
+                    #self.app.keysight.voltage=0
+                    #self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
+                    #self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
 
-                    self.app.keysight.current=0       
-                    self.app.keysight.voltage=0
-                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_set_current_script(done_event)
+                    #done_event.wait()
 
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_current_script(done_event)
-                    done_event.wait()
-
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_voltage_script(done_event)
-                    done_event.wait()
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_set_voltage_script(done_event)
+                    #done_event.wait()
 
 
-                    self.app.keysight.output_on=False
-                    done_event = threading.Event()
-                    self.app.keysight.thread_power_script(done_event)
-                    done_event.wait()
+                    #self.app.keysight.output_on=False
+                    #done_event = threading.Event()
+                    #self.app.keysight.thread_power_script(done_event)
+                    #done_event.wait()
 
+                    self.script_index=0
                     self.master_script_thread(True)
 
             elif self.script_paused:
