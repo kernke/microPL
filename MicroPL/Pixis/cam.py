@@ -2,7 +2,7 @@ import pylablib as pll
 from pylablib.devices import PrincetonInstruments
 import pyqtgraph as pg
 import numpy as np
-#import time
+import time
 from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
 
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QCheckBox,QVBoxLayout
@@ -31,6 +31,7 @@ class CameraHandler_spectral(QRunnable):
         #print(self.pixis.auto_expose_start)
         if self.pixis.auto_exposure_activated:
             self.pixis.cam.set_exposure(self.pixis.auto_expose_start)
+            time.sleep(0.01)
             self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
@@ -54,12 +55,14 @@ class CameraHandler_spectral(QRunnable):
             remaining=acq_s-number_of_full*10
             if remaining>0.01:
                 self.pixis.cam.set_exposure(remaining)
+                time.sleep(0.01)
                 self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
                 self.pixis.cam.stop_acquisition()
             else:
                 self.pixis.cam.set_exposure(10)
+                time.sleep(0.01)
                 self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
@@ -67,7 +70,9 @@ class CameraHandler_spectral(QRunnable):
                 number_of_full -= 1
 
             self.pixis.cam.set_exposure(10)
+            #time.sleep(0.01)
             for i in range(number_of_full):
+                time.sleep(0.01)
                 self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img += self.pixis.cam.read_newest_image()

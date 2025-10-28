@@ -417,7 +417,7 @@ class Scripting:
                 self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                             self.grid_spatial,self.grid_spectral,stagex,stagey) 
                 self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
-                self.app.saving.acq_name += "_map_"+str(self.script_index)
+                self.app.h5saving.acq_name += "_map_"+str(self.script_index)
                 self.app.threadpool.start(self.grid_mapper)
 
     def expand(self):
@@ -830,7 +830,7 @@ class Scripting:
         self.grid_mapper =Grid_Mapping(self.app.stage,self.app.keysight,self.app.orca,self.app.pixis,
                                        self.grid_spatial,self.grid_spectral,stagex,stagey) 
         self.grid_mapper.signals.update.connect(self.grid_mapping_on_thread)
-        self.app.saving.acq_name += "_map_"+str(self.script_index)
+        self.app.h5saving.acq_name += "_map_"+str(self.script_index)
         self.app.threadpool.start(self.grid_mapper)
 
     def acquire_IV_window_voltages(self):
@@ -913,7 +913,7 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
-                self.app.saving.acq_name += "_IV_"+str(self.script_index)
+                self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
     def iv_curve_on_thread_currents(self,step_done):
@@ -976,7 +976,7 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
-                self.app.saving.acq_name += "_IV_"+str(self.script_index)
+                self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
 
@@ -1020,7 +1020,7 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
-        self.app.saving.acq_name += "_IV_"+str(self.script_index)
+        self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
 
     def acquire_IV_currents(self):
@@ -1061,5 +1061,5 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
-        self.app.saving.acq_name += "_IV_"+str(self.script_index)
+        self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
