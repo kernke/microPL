@@ -870,7 +870,9 @@ class Scripting:
                 #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
                 #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
                 #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
+                self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
                 self.app.h5saving.save_to_h5_timeline()
+                self.app.metadata_timeline["unsaved"]=True
                 if self.master_script_index is None:
                     self.script_end()
                 else:
@@ -913,7 +915,11 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
-                self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
+                if not self.IV_spatial and not self.IV_spectral:
+                    pass
+                    #self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
+                else:
+                    self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
     def iv_curve_on_thread_currents(self,step_done):
@@ -932,7 +938,9 @@ class Scripting:
                 #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
                 #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
                 #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
+                self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
                 self.app.h5saving.save_to_h5_timeline()
+                self.app.metadata_timeline["unsaved"]=True
                 if self.master_script_index is None:
                     self.script_end()
                 else:
@@ -976,7 +984,11 @@ class Scripting:
                 self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
-                self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
+                if not self.IV_spatial and not self.IV_spectral:
+                    pass
+                    #self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
+                else:
+                    self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
 
@@ -1020,7 +1032,11 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
-        self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
+        if not self.IV_spatial and not self.IV_spectral:
+            pass
+            #self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
+        else:
+            self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
 
     def acquire_IV_currents(self):
@@ -1061,5 +1077,9 @@ class Scripting:
         self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_current_mA,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_currents)
-        self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
+        if not self.IV_spatial and not self.IV_spectral:
+            pass
+            #self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
+        else:
+            self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)

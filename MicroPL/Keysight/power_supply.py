@@ -214,17 +214,36 @@ class Keysight:
         while self.communication_running:
             time.sleep(0.1)
             QApplication.processEvents()
-        cond1=self.voltage>self.max_voltage
-        cond2=self.current>self.max_currentmA
-        cond3=self.voltage*self.current>self.max_powermW
-        if not cond1 and not cond2 and not cond3:
+
+        if self.output_on:
+            cond1=self.voltage>self.max_voltage
+            cond2=self.current>self.max_currentmA
+            cond3=self.voltage*self.current>self.max_powermW
+        
+            if not cond1 and not cond2 and not cond3:
+                self.communication_running=True
+                self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
+                self.pworker.signals.update.connect(self.thread_done_empty)
+
+                self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
+                self.voltwidget.setStyleSheet("background-color: lightGray")
+                self.currentwidget.setStyleSheet("background-color: lightGray")
+                
+                self.app.add_log("set: "+str(np.round(self.voltage,3))+" V ; "+str(np.round(self.current,1))+" mA")
+                self.app.add_log("Electric Power Output ON")
+
+                self.app.threadpool.start(self.pworker)
+            else:
+                self.app.add_log("Electric Power not turned ON")
+                self.app.add_log("Safety limits violated")
+        else:
             self.communication_running=True
             self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
             self.pworker.signals.update.connect(self.thread_done_empty)
+            self.app.add_log("Electric Power Output OFF")
+            
+            self.powerbtn.setStyleSheet("background-color: green;color: black")
             self.app.threadpool.start(self.pworker)
-        else:
-            self.app.add_log("Electric Power not turned ON")
-            self.app.add_log("Safety limits violated")
 
 
     def thread_done_empty(self):

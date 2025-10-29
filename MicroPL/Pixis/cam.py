@@ -38,14 +38,29 @@ class CameraHandler_spectral(QRunnable):
             self.pixis.cam.stop_acquisition()
 
             img_max=np.max(img).astype(np.double)
-            counts_per_s= img_max/self.pixis.auto_expose_start
+            expose_time=np.copy(self.pixis.auto_expose_start)
+            while img_max>55000:
+                expose_time *= 0.5
+                self.pixis.cam.set_exposure(expose_time)
+                time.sleep(0.01)
+                self.pixis.cam.start_acquisition()
+                self.pixis.cam.wait_for_frame()
+                img = self.pixis.cam.read_newest_image()
+                self.pixis.cam.stop_acquisition()
 
-            acq_s=np.round(65535./counts_per_s,2)
+                img_max=np.max(img).astype(np.double)
+
+            counts_per_s= img_max/expose_time#self.pixis.auto_expose_start
+
+            acq_s=np.round(55000./counts_per_s,2)
             if acq_s>self.pixis.auto_expose_max:
                 acq_s=self.pixis.auto_expose_max
-            elif acq_s<self.pixis.auto_expose_min:
-                acq_s=self.pixis.auto_expose_min
+            #elif acq_s==np.round(self.pixis.auto_expose_start,2):
 
+            #elif acq_s<self.pixis.auto_expose_min:
+            #    acq_s=self.pixis.auto_expose_min
+
+            print(acq_s)
             self.pixis.cam.set_exposure(acq_s)
 
         #else:
@@ -80,6 +95,7 @@ class CameraHandler_spectral(QRunnable):
 
 
         else:
+            time.sleep(0.01)
             self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
@@ -293,12 +309,29 @@ class Pixis():
         if self.auto_exposure_activated:
             self.auto_exposure_activated=False
             self.autobtn.setStyleSheet("background-color:lightgrey")
+
+            if self.remember_shutter=="Always Open":
+                self.shutterbtn.setText("Shutter (Open)")
+                self.shutter_value="Always Open"
+                self.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+
+            elif self.remember_shutter=="Always Closed":
+                self.shutterbtn.setText("Shutter (Closed)")
+                self.shutter_value="Always Closed"
+                self.cam.set_attribute_value("Shutter Timing Mode", 'Always Closed')
+
+            elif self.remember_shutter=="Normal":
+                self.shutterbtn.setText("Shutter (Normal)")
+                self.shutter_value="Normal"
+                self.cam.set_attribute_value("Shutter Timing Mode", 'Normal')
+
         else:
             labellist=["Start (s)","Min (s)","Max (s)"]
             defaultlist=[self.auto_expose_start,self.auto_expose_min,self.auto_expose_max]
-            heading_string="Turn on AutoExposure with the following settings: "
+            heading_string="Turn on AutoExposure (intended dynamic range: 0-55000) with the following settings: "
             heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
-            heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
+            heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s. "
+            heading_string+="(Note that the shutter is set to 'Always Open', while using AutoExposure)"
             self.window = self.app.entrymask3(self.app,"auto_spectral",defaultlist,labellist,heading_string)
             self.window.location_on_the_screen()
             self.window.show()
@@ -369,12 +402,12 @@ class Pixis():
                     self.acqtime_spectral=np.double(s)
 
                 if self.acqtime_spectral>0.001:
-                    if self.live_mode_running:
-                        self.timer.stop()
-                        self.cam.set_exposure(self.acqtime_spectral)
-                        self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
-                    else:
-                        self.cam.set_exposure(self.acqtime_spectral)
+                    #if self.live_mode_running:
+                    #    #self.timer.stop()
+                    #    self.cam.set_exposure(self.acqtime_spectral)
+                    #    #self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
+                    #else:
+                    self.cam.set_exposure(self.acqtime_spectral)
                 #else:
                 #    self.app.add_log("Acq. time must be > 0.001 s")
 

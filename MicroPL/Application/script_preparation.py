@@ -1,15 +1,17 @@
 import numpy as np
 
-def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=20,group_name_prefix="mapping_"):
+def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectral=False,max_voltage_V=20,
+                          group_name_prefix="mapping_",group_name_start="aging_",group_name_index=0,zfillint=3):
     lines=[]
 
-    if not spectral:
-        lines.append("spectral_shutter_mode : normal")
-    else:
-        lines.append("spectral_shutter_mode : open")
+    #if not spectral:
+    #    lines.append("spectral_shutter_mode : normal")
+    #else:
+    #    lines.append("spectral_shutter_mode : open")
 
     for i in range(len(currents_mA)):
-        lines.append("group_name : "+group_name_prefix+str(currents_mA[i])+"mA")
+        gn=group_name_start+str(group_name_index).zfill(zfillint)+"_"
+        lines.append("group_name : "+gn+group_name_prefix+str(currents_mA[i])+"mA")
         lines.append("current_mA : "+str(currents_mA[i]))
         if i==0:
             lines.append("voltage_V : "+str(max_voltage_V))
@@ -27,22 +29,24 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
         lines.append(line) 
 
 
-    if spectral:
-        lines.append("spectral_shutter_mode : normal")
+    #if spectral:
+    #    lines.append("spectral_shutter_mode : normal")
     lines.append("electric_output_bool : False")
     return lines
 
 
-def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True,group_name_prefix="IV_current_steps_"):
+def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spectral=True,group_name_prefix="IV_current_steps_",
+                  group_name_start="aging_",group_name_index=0,zfillint=3):
     lines=[]
 
-    if not spectral:
-        lines.append("spectral_shutter_mode : normal")
-    else:
-        lines.append("spectral_shutter_mode : open")
+    #if not spectral:
+    #    lines.append("spectral_shutter_mode : normal")
+    #else:
+    #    lines.append("spectral_shutter_mode : open")
 
     for i in range(len(steps_mA)):
-        lines.append("group_name : "+group_name_prefix+str(steps_mA[i])+"mA")
+        gn=group_name_start+str(group_name_index).zfill(zfillint)+"_"
+        lines.append("group_name : "+gn+group_name_prefix+str(steps_mA[i])+"mA")
         line="measure_iv_curve_set_currents , "
         line+= "spectral_bool : "+str(spectral)+" , "
         line+= "spatial_bool : "+str(spatial)+" , "
@@ -55,8 +59,8 @@ def multi_step_IV(steps_mA,boundary_points_mA,settling_time_s,spatial=True,spect
         lines.append(line) 
 
 
-    if spectral:
-        lines.append("spectral_shutter_mode : normal")
+    #if spectral:
+    #    lines.append("spectral_shutter_mode : normal")
     return lines
 
 def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s,
@@ -64,10 +68,10 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
     #timerange_s should be a multiple of timestep_s, which should be a multiple of electric_timestep_s
     lines=[]
 
-    if not spectral:
-        lines.append("spectral_shutter_mode : normal")
-    else:
-        lines.append("spectral_shutter_mode : open")
+    #if not spectral:
+    #    lines.append("spectral_shutter_mode : normal")
+    #else:
+    #    lines.append("spectral_shutter_mode : open")
 
     repetitions=int(timerange_s/timestep_s)
     elec_repetitions=int(timestep_s/electric_timestep_s)
@@ -99,7 +103,7 @@ def acq_pause_acq_sequence(current_mA,timestep_s,electric_timestep_s,timerange_s
             lines.append("spectral_acquire")
         lines.append("filter : "+str(filter_closed))
 
-    if spectral:
-        lines.append("spectral_shutter_mode : normal")
+    #if spectral:
+    #    lines.append("spectral_shutter_mode : normal")
     lines.append("electric_output_bool : False")
     return lines

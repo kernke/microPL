@@ -32,9 +32,23 @@ class CameraHandler_spatial(QRunnable):
             self.orca.cam.stop_acquisition()
 
             img_max=np.max(img).astype(np.double)
-            counts_per_s= img_max/self.orca.auto_expose_start
 
-            acq_s=np.round(65535./counts_per_s,2)
+            expose_time=np.copy(self.orca.auto_expose_start)
+            while img_max>55000:
+                expose_time *= 0.5
+                self.orca.cam.set_exposure(expose_time)
+                #time.sleep(0.01)
+                self.orca.cam.start_acquisition()
+                self.orca.cam.wait_for_frame()
+                img = self.orca.cam.read_newest_image()
+                self.orca.cam.stop_acquisition()
+
+                img_max=np.max(img).astype(np.double)
+
+
+            counts_per_s= img_max/expose_time#self.orca.auto_expose_start
+
+            acq_s=np.round(55000./counts_per_s,2)
             if acq_s>self.orca.auto_expose_max:
                 acq_s=self.orca.auto_expose_max
             elif acq_s<self.orca.auto_expose_min:
@@ -214,7 +228,7 @@ class Orca():
         else:
             labellist=["Start (s)","Min (s)","Max (s)"]
             defaultlist=[self.auto_expose_start,self.auto_expose_min,self.auto_expose_max]
-            heading_string="Turn on AutoExposure with the following settings: "
+            heading_string="Turn on AutoExposure (intended dynamic range: 0-55000) with the following settings: "
             heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
             heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s."
             self.window = self.app.entrymask3(self.app,"auto_spatial",defaultlist,labellist,heading_string)
