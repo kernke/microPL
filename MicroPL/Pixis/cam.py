@@ -31,8 +31,12 @@ class CameraHandler_spectral(QRunnable):
         #print(self.pixis.auto_expose_start)
         if self.pixis.auto_exposure_activated:
             self.pixis.cam.set_exposure(self.pixis.auto_expose_start)
-            time.sleep(0.01)
-            self.pixis.cam.start_acquisition()
+            #time.sleep(0.01)
+            try:
+                self.pixis.cam.start_acquisition()
+            except:
+                print("Picam Timeout Exception triggered")
+                self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
             self.pixis.cam.stop_acquisition()
@@ -42,8 +46,12 @@ class CameraHandler_spectral(QRunnable):
             while img_max>55000:
                 expose_time *= 0.5
                 self.pixis.cam.set_exposure(expose_time)
-                time.sleep(0.01)
-                self.pixis.cam.start_acquisition()
+                #time.sleep(0.01)
+                try:
+                    self.pixis.cam.start_acquisition()
+                except:
+                    print("Picam Timeout Exception triggered")
+                    self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
                 self.pixis.cam.stop_acquisition()
@@ -70,15 +78,23 @@ class CameraHandler_spectral(QRunnable):
             remaining=acq_s-number_of_full*10
             if remaining>0.01:
                 self.pixis.cam.set_exposure(remaining)
-                time.sleep(0.01)
-                self.pixis.cam.start_acquisition()
+                #time.sleep(0.01)
+                try:
+                    self.pixis.cam.start_acquisition()
+                except:
+                    print("Picam Timeout Exception triggered")
+                    self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
                 self.pixis.cam.stop_acquisition()
             else:
                 self.pixis.cam.set_exposure(10)
-                time.sleep(0.01)
-                self.pixis.cam.start_acquisition()
+                #time.sleep(0.01)
+                try:
+                    self.pixis.cam.start_acquisition()
+                except:
+                    print("Picam Timeout Exception triggered")
+                    self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
                 self.pixis.cam.stop_acquisition()
@@ -87,16 +103,24 @@ class CameraHandler_spectral(QRunnable):
             self.pixis.cam.set_exposure(10)
             #time.sleep(0.01)
             for i in range(number_of_full):
-                time.sleep(0.01)
-                self.pixis.cam.start_acquisition()
+                #time.sleep(0.01)
+                try:
+                    self.pixis.cam.start_acquisition()
+                except:
+                    print("Picam Timeout Exception triggered")
+                    self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img += self.pixis.cam.read_newest_image()
                 self.pixis.cam.stop_acquisition()
 
 
         else:
-            time.sleep(0.01)
-            self.pixis.cam.start_acquisition()
+            #time.sleep(0.01)
+            try:
+                self.pixis.cam.start_acquisition()
+            except:
+                print("Picam Timeout Exception triggered")
+                self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
             self.pixis.cam.stop_acquisition()

@@ -94,16 +94,23 @@ class Keysight:
             print("Keysight connected")
             self.connected=True
             self.app.add_log("Keysight connected")
+
+
+            self.output_on=bool(np.double(self.psu.query("OUTP?").strip()))
+            self.current=np.double(self.psu.query("SOUR:CURR?").strip())
+            self.voltage=np.double(self.psu.query("SOUR:VOLT?").strip())
             # for safety
-            self.psu.write("OUTP OFF")
+            #self.psu.write("OUTP OFF")
+
         except:
             self.connected=False
             print("dummy mode for keysight")
             self.app.add_log("Keysight dummy mode")
 
-        self.voltage=0
-        self.current=0
-        self.output_on=False
+            self.voltage=0
+            self.current=0
+            self.output_on=False
+        
         self.max_voltage=20
         self.max_currentmA=1000
         self.max_powermW=20000
@@ -124,6 +131,7 @@ class Keysight:
         self.latency_time=0.3
         self.communication_running=False
 
+
     def disconnect(self):
         if self.live_mode_running:
             self.live_mode_running=False
@@ -143,8 +151,11 @@ class Keysight:
             print("wait shortly for keysight to finish")
             return None
         else:
+            # turn off
+            #self.psu.write("OUTP OFF")
 
-            self.psu.write("OUTP OFF")
+            #leave it as is
+            pass
 
         #self.app.threadpool.waitForDone()
         self.psu.close() 
@@ -458,6 +469,8 @@ class Keysight:
         
         layoutoutput=QHBoxLayout()
         self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
+        if self.output_on:
+            self.powerbtn.setStyleSheet("background-color: green;color: black")
         label = QLabel("grey   -> off\ngreen -> on         cyan -> limited by")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
@@ -471,7 +484,7 @@ class Keysight:
         self.voltwidget.setStyleSheet("background-color: lightGray")
         self.voltwidget.setMaxLength(7)
         self.voltwidget.setFixedWidth(self.app.standard_width)
-        self.voltwidget.setText(str(np.round(self.voltage_actual,3)))
+        self.voltwidget.setText(str(np.round(self.voltage,3)))
         self.voltwidget.returnPressed.connect(self.setvoltage_confirmed)
         self.voltwidget.textEdited.connect(self.setvoltage_edited)
         label = QLabel("voltage (V)")
@@ -483,7 +496,7 @@ class Keysight:
         self.currentwidget.setStyleSheet("background-color: lightGray")
         self.currentwidget.setMaxLength(7)
         self.currentwidget.setFixedWidth(self.app.standard_width)
-        self.currentwidget.setText(str(np.round(self.currentA_actual*1000,1)))
+        self.currentwidget.setText(str(np.round(self.current*1000,1)))
         self.currentwidget.textEdited.connect(self.setcurrent_edited)
         self.currentwidget.returnPressed.connect(self.setcurrent_confirmed)
         label = QLabel("current (mA)")
@@ -506,11 +519,29 @@ class Keysight:
         btn=self.app.normal_button(layoutsafe,"Safety limits",self.set_safety)
         btn.setFixedWidth(110)
         layoutsafe.addStretch()
+
+        btn=self.app.normal_button(layoutsafe,"Update Set Values",self.set_values)
+        btn.setFixedWidth(110)
+
         self.dropdown.addLayout(layoutsafe)
 
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)
+
+
+    def set_values(self):
+        self.output_on=bool(np.double(self.psu.query("OUTP?").strip()))
+        self.current=np.double(self.psu.query("SOUR:CURR?").strip())
+        self.voltage=np.double(self.psu.query("SOUR:VOLT?").strip())
+
+        self.voltwidget.setText(str(np.round(self.voltage,3)))
+        self.currentwidget.setText(str(np.round(self.current*1000,1)))
+        
+        if self.output_on:
+            self.powerbtn.setStyleSheet("background-color: green;color: black")
+        else:
+            self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
 
     def set_safety(self):
         text="Set safety limits to the output of the electric power supply"

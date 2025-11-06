@@ -46,20 +46,20 @@ class Homing(QRunnable):
     @pyqtSlot()
     def run(self): # A slot takes no params
 
-        error = self.stageclass.m_Tango.LSX_Calibrate(self.LSID)
+        error = self.stageclass.m_Tango.LSX_Calibrate(self.stageclass.LSID)
         if error > 0:
             print("Error: Calibrate " + str(error))
         else:
             print("Info: Calibration done")
         # range measure for X axis
-        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.LSID, 1)
+        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.stageclass.LSID, 1)
         if error > 0:
             print("Error: Range measure " + str(error))
         else:
             print("Info: Range measure for X done")
 
         # range measure for Y axis
-        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.LSID, 2)
+        error = self.stageclass.m_Tango.LSX_RMeasureEx(self.stageclass.LSID, 2)
         if error > 0:
             print("Error: Range measure " + str(error))
         else:
@@ -68,13 +68,13 @@ class Homing(QRunnable):
         # move center
         inp = c_char_p("!moc\r".encode("utf-8"))
         resp = create_string_buffer(256)
-        error = self.stageclass.m_Tango.LSX_SendString(self.LSID, inp, resp, 256, True, 5000)
+        error = self.stageclass.m_Tango.LSX_SendString(self.stageclass.LSID, inp, resp, 256, True, 5000)
         if error > 0:
             print("Error: SendString " + str(error))
         else:
             print('Info: MoveCenter via SendString done: ' + str(resp.value.decode("ascii")))
 
-        x,y =self.stageclass.stage.get_position()
+        x,y =self.stageclass.get_position()
         stage_status_string="Stage X: "+str(x)+ " mm\n"
         stage_status_string+="Stage Y: "+str(y)+ " mm"
 
@@ -386,18 +386,22 @@ class Stage:
         self.btn_up.setStyleSheet("background-color: orange;font-size: 13pt")
 
     def clicked_left(self):
+        self.xpos,self.ypos=self.get_position()
         self.xpos_set=self.xpos-self.step_size
         self.stage_goto()
 
     def clicked_right(self):
+        self.xpos,self.ypos=self.get_position()
         self.xpos_set=self.xpos+self.step_size
         self.stage_goto()
 
     def clicked_up(self):
+        self.xpos,self.ypos=self.get_position()
         self.ypos_set=self.ypos+self.step_size
         self.stage_goto()
 
     def clicked_down(self):
+        self.xpos,self.ypos=self.get_position()
         self.ypos_set=self.ypos-self.step_size
         self.stage_goto()
 
