@@ -36,6 +36,7 @@ class CameraHandler_spectral(QRunnable):
                 self.pixis.cam.start_acquisition()
             except:
                 print("Picam Timeout Exception triggered")
+                print(self.pixis.cam.get_status())
                 self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
@@ -51,6 +52,7 @@ class CameraHandler_spectral(QRunnable):
                     self.pixis.cam.start_acquisition()
                 except:
                     print("Picam Timeout Exception triggered")
+                    print(self.pixis.cam.get_status())
                     self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
@@ -83,6 +85,7 @@ class CameraHandler_spectral(QRunnable):
                     self.pixis.cam.start_acquisition()
                 except:
                     print("Picam Timeout Exception triggered")
+                    print(self.pixis.cam.get_status())
                     self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
@@ -94,6 +97,7 @@ class CameraHandler_spectral(QRunnable):
                     self.pixis.cam.start_acquisition()
                 except:
                     print("Picam Timeout Exception triggered")
+                    print(self.pixis.cam.get_status())
                     self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img = self.pixis.cam.read_newest_image()
@@ -108,6 +112,7 @@ class CameraHandler_spectral(QRunnable):
                     self.pixis.cam.start_acquisition()
                 except:
                     print("Picam Timeout Exception triggered")
+                    print(self.pixis.cam.get_status())
                     self.pixis.cam.start_acquisition()
                 self.pixis.cam.wait_for_frame()
                 img += self.pixis.cam.read_newest_image()
@@ -120,6 +125,7 @@ class CameraHandler_spectral(QRunnable):
                 self.pixis.cam.start_acquisition()
             except:
                 print("Picam Timeout Exception triggered")
+                print(self.pixis.cam.get_status())
                 self.pixis.cam.start_acquisition()
             self.pixis.cam.wait_for_frame()
             img = self.pixis.cam.read_newest_image()
@@ -374,11 +380,13 @@ class Pixis():
             self.app.orca.cw.setHidden(False)
             self.app.midleft.setHidden(False)
             self.maxbtn.setText("Maximize View")
+            self.maxbtn.setStyleSheet("background-color:lightGray;")
         else:
             self.maximized=True
             self.app.orca.cw.setHidden(True)
             self.app.midleft.setHidden(True)
             self.maxbtn.setText("Minimize View")
+            self.maxbtn.setStyleSheet("background-color:cyan;")
 
     def live_mode(self):
         if not self.live_mode_running:

@@ -537,7 +537,7 @@ class Keysight:
 
         self.voltwidget.setText(str(np.round(self.voltage,3)))
         self.currentwidget.setText(str(np.round(self.current*1000,1)))
-        
+
         if self.output_on:
             self.powerbtn.setStyleSheet("background-color: green;color: black")
         else:
@@ -690,8 +690,11 @@ class Keysight:
             self.app.stage.plot.setHidden(False)
             self.app.midright.setHidden(False)
             self.maxbtn.setText("Maximize View")
+            self.maxbtn.setStyleSheet("background-color:lightGray;")
+
         else:
             self.maximized=True
             self.app.stage.plot.setHidden(True)
             self.app.midright.setHidden(True)
             self.maxbtn.setText("Minimize View")
+            self.maxbtn.setStyleSheet("background-color:cyan;")

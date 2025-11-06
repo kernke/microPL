@@ -297,13 +297,14 @@ class Orca():
             self.app.pixis.roiplot.setHidden(False)
             self.app.midleft.setHidden(False)
             self.maxbtn.setText("Maximize View")
+            self.maxbtn.setStyleSheet("background-color:lightGray;")
         else:
             self.maximized=True
             self.app.pixis.cw.setHidden(True)
             self.app.pixis.roiplot.setHidden(True)
             self.app.midleft.setHidden(True)
             self.maxbtn.setText("Minimize View")
-
+            self.maxbtn.setStyleSheet("background-color:cyan;")
 
     def overlay_crosshair(self):
         if self.crosshair:
