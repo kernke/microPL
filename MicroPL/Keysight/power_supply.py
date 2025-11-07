@@ -112,8 +112,8 @@ class Keysight:
             self.output_on=False
         
         self.max_voltage=20
-        self.max_currentmA=1000
-        self.max_powermW=20000
+        self.max_currentmA=600
+        self.max_powermW=12000
 
         self.refresh_rate=0.55
         self.voltage_actual=0
@@ -236,7 +236,7 @@ class Keysight:
                 self.pworker=PSU_power(self.psu,self.output_on,self.voltage,self.current,event)
                 self.pworker.signals.update.connect(self.thread_done_empty)
 
-                self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
+                self.powerbtn.setStyleSheet("background-color: green;color: black")
                 self.voltwidget.setStyleSheet("background-color: lightGray")
                 self.currentwidget.setStyleSheet("background-color: lightGray")
                 
@@ -253,7 +253,7 @@ class Keysight:
             self.pworker.signals.update.connect(self.thread_done_empty)
             self.app.add_log("Electric Power Output OFF")
             
-            self.powerbtn.setStyleSheet("background-color: green;color: black")
+            self.powerbtn.setStyleSheet("background-color: lightGray;color: black")
             self.app.threadpool.start(self.pworker)
 
 
@@ -470,9 +470,14 @@ class Keysight:
         self.dropdown=QVBoxLayout()
         
         layoutoutput=QHBoxLayout()
-        self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
-        if self.output_on:
-            self.powerbtn.setStyleSheet("background-color: green;color: black")
+        if self.connected:
+            self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)
+            if self.output_on:
+                self.powerbtn.setStyleSheet("background-color: green;color: black")
+        else:
+            self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.dummy_func)
+            self.powerbtn.setStyleSheet("background-color: red;color: black")
+            
         label = QLabel("grey   -> off\ngreen -> on         cyan -> limited by")
         label.setStyleSheet("color:white")
         label.setWordWrap(True)
@@ -483,11 +488,16 @@ class Keysight:
         self.dropdown.addLayout(layoutoutput)
         layoutset=QHBoxLayout()
         self.voltwidget = QLineEdit()
-        self.voltwidget.setStyleSheet("background-color: lightGray")
         self.voltwidget.setMaxLength(7)
         self.voltwidget.setFixedWidth(self.app.standard_width)
         self.voltwidget.setText(str(np.round(self.voltage,3)))
-        self.voltwidget.returnPressed.connect(self.setvoltage_confirmed)
+        if self.connected:
+            self.voltwidget.setStyleSheet("background-color: lightGray")
+            self.voltwidget.returnPressed.connect(self.setvoltage_confirmed)
+        else:
+            self.voltwidget.setStyleSheet("background-color: red")
+            self.voltwidget.returnPressed.connect(self.dummy_func)
+
         self.voltwidget.textEdited.connect(self.setvoltage_edited)
         label = QLabel("voltage (V)")
         label.setStyleSheet("color:white")
@@ -495,12 +505,18 @@ class Keysight:
         layoutset.addWidget(label)
         layoutset.addStretch()
         self.currentwidget = QLineEdit()
-        self.currentwidget.setStyleSheet("background-color: lightGray")
+
         self.currentwidget.setMaxLength(7)
         self.currentwidget.setFixedWidth(self.app.standard_width)
         self.currentwidget.setText(str(np.round(self.current*1000,1)))
         self.currentwidget.textEdited.connect(self.setcurrent_edited)
-        self.currentwidget.returnPressed.connect(self.setcurrent_confirmed)
+        if self.connected:
+            self.currentwidget.setStyleSheet("background-color: lightGray")
+            self.currentwidget.returnPressed.connect(self.setcurrent_confirmed)
+        else:
+            self.currentwidget.setStyleSheet("background-color: red")
+            self.currentwidget.returnPressed.connect(self.dummy_func)
+
         label = QLabel("current (mA)")
         label.setStyleSheet("color:white")
         layoutset.addWidget(label)
@@ -522,7 +538,11 @@ class Keysight:
         btn.setFixedWidth(110)
         layoutsafe.addStretch()
 
-        btn=self.app.normal_button(layoutsafe,"Update Set Values",self.set_values)
+        if self.connected:
+            btn=self.app.normal_button(layoutsafe,"Update Set Values",self.set_values)
+        else:
+            btn=self.app.normal_button(layoutsafe,"Update Set Values",self.dummy_func)
+            btn.setStyleSheet("background-color: red")
         btn.setFixedWidth(110)
 
         self.dropdown.addLayout(layoutsafe)
@@ -589,7 +609,11 @@ class Keysight:
         layoutfresh.addWidget(label)
         layoutfresh.addStretch()
 
-        self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
+        if self.connected:
+            self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.live_mode)
+        else:
+            self.btnlive=self.app.normal_button(layoutfresh,"Status Live",self.dummy_func)
+            self.btnlive.setStyleSheet("background-color: red")
 
         self.dropdown2.addLayout(layoutfresh)
 

@@ -212,6 +212,8 @@ class Stage:
         self.m_Tango.LSX_Disconnect(self.LSID)
         print("Tango disconnected")
     
+    def dummy_func(self):
+        self.app.add_log("device not connected")
 
     def get_position(self):
         dx = c_double() 
@@ -308,25 +310,41 @@ class Stage:
         self.btn_up.move(xshift, 0)  # position inside plot area
         self.btn_up.setStyleSheet("background-color: lightGray;font-size: 13pt")
         self.btn_up.setFixedSize(bsize,bsize)
-        self.btn_up.clicked.connect(self.clicked_up)
+        if self.connected:
+            self.btn_up.clicked.connect(self.clicked_up)
+        else:
+            self.btn_up.clicked.connect(self.dummy_func)
+            self.btn_up.setStyleSheet("background-color: red;font-size: 13pt")
 
         self.btn_down = QPushButton("\u25BC", self.plot)
         self.btn_down.move(xshift, 2*bsize)  # position inside plot area
         self.btn_down.setStyleSheet("background-color: lightGray;font-size: 13pt")
         self.btn_down.setFixedSize(bsize,bsize)
-        self.btn_down.clicked.connect(self.clicked_down)
+        if self.connected:
+            self.btn_down.clicked.connect(self.clicked_down)
+        else:
+            self.btn_down.clicked.connect(self.dummy_func)
+            self.btn_down.setStyleSheet("background-color: red;font-size: 13pt")
 
         self.btn_left = QPushButton("\u25C0", self.plot)
         self.btn_left.move(xshift-bsize, bsize)  # position inside plot area
         self.btn_left.setStyleSheet("background-color: lightGray;font-size: 19pt")
         self.btn_left.setFixedSize(bsize,bsize)
-        self.btn_left.clicked.connect(self.clicked_left)
+        if self.connected:
+            self.btn_left.clicked.connect(self.clicked_left)
+        else:
+            self.btn_left.clicked.connect(self.dummy_func)
+            self.btn_left.setStyleSheet("background-color: red;font-size: 13pt")
 
         self.btn_right = QPushButton("\u25B6", self.plot)
         self.btn_right.move(xshift+bsize, bsize)  # position inside plot area
         self.btn_right.setStyleSheet("background-color: lightGray;font-size: 19pt")
         self.btn_right.setFixedSize(bsize,bsize)
-        self.btn_right.clicked.connect(self.clicked_right)
+        if self.connected:
+            self.btn_right.clicked.connect(self.clicked_right)
+        else:
+            self.btn_right.clicked.connect(self.dummy_func)
+            self.btn_right.setStyleSheet("background-color: red;font-size: 13pt")
 
         self.btn_step = QPushButton("step size", self.plot)
         self.btn_step.move(xshift-bsize+10, int(3.5*bsize))  # position inside plot area
@@ -466,11 +484,16 @@ class Stage:
         layoutstage=QHBoxLayout()
 
         self.widgetx = QLineEdit()
-        self.widgetx.setStyleSheet("background-color: lightGray")
         self.widgetx.setMaxLength(7)
         self.widgetx.setFixedWidth(self.app.standard_width)
         self.widgetx.setText(str(self.xpos_set))
-        self.widgetx.textEdited.connect(self.stage_update_x)
+        if self.connected:
+            self.widgetx.setStyleSheet("background-color: lightGray")
+            self.widgetx.textEdited.connect(self.stage_update_x)
+        else:
+            self.widgetx.setStyleSheet("background-color: red")
+            self.widgetx.textEdited.connect(self.dummy_func)
+
         layoutstage.addWidget(self.widgetx)
         
         label = QLabel("X (mm)")
@@ -481,11 +504,15 @@ class Stage:
         layoutstage.addStretch()
 
         self.widgety = QLineEdit()
-        self.widgety.setStyleSheet("background-color: lightGray")
         self.widgety.setMaxLength(7)
         self.widgety.setFixedWidth(self.app.standard_width)
         self.widgety.setText(str(self.ypos_set))
-        self.widgety.textEdited.connect(self.stage_update_y)
+        if self.connected:
+            self.widgety.setStyleSheet("background-color: lightGray")
+            self.widgety.textEdited.connect(self.stage_update_y)
+        else:
+            self.widgety.setStyleSheet("background-color: red")
+            self.widgety.textEdited.connect(self.dummy_func)
         
         label = QLabel("Y (mm)")
         label.setStyleSheet("color:white")
@@ -496,15 +523,27 @@ class Stage:
         self.dropdown.addLayout(layoutstage)
 
         layoutstagebuttons=QHBoxLayout()
-        self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
+        if self.connected:
+            btn=self.app.normal_button(layoutstagebuttons,"GoTo",self.stage_goto)
+        else:
+            btn=self.app.normal_button(layoutstagebuttons,"GoTo",self.dummy_func)
+            btn.setStyleSheet("background-color: red")
 
         layoutstagebuttons.addStretch()
 
-        self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
+        if self.connected:
+            btn=self.app.normal_button(layoutstagebuttons,"Actual",self.stage_actual)        
+        else:
+            btn=self.app.normal_button(layoutstagebuttons,"Actual",self.dummy_func)        
+            btn.setStyleSheet("background-color: red")
 
         layoutstagebuttons.addStretch()
 
-        self.app.normal_button(layoutstagebuttons,"Home",self.home_stage)
+        if self.connected:
+            btn=self.app.normal_button(layoutstagebuttons,"Home",self.home_stage)
+        else:
+            btn=self.app.normal_button(layoutstagebuttons,"Home",self.home_stage)
+            btn.setStyleSheet("background-color: red")
 
         self.dropdown.addLayout(layoutstagebuttons)
 

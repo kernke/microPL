@@ -67,8 +67,8 @@ class CameraHandler_spectral(QRunnable):
                 acq_s=self.pixis.auto_expose_max
             #elif acq_s==np.round(self.pixis.auto_expose_start,2):
 
-            #elif acq_s<self.pixis.auto_expose_min:
-            #    acq_s=self.pixis.auto_expose_min
+            elif acq_s<self.pixis.auto_expose_min:
+                acq_s=self.pixis.auto_expose_min
 
             print(acq_s)
             self.pixis.cam.set_exposure(acq_s)
