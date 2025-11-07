@@ -270,9 +270,9 @@ class EntryMask3(Multi_entry):
             self.app.pixis.auto_expose_min=self.b        
             self.app.pixis.auto_expose_max=self.c
 
-            self.app.pixis.shutterbtn.setText("Shutter (Open)")
-            self.app.pixis.shutter_value="Always Open"
-            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+            #self.app.pixis.shutterbtn.setText("Shutter (Open)")
+            #self.app.pixis.shutter_value="Always Open"
+            #self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
 
             self.app.pixis.autobtn.setStyleSheet("background-color:green")
         elif self.keyword=="auto_spatial":

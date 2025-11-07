@@ -356,7 +356,7 @@ class Scripting:
 
         self.IV_curve_voltages=[0]
         self.IV_curve_currents=[0]
-        self.IV_optical_spatial=[0]
+        #self.IV_optical_spatial=[0]
 
         self.float_keys=set(["spatial_acquisition_time_s",
                             "spectral_acquisition_time_s",
@@ -490,14 +490,14 @@ class Scripting:
               
     def script_end(self):
         self.script_index=None
-        if self.app.pixis.connected:
-            self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", self.app.pixis.remember_shutter)
-            if self.app.pixis.remember_shutter == "Always Open":
-                self.app.pixis.shutterbtn.setText("Shutter (Open)")
-            elif self.app.pixis.remember_shutter == "Always Closed":
-                self.app.pixis.shutterbtn.setText("Shutter (Closed)")
-            elif self.app.pixis.remember_shutter == "Normal":
-                self.app.pixis.shutterbtn.setText("Shutter (Normal)")
+        #if self.app.pixis.connected:
+        #    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", self.app.pixis.remember_shutter)
+        #    if self.app.pixis.remember_shutter == "Always Open":
+        #        self.app.pixis.shutterbtn.setText("Shutter (Open)")
+        #    elif self.app.pixis.remember_shutter == "Always Closed":
+        #        self.app.pixis.shutterbtn.setText("Shutter (Closed)")
+        #    elif self.app.pixis.remember_shutter == "Normal":
+        #        self.app.pixis.shutterbtn.setText("Shutter (Normal)")
 
         if self.script_selected==3 or self.script_selected==4: # turn off after IV curve
             self.app.keysight.current=0       
@@ -561,24 +561,24 @@ class Scripting:
 
             if self.script_selected==1:
                 #if self.grid_spectral:
-                self.app.pixis.shutterbtn.setText("Shutter (Open)")
-                self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+                #self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                #self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.master_script_thread(True)
         
             elif self.script_selected==2:
-                if self.grid_spectral:
-                    self.app.pixis.shutterbtn.setText("Shutter (Open)")
-                    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+                #if self.grid_spectral:
+                #    self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                #    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.grid_mapping_script()
             elif self.script_selected==3:
-                if self.IV_spectral:
-                    self.app.pixis.shutterbtn.setText("Shutter (Open)")
-                    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+                #if self.IV_spectral:
+                #    self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                #    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.acquire_IV_voltages()
             elif self.script_selected==4:
-                if self.IV_spectral:
-                    self.app.pixis.shutterbtn.setText("Shutter (Open)")
-                    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
+                #if self.IV_spectral:
+                #    self.app.pixis.shutterbtn.setText("Shutter (Open)")
+                #    self.app.pixis.cam.set_attribute_value("Shutter Timing Mode", 'Always Open')
                 self.acquire_IV_currents()
                 
 
@@ -812,7 +812,7 @@ class Scripting:
         #if self.script_index is None:
         text="Measurement grid with current settings\nChoose the grid via start position (min), "
         text+="end position (max)\nand number of points (num) in each dimension. "
-        text+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
+        #text+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         labellist=["X min","Y min","X max","Y max","X num","Y num"]
         defaultlist=[self.script_x_entries[0],self.script_y_entries[0],self.script_x_entries[1],
                         self.script_y_entries[1],self.script_x_entries[2],self.script_y_entries[2]]
@@ -836,7 +836,7 @@ class Scripting:
     def acquire_IV_window_voltages(self):
         heading_string="Acquire I-V-Curve by stepwise increasing the voltage from the set minimum to maximum value"
         heading_string+=" and measuring the corresponding current after a given settling time. "
-        heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
+        #heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         defaultlist=[self.IV_start_voltage,self.IV_end_voltage,self.IV_step_voltage,self.IV_settling_time]
         labellist=["Voltage-Start (V)","Voltage-End (V)","Voltage-Step (V)","Settling Time (s)"]
         self.window = self.app.entrymaskiv(self.app,"set_voltages",defaultlist,labellist,heading_string)
@@ -846,7 +846,7 @@ class Scripting:
     def acquire_IV_window_currents(self):
         heading_string="Acquire I-V-Curve by stepwise increasing the current from the set minimum to maximum value"
         heading_string+=" and measuring the corresponding voltage after a given settling time. "
-        heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
+        #heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         defaultlist=[self.IV_start_current_mA,self.IV_end_current_mA,self.IV_step_current_mA,self.IV_settling_time]
         labellist=["Current-Start (mA)","Current-End (mA)","Current-Step (mA)","Settling Time (s)"]
         self.window = self.app.entrymaskiv(self.app,"set_currents",defaultlist,labellist,heading_string)
@@ -1001,8 +1001,8 @@ class Scripting:
 
         self.IV_curve_voltages=[]
         self.IV_curve_currents=[]
-        if self.app.orca.connected:
-            self.IV_optical_spatial=[]
+        #if self.app.orca.connected:
+        #    self.IV_optical_spatial=[]
         
         if self.app.keysight.output_on:
             self.app.keysight.output_on =False
@@ -1047,8 +1047,8 @@ class Scripting:
 
         self.IV_curve_voltages=[]
         self.IV_curve_currents=[]
-        if self.app.orca.connected:
-            self.IV_optical_spatial=[]
+        #if self.app.orca.connected:
+        #    self.IV_optical_spatial=[]
         
         if self.app.keysight.output_on:
             self.app.keysight.output_on =False

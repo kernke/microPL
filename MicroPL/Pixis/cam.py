@@ -172,7 +172,7 @@ class Pixis():
 
         self.auto_exposure_activated=False
         self.auto_expose_start=0.1
-        self.auto_expose_min=0.01
+        self.auto_expose_min=0.05
         self.auto_expose_max=10
 
         self.counter=0
@@ -388,7 +388,7 @@ class Pixis():
             heading_string="Turn on AutoExposure (intended dynamic range: 0-55000) with the following settings: "
             heading_string+="Start refers to the time of the first test acquisition and Min and Max limit the range of exposure times. "
             heading_string+="Any Exposure above 10 seconds consists of a Multiframe sum, with the longest exposure time being 10 s. "
-            heading_string+="(Note that the shutter is set to 'Always Open', while using AutoExposure)"
+            #heading_string+="(Note that the shutter is set to 'Always Open', while using AutoExposure)"
             self.window = self.app.entrymask3(self.app,"auto_spectral",defaultlist,labellist,heading_string)
             self.window.location_on_the_screen()
             self.window.show()

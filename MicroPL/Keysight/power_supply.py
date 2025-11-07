@@ -97,7 +97,7 @@ class Keysight:
 
 
             self.output_on=bool(np.double(self.psu.query("OUTP?").strip()))
-            self.current=np.double(self.psu.query("SOUR:CURR?").strip())
+            self.current=np.double(self.psu.query("SOUR:CURR?").strip())*1000
             self.voltage=np.double(self.psu.query("SOUR:VOLT?").strip())
             # for safety
             #self.psu.write("OUTP OFF")
@@ -508,7 +508,7 @@ class Keysight:
 
         self.currentwidget.setMaxLength(7)
         self.currentwidget.setFixedWidth(self.app.standard_width)
-        self.currentwidget.setText(str(np.round(self.current*1000,1)))
+        self.currentwidget.setText(str(np.round(self.current,1)))
         self.currentwidget.textEdited.connect(self.setcurrent_edited)
         if self.connected:
             self.currentwidget.setStyleSheet("background-color: lightGray")
