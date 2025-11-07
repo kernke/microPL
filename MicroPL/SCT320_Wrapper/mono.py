@@ -151,6 +151,9 @@ class SCT320():
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def dummy_func(self):
+        self.app.add_log("device not connected")
+
     def mono_ui(self,layoutright):
         self.expanded=False
         self.app.heading_label(layoutright,"Monochromator",self.expand)
@@ -159,12 +162,17 @@ class SCT320():
 
         layoutwavelength=QHBoxLayout()
         self.widgetwave = QLineEdit()
-        self.widgetwave.setStyleSheet("background-color: lightGray")
         self.widgetwave.setMaxLength(7)
         self.widgetwave.setFixedWidth(60)
         self.widgetwave.setText(str(np.round(self.wavelength,2)))
         self.widgetwave.textEdited.connect(self.wavelength_updated)
-        self.widgetwave.returnPressed.connect(self.wavelength_edited)
+        if self.connected:
+           self.widgetwave.setStyleSheet("background-color: lightGray")
+           self.widgetwave.returnPressed.connect(self.wavelength_edited)
+        else:
+            self.widgetwave.setStyleSheet("background-color: red")
+            self.widgetwave.returnPressed.connect(self.dummy_func)
+
         layoutwavelength.addWidget(self.widgetwave)
 
         label = QLabel("wavelength (nm)\n(confirm with enter)")
@@ -176,11 +184,14 @@ class SCT320():
         layoutgrating=QHBoxLayout()
         widget = QComboBox()
         widget.addItems(self.grating_list)
-        widget.setStyleSheet("background-color: lightGray")
         widget.setFixedHeight(25)
         widget.setCurrentIndex(int(self.grating_pos-1))
-        widget.currentIndexChanged.connect(self.grating_changing )
-
+        if self.connected:
+            widget.setStyleSheet("background-color: lightGray")
+            widget.currentIndexChanged.connect(self.grating_changing )
+        else:
+            widget.setStyleSheet("background-color: red")
+            widget.currentIndexChanged.connect(self.dummy_func)
         layoutgrating.addWidget(widget)
         label = QLabel("grating")
         label.setStyleSheet("color:white")
@@ -192,10 +203,15 @@ class SCT320():
         layoutfilter=QHBoxLayout()
         widgetfilter = QComboBox()
         widgetfilter.addItems(self.filter_list)
-        widgetfilter.setStyleSheet("background-color: lightGray")
         widgetfilter.setFixedHeight(25)
         widgetfilter.setCurrentIndex(int(self.filter_pos-1))
-        widgetfilter.currentIndexChanged.connect(self.filter_changing )
+        if self.connected:
+            widgetfilter.setStyleSheet("background-color: lightGray")
+            widgetfilter.currentIndexChanged.connect(self.filter_changing )
+        else:
+            widgetfilter.setStyleSheet("background-color: red")
+            widgetfilter.currentIndexChanged.connect(self.dummy_func )
+
         layoutfilter.addWidget(widgetfilter)
         
         label = QLabel("filter")

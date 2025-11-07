@@ -159,6 +159,8 @@ class Orca():
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def dummy_func(self):
+        self.app.add_log("device not connected")
 
     def spatial_camera_ui(self,layoutright):
         self.timer=QTimer()
@@ -171,12 +173,18 @@ class Orca():
 
         layoutacqtime_spatial=QHBoxLayout()
         self.acqwidget = QLineEdit()
-        self.acqwidget.setStyleSheet("background-color: lightGray")
         self.acqwidget.setMaxLength(7)
         self.acqwidget.setFixedWidth(self.app.standard_width)
         self.acqwidget.setText(str(self.acqtime_spatial))
+        if self.connected:
+            self.acqwidget.setStyleSheet("background-color: lightGray")
+            self.acqwidget.textEdited.connect(self.acqtime_spatial_edited)
+        else:
+            self.acqwidget.setStyleSheet("background-color: red")
+            self.acqwidget.textEdited.connect(self.dummy_func)
+
         layoutacqtime_spatial.addWidget(self.acqwidget)
-        self.acqwidget.textEdited.connect(self.acqtime_spatial_edited)
+
 
         label = QLabel("acquisition time (s)")
         label.setStyleSheet("color:white")
@@ -187,13 +195,21 @@ class Orca():
 
 
         layoutacqbutton=QHBoxLayout()
-        self.btnacq_spatial = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spatial)
+        if self.connected:
+            self.btnacq_spatial = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spatial)
+        else:
+            self.btnacq_spatial = self.app.normal_button(layoutacqbutton,"Acquire",self.dummy_func)
+            self.btnacq_spatial.setStyleSheet("background-color:red;")
+
         layoutacqbutton.addStretch()
         self.app.normal_button(layoutacqbutton,"Crosshair",self.overlay_crosshair)
         layoutacqbutton.addStretch()
 
-        
-        self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
+        if self.connected:
+            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
+        else:
+            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.dummy_func)
+            self.btnlive.setStyleSheet("background-color:red;")
 
 
         self.dropdown.addLayout(layoutacqbutton)
@@ -299,12 +315,15 @@ class Orca():
             self.maxbtn.setText("Maximize View")
             self.maxbtn.setStyleSheet("background-color:lightGray;")
         else:
-            self.maximized=True
-            self.app.pixis.cw.setHidden(True)
-            self.app.pixis.roiplot.setHidden(True)
-            self.app.midleft.setHidden(True)
-            self.maxbtn.setText("Minimize View")
-            self.maxbtn.setStyleSheet("background-color:cyan;")
+            if self.app.pixis.maximized or self.app.keysight.maximized:
+                self.app.add_log("Minimize corresponding window first")
+            else:
+                self.maximized=True
+                self.app.pixis.cw.setHidden(True)
+                self.app.pixis.roiplot.setHidden(True)
+                self.app.midleft.setHidden(True)
+                self.maxbtn.setText("Minimize View")
+                self.maxbtn.setStyleSheet("background-color:cyan;")
 
     def overlay_crosshair(self):
         if self.crosshair:

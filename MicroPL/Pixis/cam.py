@@ -264,6 +264,9 @@ class Pixis():
             self.expanded=False
             self.app.set_layout_visible(self.dropdown,False)
 
+    def dummy_func(self):
+        self.app.add_log("device not connected")
+
     def spectral_camera_ui(self,layoutright):   
         self.expanded=False 
         self.app.heading_label(layoutright,"Spectral Camera",self.expand)
@@ -278,12 +281,16 @@ class Pixis():
 
         layoutacqtime_spectral=QHBoxLayout()
         self.acqwidget = QLineEdit()
-        self.acqwidget.setStyleSheet("background-color: lightGray")
         self.acqwidget.setMaxLength(7)
         self.acqwidget.setFixedWidth(self.app.standard_width)
         self.acqwidget.setText(str(self.acqtime_spectral))
         layoutacqtime_spectral.addWidget(self.acqwidget)
-        self.acqwidget.textEdited.connect(self.acqtime_spectral_edited)
+        if self.connected:
+            self.acqwidget.setStyleSheet("background-color: lightGray")
+            self.acqwidget.textEdited.connect(self.acqtime_spectral_edited)
+        else:
+            self.acqwidget.setStyleSheet("background-color: red")
+            self.acqwidget.textEdited.connect(self.dummy_func)
 
         label = QLabel("acquisition time (s)")
         label.setStyleSheet("color:white")
@@ -295,14 +302,24 @@ class Pixis():
         self.dropdown.addLayout(layoutacqtime_spectral)
 
         layoutacqbutton=QHBoxLayout()
-        self.btnacq_spectral = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spectral)
+        if self.connected:
+            self.btnacq_spectral = self.app.normal_button(layoutacqbutton,"Acquire",self.acquire_clicked_spectral)
+        else:
+            self.btnacq_spectral = self.app.normal_button(layoutacqbutton,"Acquire",self.dummy_func)
+            self.btnacq_spectral.setStyleSheet("background-color:red;")
+        
         layoutacqbutton.addStretch()
 
         self.app.normal_button(layoutacqbutton,"set ROI",self.entry_window_roi)
 
         layoutacqbutton.addStretch()
 
-        self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
+        if self.connected:
+            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.live_mode)
+        else:
+            self.btnlive = self.app.normal_button(layoutacqbutton,"Live",self.dummy_func)
+            self.btnlive.setStyleSheet("background-color:red;")
+
         #self.timer=QTimer()
         #self.timer.timeout.connect(self.acquire_clicked_spectral)
 
@@ -313,7 +330,12 @@ class Pixis():
         self.autobtn=self.app.normal_button(layoutauto,"Auto Exposure",self.auto_exposure)
         self.autobtn.setFixedWidth(110)
         layoutauto.addStretch()
-        self.shutterbtn=self.app.normal_button(layoutauto,"Shutter (Normal)",self.shutter_setting)
+        if self.connected:
+            self.shutterbtn=self.app.normal_button(layoutauto,"Shutter (Normal)",self.shutter_setting)
+        else:
+            self.shutterbtn=self.app.normal_button(layoutauto,"Shutter (Normal)",self.dummy_func)
+            self.shutterbtn.setStyleSheet("background-color:red;")
+
         self.shutterbtn.setFixedWidth(120)
 
         self.dropdown.addLayout(layoutauto)
@@ -325,7 +347,12 @@ class Pixis():
         self.maxbtn=self.app.normal_button(layoutmax,"Maximize View",self.maximize)
         self.maxbtn.setFixedWidth(110)
         layoutmax.addStretch()
-        self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temp. (Logging)",self.chip_temp)
+        if self.connected:
+            self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temp. (Logging)",self.chip_temp)
+        else:
+            self.ctempbtn=self.app.normal_button(layoutmax,"Chip Temp. (Logging)",self.dummy_func)
+            self.ctempbtn.setStyleSheet("background-color:red;")
+
         self.ctempbtn.setFixedWidth(120)
 
         self.dropdown.addLayout(layoutmax)
@@ -382,11 +409,14 @@ class Pixis():
             self.maxbtn.setText("Maximize View")
             self.maxbtn.setStyleSheet("background-color:lightGray;")
         else:
-            self.maximized=True
-            self.app.orca.cw.setHidden(True)
-            self.app.midleft.setHidden(True)
-            self.maxbtn.setText("Minimize View")
-            self.maxbtn.setStyleSheet("background-color:cyan;")
+            if self.app.orca.maximized or self.app.keysight.maximized:
+                self.app.add_log("Minimize corresponding window first")
+            else:
+                self.maximized=True
+                self.app.orca.cw.setHidden(True)
+                self.app.midleft.setHidden(True)
+                self.maxbtn.setText("Minimize View")
+                self.maxbtn.setStyleSheet("background-color:cyan;")
 
     def live_mode(self):
         if not self.live_mode_running:

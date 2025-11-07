@@ -459,6 +459,8 @@ class Keysight:
                 else:
                     self.refresh_rate=np.double(s)
                     
+    def dummy_func(self):
+        self.app.add_log("device not connected")
 
     def power_ui(self,layoutright):
 
@@ -693,8 +695,11 @@ class Keysight:
             self.maxbtn.setStyleSheet("background-color:lightGray;")
 
         else:
-            self.maximized=True
-            self.app.stage.plot.setHidden(True)
-            self.app.midright.setHidden(True)
-            self.maxbtn.setText("Minimize View")
-            self.maxbtn.setStyleSheet("background-color:cyan;")
+            if self.app.orca.maximized or self.app.pixis.maximized:
+                self.app.add_log("Minimize corresponding window first")
+            else:
+                self.maximized=True
+                self.app.stage.plot.setHidden(True)
+                self.app.midright.setHidden(True)
+                self.maxbtn.setText("Minimize View")
+                self.maxbtn.setStyleSheet("background-color:cyan;")
