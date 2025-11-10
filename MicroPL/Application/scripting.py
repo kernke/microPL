@@ -12,20 +12,33 @@ class Update_Signal(QObject):
     #update_with_event=pyqtSignal(object)
 
 class Sleep_Worker(QRunnable):
-    def __init__(self,sleep_duration):#,event=None):
+    def __init__(self,sleep_duration,event=None,app=None):
         super().__init__()
         self.sleep_duration=sleep_duration
         self.signals=Update_Signal()
-        #self.event=event
+        self.event=event
+        self.app=app
 
     @pyqtSlot()
     def run(self):
-        time.sleep(self.sleep_duration)
+        if self.app:
+            N=int(self.sleep_duration)
+            remainder=self.sleep_duration-int(self.sleep_duration)
+            for i in range(N):
+                time.sleep(1)
+                self.app.update_log(str(i+1)+" s out of "+str(self.sleep_duration))
+            if remainder>0.001:
+                time.sleep(remainder)
+        else:
+            time.sleep(self.sleep_duration)
         #
+    
         self.signals.update_empty.emit()
         #QApplication.processEvents()
-        #if self.event:
-        #    self.signals.update_with_event.emit(self.event)
+        if self.event:
+            self.event.set()
+
+            #self.signals.update_with_event.emit(self.event)
         
         #QApplication.processEvents()
 
@@ -167,7 +180,9 @@ class Master_Script(QRunnable):
             self.app.stage.thread_task(done_event)
             done_event.wait()            
         elif self.command[0]=="sleep_s":
-            self.app.scripting.sleep_long_script(self.command[1])
+            done_event = threading.Event()            
+            self.app.scripting.sleep_long_script(self.command[1],done_event)
+            done_event.wait()
         elif self.command[0]=="voltage_V":
             self.app.keysight.voltage=self.command[1]
             done_event = threading.Event()
@@ -330,8 +345,8 @@ class Scripting:
 
         self.master_script_index=None
 
-        self.sleep_start=None
-        self.sleep_duration=0
+        #self.sleep_start=None
+        #self.sleep_duration=0
 
         # stage mapping
         self.script_x_entries=[0,50,10]
@@ -582,13 +597,11 @@ class Scripting:
                 self.acquire_IV_currents()
                 
 
-    def sleep_long_script(self,time_seconds):
-        self.sleep_start=time.time()
-        self.sleep_duration=time_seconds
-        while self.sleep_duration>0:
-            time.sleep(0.5)
-            self.sleep_duration -= 0.5
-            QApplication.processEvents()
+    def sleep_long_script(self,time_seconds,event):
+        self.ssleep_worker=self.app.sleep_worker_class(time_seconds,event,self.app)
+        self.app.threadpool.start(self.ssleep_worker)
+        self.app.add_log("sleeping: ")
+        self.app.add_log("0s out of "+str(time_seconds)+" s")
 
     def check_script(self,fname):
         
