@@ -4,7 +4,7 @@ import numpy as np
 import time
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QApplication
-from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
+from PyQt5.QtCore import pyqtSignal,QRunnable,pyqtSlot,QObject
 
 class Update_Signal(QObject):
 

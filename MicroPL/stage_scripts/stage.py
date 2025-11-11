@@ -334,7 +334,7 @@ class Stage:
             self.btn_left.clicked.connect(self.clicked_left)
         else:
             self.btn_left.clicked.connect(self.dummy_func)
-            self.btn_left.setStyleSheet("background-color: red;font-size: 13pt")
+            self.btn_left.setStyleSheet("background-color: red;font-size: 19pt")
 
         self.btn_right = QPushButton("\u25B6", self.plot)
         self.btn_right.move(xshift+bsize, bsize)  # position inside plot area
@@ -344,7 +344,7 @@ class Stage:
             self.btn_right.clicked.connect(self.clicked_right)
         else:
             self.btn_right.clicked.connect(self.dummy_func)
-            self.btn_right.setStyleSheet("background-color: red;font-size: 13pt")
+            self.btn_right.setStyleSheet("background-color: red;font-size: 19pt")
 
         self.btn_step = QPushButton("step size", self.plot)
         self.btn_step.move(xshift-bsize+10, int(3.5*bsize))  # position inside plot area

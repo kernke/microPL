@@ -3,7 +3,7 @@ from pylablib.devices import PrincetonInstruments
 import pyqtgraph as pg
 import numpy as np
 import time
-from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable,QTimer
+from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable#,QTimer
 
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QCheckBox,QVBoxLayout
 
@@ -175,6 +175,8 @@ class Pixis():
         self.auto_expose_min=0.05
         self.auto_expose_max=10
 
+        self.colorbar_locked=False
+
         self.counter=0
 
     def chip_temp(self):
@@ -222,13 +224,14 @@ class Pixis():
         vb.invertY(True)
         vb.autoRange()
         
-        hist = pg.HistogramLUTWidget(gradientPosition="left")#,orientation="horizontal")
+        self.hist = pg.HistogramLUTWidget(gradientPosition="left")#,orientation="horizontal")
 
-        hist.setBackground(None)
-        hist.setLevelMode(mode="mono")
-        hist.gradient.loadPreset("greyclip")
-        layout.addWidget(hist,3)# 0, 1)
-        hist.setImageItem(self.img)
+        self.hist.setBackground(None)
+        self.hist.setLevelMode(mode="mono")
+        self.hist.gradient.loadPreset("greyclip")
+                
+        layout.addWidget(self.hist,3)# 0, 1)
+        self.hist.setImageItem(self.img)
 
         # ROI
         #max_bounds = pg.QtCore.QRectF(0, 0, 1024, 256)
@@ -267,17 +270,35 @@ class Pixis():
     def dummy_func(self):
         self.app.add_log("device not connected")
 
+    def lock_colorbar(self):
+        if self.colorbar_locked:
+            self.colorbar_locked=False
+            self.hist.autoHistogramRange = True
+        else:
+            self.colorbar_locked=False
+            self.hist.autoHistogramRange = False
+            self.hist.setLevels(0, 65535)
+
+
     def spectral_camera_ui(self,layoutright):   
         self.expanded=False 
         self.app.heading_label(layoutright,"Spectral Camera",self.expand)
 
         self.dropdown=QVBoxLayout()
        
+        layoutcheckbox=QHBoxLayout()
         self.checkbox = QCheckBox('save full chip image')#, self.app)
         self.checkbox.setStyleSheet("color:white")
         self.checkbox.setChecked(True)
         self.checkbox.stateChanged.connect(self.checkbox_full_saving)
-        self.dropdown.addWidget(self.checkbox)
+        
+        layoutcheckbox.addWidget(self.checkbox)
+
+        layoutcheckbox.addStretch()
+        self.btncolorbar =self.app.normal_button(layoutcheckbox,"Lock Colorbar",self.lock_colorbar)
+        self.btncolorbar.setFixedWidth(100)
+
+        self.dropdown.addLayout(layoutcheckbox)
 
         layoutacqtime_spectral=QHBoxLayout()
         self.acqwidget = QLineEdit()
@@ -463,15 +484,15 @@ class Pixis():
                 else:
                     self.acqtime_spectral=np.double(s)
 
-                if self.acqtime_spectral>0.001:
+                if self.acqtime_spectral>0.05:
                     #if self.live_mode_running:
                     #    #self.timer.stop()
                     #    self.cam.set_exposure(self.acqtime_spectral)
                     #    #self.timer.start(int(self.acqtime_spectral*1000+self.live_mode_latency))
                     #else:
                     self.cam.set_exposure(self.acqtime_spectral)
-                #else:
-                #    self.app.add_log("Acq. time must be > 0.001 s")
+                else:
+                    self.app.add_log("Acq. time must be > 0.05 s")
 
 
     def updateRoi(self):
