@@ -176,6 +176,7 @@ class Pixis():
         self.auto_expose_max=10
 
         self.colorbar_locked=False
+        self.noise_level=600
 
         self.counter=0
 
@@ -274,11 +275,12 @@ class Pixis():
         if self.colorbar_locked:
             self.colorbar_locked=False
             self.hist.autoHistogramRange = True
+            self.btncolorbar.setStyleSheet("background-color: lightGray")
         else:
-            self.colorbar_locked=False
+            self.colorbar_locked=True
             self.hist.autoHistogramRange = False
-            self.hist.setLevels(0, 65535)
-
+            self.hist.setLevels(0,6500, 65535)
+            self.btncolorbar.setStyleSheet("background-color: green")
 
     def spectral_camera_ui(self,layoutright):   
         self.expanded=False 
@@ -484,7 +486,7 @@ class Pixis():
                 else:
                     self.acqtime_spectral=np.double(s)
 
-                if self.acqtime_spectral>0.05:
+                if self.acqtime_spectral>=0.01:
                     #if self.live_mode_running:
                     #    #self.timer.stop()
                     #    self.cam.set_exposure(self.acqtime_spectral)
@@ -492,7 +494,7 @@ class Pixis():
                     #else:
                     self.cam.set_exposure(self.acqtime_spectral)
                 else:
-                    self.app.add_log("Acq. time must be > 0.05 s")
+                    self.app.add_log("Acq. time must be > 0.01 s")
 
 
     def updateRoi(self):
@@ -553,8 +555,17 @@ class Pixis():
         self.img_data=cimg.T[::-1]
         self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         imgmax=np.max(cimg)
+        img90=np.percentile(cimg,95)
+        # signal=cimg[cimg>self.noise_level]
+
         statustext="Spectral Max: "+str(int(imgmax))+"\n"
+        statustext+="95th percentile: "+str(int(img90))+"\n"
         
+        if self.colorbar_locked:
+            self.hist.autoHistogramRange = False
+            self.hist.setLevels(0, 65535)
+
+
         self.updateRoi()
 
         if not self.live_mode_running:

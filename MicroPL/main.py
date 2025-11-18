@@ -104,13 +104,13 @@ class MainWindow(QMainWindow):
         
         layoutstatus.addItem(self.vspace)
 
-        self.status_orca = QLabel("Spatial Max: \nSpatial Mean: ")
+        self.status_orca = QLabel("Spatial Max: \nSpatial Median: ")
         self.status_orca.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_orca)
 
         layoutstatus.addItem(self.vspace)
 
-        self.status_pixis = QLabel("Spectral Max: \nROI Max at: ")
+        self.status_pixis = QLabel("Spectral Max: \n95th percentile: \nROI Max at: ")
         self.status_pixis.setStyleSheet(status_style_string)
         layoutstatus.addWidget(self.status_pixis)
 

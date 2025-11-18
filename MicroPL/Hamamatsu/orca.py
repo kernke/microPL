@@ -346,7 +346,7 @@ class Orca():
             self.img_data=np.reshape(cimg.T[:,::-1],(512,4,512,4)).mean(-1).mean(1)
 
         imgmax=np.max(cimg)
-        imgmean=np.mean(cimg)
+        imgmed=np.median(cimg)
 
         self.app.metadata_spatial["acquisition_time"]=self.acqtime_spatial
         if not self.live_mode_running:
@@ -363,7 +363,7 @@ class Orca():
         if imgmax>65534:
             self.app.update_log("Warning: spatial img oversaturation")
 
-        self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Mean: "+str(int(imgmean)))
+        self.app.status_orca.setText("Spatial Max: "+str(int(imgmax))+"\n"+"Spatial Median: "+str(int(imgmed)))
         if self.crosshair:
             crosshaired_img=np.copy(self.img_data)
             if self.binning==1:
