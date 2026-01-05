@@ -152,13 +152,13 @@ class Master_Script(QRunnable):
 
     @pyqtSlot()
     def run(self): # A slot takes no params    
-        if self.command[0]=="spatial_acquisition_time_s":
+        if self.command[0]=="spectral_acquisition_time_s":
             if self.app.pixis.auto_exposure_activated:
                 self.app.pixis.auto_exposure_activated=False
                 self.app.pixis.acqtime_spectral=self.command[1]
             self.app.pixis.cam.set_exposure(self.command[1])
             self.app.pixis.acqwidget.setText(str(self.command[1]))
-        elif self.command[0]=="spectral_acquisition_time_s":
+        elif self.command[0]=="spatial_acquisition_time_s":
             if self.app.orca.auto_exposure_activated:
                 self.app.orca.auto_exposure_activated=False
             self.app.orca.acqtime_spatial=self.command[1]

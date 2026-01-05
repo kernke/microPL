@@ -10,8 +10,8 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
     #    lines.append("spectral_shutter_mode : open")
 
     for i in range(len(currents_mA)):
-        gn=group_name_start+str(group_name_index).zfill(zfillint)+"_"
-        lines.append("group_name : "+gn+group_name_prefix+str(currents_mA[i])+"mA")
+        #gn=group_name_start+str(group_name_index).zfill(zfillint)+"_"
+        lines.append("group_name : "+group_name_prefix+str(currents_mA[i])+"mA")
         lines.append("current_mA : "+str(currents_mA[i]))
         if i==0:
             lines.append("voltage_V : "+str(max_voltage_V))
@@ -31,7 +31,7 @@ def multi_current_mapping(currents_mA,boundary_points_stage,spatial=True,spectra
 
     #if spectral:
     #    lines.append("spectral_shutter_mode : normal")
-    lines.append("electric_output_bool : False")
+    #lines.append("electric_output_bool : False")
     return lines
 
 

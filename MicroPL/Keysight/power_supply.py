@@ -86,7 +86,9 @@ class Keysight:
     def __init__(self,app):
         self.app=app
         self.model_name="E36105B"
-        self.resource_str="USB0::0x2A8D::0x1802::MY61001772::0::INSTR"
+        #self.resource_str="USB0::0x2A8D::0x1802::MY61001772::0::INSTR"
+        self.resource_str="USB0::0x2A8D::0x1602::MY61003313::0::INSTR"
+        
         try:
             # needs the existence of a driver like 'C:\WINDOWS\system32\visa32.dll' or similar
             rm = pyvisa.ResourceManager()
@@ -112,8 +114,8 @@ class Keysight:
             self.output_on=False
         
         self.max_voltage=20
-        self.max_currentmA=600
-        self.max_powermW=12000
+        self.max_currentmA=2000
+        self.max_powermW=20000
 
         self.refresh_rate=0.55
         self.voltage_actual=0
