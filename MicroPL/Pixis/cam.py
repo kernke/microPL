@@ -73,63 +73,15 @@ class CameraHandler_spectral(QRunnable):
             print(acq_s)
             self.pixis.cam.set_exposure(acq_s)
 
-        #else:
-
-        if acq_s>10:
-            number_of_full=int(acq_s//10)
-            remaining=acq_s-number_of_full*10
-            if remaining>0.01:
-                self.pixis.cam.set_exposure(remaining)
-                #time.sleep(0.01)
-                try:
-                    self.pixis.cam.start_acquisition()
-                except:
-                    print("Picam Timeout Exception triggered")
-                    print(self.pixis.cam.get_status())
-                    self.pixis.cam.start_acquisition()
-                self.pixis.cam.wait_for_frame()
-                img = self.pixis.cam.read_newest_image()
-                self.pixis.cam.stop_acquisition()
-            else:
-                self.pixis.cam.set_exposure(10)
-                #time.sleep(0.01)
-                try:
-                    self.pixis.cam.start_acquisition()
-                except:
-                    print("Picam Timeout Exception triggered")
-                    print(self.pixis.cam.get_status())
-                    self.pixis.cam.start_acquisition()
-                self.pixis.cam.wait_for_frame()
-                img = self.pixis.cam.read_newest_image()
-                self.pixis.cam.stop_acquisition()
-                number_of_full -= 1
-
-            self.pixis.cam.set_exposure(10)
-            #time.sleep(0.01)
-            for i in range(number_of_full):
-                #time.sleep(0.01)
-                try:
-                    self.pixis.cam.start_acquisition()
-                except:
-                    print("Picam Timeout Exception triggered")
-                    print(self.pixis.cam.get_status())
-                    self.pixis.cam.start_acquisition()
-                self.pixis.cam.wait_for_frame()
-                img += self.pixis.cam.read_newest_image()
-                self.pixis.cam.stop_acquisition()
-
-
-        else:
-            #time.sleep(0.01)
-            try:
-                self.pixis.cam.start_acquisition()
-            except:
-                print("Picam Timeout Exception triggered")
-                print(self.pixis.cam.get_status())
-                self.pixis.cam.start_acquisition()
-            self.pixis.cam.wait_for_frame()
-            img = self.pixis.cam.read_newest_image()
-            self.pixis.cam.stop_acquisition()
+        try:
+            self.pixis.cam.start_acquisition()
+        except:
+            print("Picam Timeout Exception triggered")
+            print(self.pixis.cam.get_status())
+            self.pixis.cam.start_acquisition()
+        self.pixis.cam.wait_for_frame(timeout=None)# maybe better acq_s+1
+        img = self.pixis.cam.read_newest_image()
+        self.pixis.cam.stop_acquisition()
 
         #this line is a bit unclean, as it indirectly returns the acqtime
         self.pixis.acqtime_spectral=acq_s
@@ -486,7 +438,7 @@ class Pixis():
                 else:
                     self.acqtime_spectral=np.double(s)
 
-                if self.acqtime_spectral>=0.01:
+                if self.acqtime_spectral>=0.009:
                     #if self.live_mode_running:
                     #    #self.timer.stop()
                     #    self.cam.set_exposure(self.acqtime_spectral)
@@ -494,7 +446,7 @@ class Pixis():
                     #else:
                     self.cam.set_exposure(self.acqtime_spectral)
                 else:
-                    self.app.add_log("Acq. time must be > 0.01 s")
+                    self.app.add_log("Acq. time must be > 0.009 s")
 
 
     def updateRoi(self):
@@ -529,6 +481,8 @@ class Pixis():
         self.w.show()  
 
     def acquire_clicked_spectral(self,event=None):
+        if not self.auto_exposure_activated:
+            self.app.metadata_spectral["acquisition_time"]=self.acqtime_spectral
         self.app.metadata_spectral["mode"]="spectral"
         self.app.metadata_spectral["filter"]=self.app.monochromator.filter_pos
         self.app.metadata_spectral["ROI_origin_pixel"]=(self.roi.pos()[0],self.roi.pos()[1])

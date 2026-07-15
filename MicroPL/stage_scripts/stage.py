@@ -8,6 +8,7 @@ import sys
 from ctypes import cdll,c_int,byref,create_string_buffer,c_double,c_char_p  # import ctypes (used to call DLL functions)
 import pyqtgraph as pg
 import numpy as np
+import time
 from PyQt5.QtWidgets import QHBoxLayout,  QLineEdit,QLabel,QVBoxLayout,QPushButton,QComboBox,QApplication
 from PyQt5.QtCore import pyqtSignal, QTimer,QRunnable,pyqtSlot,QObject
 
@@ -241,7 +242,7 @@ class Stage:
         Z.value =  0.0
         A.value =  0.0
         error = self.m_Tango.LSX_MoveAbs(self.LSID, X, Y, Z, A, True)
-        
+        #time.sleep(0.2)
         if error > 0:
             print("Error: Function MoveAbsolute " + str(error))
         #else:
@@ -653,12 +654,12 @@ class Stage:
 
         
     def stage_goto(self):
-        cond1=self.xpos > self.xlimit[0]
-        cond2=self.xpos < self.xlimit[1]
-        cond3=self.ypos > self.ylimit[0]
-        cond4=self.ypos < self.ylimit[1]
+        #cond1=self.xpos > self.xlimit[0]
+        #cond2=self.xpos < self.xlimit[1]
+        #cond3=self.ypos > self.ylimit[0]
+        #cond4=self.ypos < self.ylimit[1]
 
-        if cond1*cond2*cond3*cond4:        
+        if True:#cond1*cond2*cond3*cond4:        
                 
             if self.live_mode_running:
                 self.timer.stop()

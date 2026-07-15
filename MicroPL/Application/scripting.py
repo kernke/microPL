@@ -76,6 +76,7 @@ class Grid_Mapping(QRunnable):
 
         if self.spatial_bool:
             done_event = threading.Event()
+            time.sleep(5)
             self.orca.acquire_clicked_spatial(done_event)
             done_event.wait()
             QApplication.processEvents()
