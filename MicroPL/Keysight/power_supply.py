@@ -82,6 +82,9 @@ class Status_update(QRunnable):
         if self.event:
             self.event.set()
 
+
+
+
 class Keysight:
     def __init__(self,app):
         self.app=app
@@ -113,6 +116,9 @@ class Keysight:
             self.current=0
             self.output_on=False
         
+        if self.app.switcher.connected:
+            pass
+
         self.max_voltage=20
         self.max_currentmA=2000
         self.max_powermW=20000
@@ -471,6 +477,58 @@ class Keysight:
 
         self.dropdown=QVBoxLayout()
         
+        layoutswitcher=QHBoxLayout()
+        if self.app.switcher.connected:
+            self.btn_IVmode=self.app.normal_button(layoutswitcher,"IV-Curve Mode",self.app.switcher.set_IVcurve_mode)
+            self.btn_IVmode.setStyleSheet("background-color: green")  
+
+        else: 
+            self.btn_IVmode=self.app.normal_button(layoutswitcher,"IV-Curve Mode",self.dummy_func)
+            self.btn_IVmode.setStyleSheet("background-color: red")       
+        
+        self.btn_IVmode.setFixedWidth(110)
+        layoutswitcher.addStretch()
+        if self.app.switcher.connected:        
+            self.btn_LCRmode=self.app.normal_button(layoutswitcher,"LCR Mode",self.app.switcher.set_LCR_mode)
+        else: 
+            self.btn_LCRmode=self.app.normal_button(layoutswitcher,"LCR Mode",self.dummy_func)
+            self.btn_LCRmode.setStyleSheet("background-color: red")       
+        self.btn_LCRmode.setFixedWidth(110)
+        self.dropdown.addLayout(layoutswitcher)
+        
+        
+        layoutswitcher2=QHBoxLayout()
+        if self.app.switcher.connected:
+            self.btn_positive=self.app.normal_button(layoutswitcher2,"Positive",self.app.switcher.set_positive)
+        else: 
+            self.btn_positive=self.app.normal_button(layoutswitcher2,"Positive",self.dummy_func)
+            self.btn_positive.setStyleSheet("background-color: red")       
+        #btn.setFixedWidth()
+        layoutswitcher2.addStretch()
+
+        if self.app.switcher.connected:
+            self.btn_negative=self.app.normal_button(layoutswitcher2,"Negative",self.app.switcher.set_negative)
+        else: 
+            self.btn_negative=self.app.normal_button(layoutswitcher2,"Negative",self.dummy_func)
+            self.btn_negative.setStyleSheet("background-color: red")       
+
+        #btn.setFixedWidth(110)
+        layoutswitcher2.addStretch()
+
+        if self.app.switcher.connected:
+            self.btn_off=self.app.normal_button(layoutswitcher2,"Off",self.app.switcher.set_off)
+            self.btn_off.setStyleSheet("background-color: green")       
+        else: 
+            self.btn_off=self.app.normal_button(layoutswitcher2,"Off",self.dummy_func)
+            self.btn_off.setStyleSheet("background-color: red")       
+
+        #btn.setFixedWidth(110)
+
+        self.dropdown.addLayout(layoutswitcher2)
+
+
+
+
         layoutoutput=QHBoxLayout()
         if self.connected:
             self.powerbtn=self.app.normal_button(layoutoutput,"Output",self.power_on)

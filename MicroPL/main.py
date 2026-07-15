@@ -15,6 +15,7 @@ from .stage_scripts.stage import Stage
 from .SCT320_Wrapper.mono import SCT320
 from .Hamamatsu.orca import Orca
 from .Keysight.power_supply import Keysight
+from .Switcher.relais_switcher import Switcher
 
 #color_text_on_dark="white"
 #color_text_on_bright="black"
@@ -59,6 +60,7 @@ class MainWindow(QMainWindow):
         self.monochromator=SCT320(self)
         self.pixis = Pixis(self)
         self.orca = Orca(self)
+        self.switcher=Switcher(self)
         self.keysight=Keysight(self)
         
         self.metadata_spatial=dict()
@@ -225,7 +227,9 @@ class MainWindow(QMainWindow):
             self.orca.disconnect()
         if self.keysight.connected:
             self.keysight.disconnect()    
-        
+        if self.switcher.connected:
+            self.switcher.disconnect()
+
         can_exit=True
         if can_exit:
             event.accept() # let the window close
