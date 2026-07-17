@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
 
         self.threadpool = QThreadPool() 
         
+        # initialize all subclasses, such that they exist as instances inside MainWindow
         self.h5saving=Saving(self)
         self.scripting=Scripting(self)
 
@@ -62,7 +63,8 @@ class MainWindow(QMainWindow):
         self.orca = Orca(self)
         self.switcher=Switcher(self)
         self.keysight=Keysight(self)
-        
+
+        #        
         self.metadata_spatial=dict()
         self.metadata_spatial["unsaved"]=True
 

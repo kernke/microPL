@@ -1,7 +1,7 @@
 [![Python package](https://github.com/kernke/microPL/actions/workflows/python-package.yml/badge.svg)](https://github.com/kernke/microPL/actions/workflows/python-package.yml)
 
 # microPL
-Setup to control several devices, execute measurement sequences and preliminary show the data 
+Setup to control several devices, execute measurement sequences and preliminarily show the data 
 
 # Installation
 When installing the first time, change into the directory containing setup.py and install via 
@@ -29,6 +29,12 @@ The first cell covers the imports and sets the kernel to an interactive mode.
     app.exec()
 
 The second cell actually starts the interface.
+
+# Description
+
+The structure of the code can be roughly illustrated as follows:
+
+![Diagram of the code structure](MicroPL_code_diagram.png)
 
 # Scripting
 
