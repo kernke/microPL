@@ -65,6 +65,7 @@ class Switcher:
             self.app.keysight.btn_positive.setStyleSheet("background-color: lightGray")   
             self.app.keysight.btn_negative.setStyleSheet("background-color: lightGray")   
             self.app.keysight.btn_off.setStyleSheet("background-color: lightGray")   
+        time.sleep(0.3)
 
     def set_LCR_mode(self):
         command="Impedanz"
@@ -75,7 +76,7 @@ class Switcher:
         self.app.keysight.btn_positive.setStyleSheet("background-color: grey")   
         self.app.keysight.btn_negative.setStyleSheet("background-color: gray")   
         self.app.keysight.btn_off.setStyleSheet("background-color: gray")   
-
+        time.sleep(0.3)
 
 
     def set_positive(self):
@@ -85,6 +86,7 @@ class Switcher:
         self.app.keysight.btn_positive.setStyleSheet("background-color: green")   
         self.app.keysight.btn_negative.setStyleSheet("background-color: lightGray")   
         self.app.keysight.btn_off.setStyleSheet("background-color: lightGray")   
+        time.sleep(0.3)
 
 
 
@@ -95,7 +97,7 @@ class Switcher:
         self.app.keysight.btn_positive.setStyleSheet("background-color: lightGray")   
         self.app.keysight.btn_negative.setStyleSheet("background-color: green")   
         self.app.keysight.btn_off.setStyleSheet("background-color: lightGray")   
-
+        time.sleep(0.3)
         
     def set_off(self,initialization=False):
         command="Aus"
@@ -105,7 +107,7 @@ class Switcher:
             self.app.keysight.btn_positive.setStyleSheet("background-color: lightGray")   
             self.app.keysight.btn_negative.setStyleSheet("background-color: lightGray")   
             self.app.keysight.btn_off.setStyleSheet("background-color: green")   
-            
+        time.sleep(0.3)            
 
 
     def send_command(self, command):

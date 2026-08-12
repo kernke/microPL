@@ -123,7 +123,7 @@ class IV_Measurement(QRunnable):
         time.sleep(self.settling_time)
 
         done_event = threading.Event()
-        self.keysight.thread_task_script(done_event)
+        self.keysight.thread_task_script(done_event) #read out voltage and current
         done_event.wait()
         QApplication.processEvents()
 
@@ -369,9 +369,12 @@ class Scripting:
 
         self.IV_spatial=True
         self.IV_spectral=True
+        self.IV_both_ways=False
 
-        self.IV_curve_voltages=[0]
-        self.IV_curve_currents=[0]
+        self.IV_curve_voltages=[]
+        self.IV_curve_currents=[]
+        self.IV_curve_currents_Keysight=[]
+
         #self.IV_optical_spatial=[0]
 
         self.float_keys=set(["spatial_acquisition_time_s",
@@ -848,7 +851,7 @@ class Scripting:
         self.app.threadpool.start(self.grid_mapper)
 
     def acquire_IV_window_voltages(self):
-        heading_string="Acquire I-V-Curve by stepwise increasing the voltage from the set minimum to maximum value"
+        heading_string="Acquire I-V-Curve by stepwise changing the voltage from the set start to end value"
         heading_string+=" and measuring the corresponding current after a given settling time. "
         #heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         defaultlist=[self.IV_start_voltage,self.IV_end_voltage,self.IV_step_voltage,self.IV_settling_time]
@@ -858,7 +861,7 @@ class Scripting:
         self.window.show()
 
     def acquire_IV_window_currents(self):
-        heading_string="Acquire I-V-Curve by stepwise increasing the current from the set minimum to maximum value"
+        heading_string="Acquire I-V-Curve by stepwise changing the current from the set start to end value"
         heading_string+=" and measuring the corresponding voltage after a given settling time. "
         #heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
         defaultlist=[self.IV_start_current_mA,self.IV_end_current_mA,self.IV_step_current_mA,self.IV_settling_time]
@@ -876,11 +879,13 @@ class Scripting:
             self.script_index +=1
             if self.script_index==self.number_of_points:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
-                self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
+                self.IV_curve_currents.append(self.app.keysight.currentA_actual)
+                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
                 self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                self.app.metadata_timeline["IV_current_Keysight"]=self.IV_curve_currents_Keysight
                 #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
                 #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
                 #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
@@ -921,10 +926,21 @@ class Scripting:
 
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)
                 #print(self.IV_curve_voltages)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_volt=self.IV_set_voltages[self.script_index]
+                #sign_change= np.sign(set_volt) != np.sign(self.IV_set_voltages[self.script_index-1])
+                #if set_volt<0:
+                #    if 
+                #    if self.app.switcher.mode_state == "positive":
+                
+                #        self.app.switcher.set_negative()
+                #    elif self.app.switcher.mode_state == "negative":
+                #        self.app.switcher.set_positive()
+                #    else:
+                #        print("Error: Switcher is neither positive or negative, maybe off, maybe LCR")
                 self.app.keysight.voltwidget.setText(str(set_volt))
                 self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
@@ -946,9 +962,11 @@ class Scripting:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)   
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
                 self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
+                self.app.metadata_timeline["IV_current_Keysight"]=self.IV_curve_currents_Keysight
                 #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
                 #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
                 #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
@@ -990,6 +1008,7 @@ class Scripting:
 
                 self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
                 self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)                
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_current_mA=self.IV_set_currents_mA[self.script_index]
@@ -1018,6 +1037,7 @@ class Scripting:
         #if self.app.orca.connected:
         #    self.IV_optical_spatial=[]
         
+        # unnecessary maybe (trun off and on power supply, before IV-curve)
         if self.app.keysight.output_on:
             self.app.keysight.output_on =False
             done_event = threading.Event()
@@ -1036,11 +1056,21 @@ class Scripting:
         self.app.keysight.thread_power_script(done_event)
         done_event.wait()        
 
-        self.number_of_points=int((self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)+1 
+        self.number_of_points=int(abs(self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)+1 
 
         self.IV_set_voltages=[]
-        for i in range(self.number_of_points):
-            self.IV_set_voltages.append(self.IV_start_voltage+i*self.IV_step_voltage)
+
+        if self.IV_start_voltage < self.IV_end_voltage:
+            for i in range(self.number_of_points):
+                self.IV_set_voltages.append(self.IV_start_voltage+i*self.IV_step_voltage)
+        else:
+            for i in range(self.number_of_points):
+                self.IV_set_voltages.append(self.IV_start_voltage-i*self.IV_step_voltage)
+
+        if self.IV_both_ways:
+            self.IV_set_voltages=self.IV_set_voltages+self.IV_set_voltages[::-1][1:]
+            self.number_of_points=self.number_of_points*2 -1
+
         set_volt=self.IV_set_voltages[self.script_index]
         self.app.keysight.voltwidget.setText(str(set_volt))
         self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
@@ -1081,11 +1111,22 @@ class Scripting:
         done_event = threading.Event()
         self.app.keysight.thread_power_script(done_event)
         done_event.wait()
-        self.number_of_points=int((self.IV_end_current_mA-self.IV_start_current_mA)/self.IV_step_current_mA)+1 
+        self.number_of_points=int(abs(self.IV_end_current_mA-self.IV_start_current_mA)/self.IV_step_current_mA)+1 
 
         self.IV_set_currents_mA=[]
-        for i in range(self.number_of_points):
-            self.IV_set_currents_mA.append(self.IV_start_current_mA+i*self.IV_step_current_mA)
+
+        if self.IV_start_current_mA< self.IV_end_current_mA:
+            for i in range(self.number_of_points):
+                self.IV_set_currents_mA.append(self.IV_start_current_mA+i*self.IV_step_current_mA)
+        else:
+            for i in range(self.number_of_points):
+                self.IV_set_currents_mA.append(self.IV_start_current_mA-i*self.IV_step_current_mA)
+
+        if self.IV_both_ways:
+            self.IV_set_currents_mA=self.IV_set_currents_mA+self.IV_set_currents_mA[::-1][1:]
+            self.number_of_points=self.number_of_points*2 -1
+
+
         #print(self.IV_set_currents_mA)
         set_current_mA=self.IV_set_currents_mA[self.script_index]
         self.iv_worker=IV_Measurement("set_currents",self.app.keysight,self.app.orca,self.app.pixis,

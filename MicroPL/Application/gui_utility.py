@@ -61,15 +61,15 @@ class Multi_entry(QWidget):
         if s:
             try:
                 num=np.double(s)
-                #if positive:
-                if num<0:
-                    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
+                if positive:
+                    if num<0:
+                        getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
+                    else:
+                        getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
+                        setattr(self,valuename,num)
                 else:
                     getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
                     setattr(self,valuename,num)
-                #else:
-                #    getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:black")
-                #    setattr(self,valuename,num)
             except:
                 getattr(self,widgetname).setStyleSheet("background-color: lightGray;color:red")
                 
@@ -298,6 +298,7 @@ class EntryMaskIV(Multi_entry):
         self.d=defaults[3]
         self.spatial=True
         self.spectral=True
+        self.both_ways=False
 
         #self.keyword=keyword
         self.setWindowTitle("Enter Values")
@@ -334,6 +335,20 @@ class EntryMaskIV(Multi_entry):
         layout.addLayout(checkboxes1)
 
 
+        checkboxes2=QHBoxLayout()
+
+        checkbox = QCheckBox('Both ways  ')
+        checkbox.setStyleSheet("color:white")
+        checkbox.setChecked(False)
+        checkbox.stateChanged.connect(self.checkbox_both_ways)
+
+        checkboxes2.addWidget(checkbox)
+        checkboxes2.addStretch()
+
+        layout.addLayout(checkboxes2)
+
+
+
         widgetnames=["widgeta","widgetb","widgetc","widgetd"]
 
         entries1=QHBoxLayout()
@@ -351,9 +366,9 @@ class EntryMaskIV(Multi_entry):
         entries2.addStretch()
         
         getattr(self,widgetnames[0]).textEdited.connect(
-                lambda s: self.number_entry(widgetnames[0],"a",s))
+                lambda s: self.number_entry(widgetnames[0],"a",s,positive=False))
         getattr(self,widgetnames[1]).textEdited.connect(
-                lambda s: self.number_entry(widgetnames[1],"b",s))        
+                lambda s: self.number_entry(widgetnames[1],"b",s,positive=False))        
         getattr(self,widgetnames[2]).textEdited.connect(
                 lambda s: self.number_entry(widgetnames[2],"c",s))        
         getattr(self,widgetnames[3]).textEdited.connect(
@@ -382,6 +397,12 @@ class EntryMaskIV(Multi_entry):
         else:
             self.spectral=False
 
+    def checkbox_both_ways(self,state):
+        if state == 2: #checked
+            self.both_ways=True
+        else:
+            self.both_ways=False
+
     def location_on_the_screen(self):
         ag = QDesktopWidget().availableGeometry()
         x=ag.width()//2-275
@@ -402,6 +423,7 @@ class EntryMaskIV(Multi_entry):
         self.app.scripting.IV_settling_time=self.d
         self.app.scripting.IV_spatial=self.spatial
         self.app.scripting.IV_spectral=self.spectral
+        self.app.scripting.IV_both_ways=self.both_ways
         self.app.scripting.script_settings_prepared=True
         self.app.scripting.btnexec.setStyleSheet("background-color:lightgrey;")
         self.app.scripting.btnstart.setStyleSheet("background-color:cyan;")
@@ -602,6 +624,7 @@ class EntryMaskMapping(Multi_entry):
             self.spectral=True
         else:
             self.spectral=False
+
 
     def confirm_and_close(self):
         self.app.scripting.script_x_entries=[self.xmin,self.xmax,int(self.xnum)]

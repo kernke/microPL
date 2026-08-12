@@ -120,6 +120,8 @@ class Status_update(QRunnable):
             self.psu.query("MEAS:VOLT?").strip()
         )
 
+        currentA_actual_Keysight=float(self.psu.query("MEAS:CURR?").strip())
+
         # ---------------------------------------------------------
         # READ ACTUAL CURRENT FROM KEITHLEY 196
         # ---------------------------------------------------------
@@ -155,7 +157,7 @@ class Status_update(QRunnable):
 
         except Exception as e:
 
-            print("Keithley reading error:", e)
+            #print("Keithley reading error:", e)
 
             currentA_actual = None
 
@@ -189,7 +191,8 @@ class Status_update(QRunnable):
             (
                 statusstring,
                 voltage_actual,
-                currentA_actual
+                currentA_actual,
+                currentA_actual_Keysight
             )
         )
 
@@ -341,6 +344,7 @@ class Keysight:
 
         self.voltage_list = []
         self.currentA_list = []
+        self.currentA_Keysight_list=[]
         self.timeline_list = []
 
         self.timeline_time = 0
@@ -623,9 +627,17 @@ class Keysight:
 
             self.communication_running = True
 
+            if self.voltage<0:
+                if self.app.switcher.mode_state != "negative":
+                    self.app.switcher.set_negative()
+            else:
+                if self.app.switcher.mode_state != "positive":
+                    self.app.switcher.set_positive()
+
+
             self.vworker = PSU_voltage(
                 self.psu,
-                self.voltage,
+                abs(self.voltage),
                 event
             )
 
@@ -787,9 +799,17 @@ class Keysight:
 
             self.communication_running = True
 
+            if self.voltage<0:
+                if self.app.switcher.mode_state != "negative":
+                    self.app.switcher.set_negative()
+            else:
+                if self.app.switcher.mode_state != "positive":
+                    self.app.switcher.set_positive()
+
+        
             self.vworker = PSU_voltage(
                 self.psu,
-                self.voltage
+                abs(self.voltage)
             )
 
             self.vworker.signals.update.connect(
@@ -915,6 +935,8 @@ class Keysight:
 
         currentA_actual = string_volt_curr_tuple[2]
 
+        currentA_actual_Keysight = string_volt_curr_tuple[3]
+
         # ---------------------------------------------------------
         # UPDATE STATUS LABEL
         # ---------------------------------------------------------
@@ -926,12 +948,20 @@ class Keysight:
         # ---------------------------------------------------------
         # STORE ACTUAL VALUES
         # ---------------------------------------------------------
-
-        self.voltage_actual = voltage_actual
+        
+        if self.app.switcher.mode_state == "positive":
+            self.voltage_actual = voltage_actual
+        elif self.app.switcher.mode_state == "negative":
+            self.voltage_actual = -voltage_actual
+        else:
+            self.voltage_actual = voltage_actual
+            #print("error: switcher should be positive or negative to read out voltage")
 
         if currentA_actual is not None:
 
             self.currentA_actual = currentA_actual
+
+        self.currentA_actual_Keysight=currentA_actual_Keysight
 
         # ---------------------------------------------------------
         # TIMELINE
@@ -947,6 +977,10 @@ class Keysight:
 
             self.currentA_list = [
                 self.currentA_actual
+            ]
+
+            self.currentA_Keysight_list = [
+                self.currentA_actual_Keysight
             ]
 
             self.timeline_time = 0
@@ -973,6 +1007,11 @@ class Keysight:
             self.currentA_list.append(
                 self.currentA_actual
             )
+
+            self.currentA_Keysight_list.append(
+                self.currentA_actual_Keysight
+            )
+
 
             self.timeline_time = (
                 time.time()
@@ -1213,8 +1252,8 @@ class Keysight:
             and
             not self.voltage * self.current
             > self.max_powermW
-        ):
-
+        ):  
+            
             self.thread_set_voltage()
 
             self.voltwidget.setStyleSheet(
