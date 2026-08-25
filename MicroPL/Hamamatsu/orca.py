@@ -133,7 +133,7 @@ class Orca():
         self.crosshair=False
         self.live_mode_running=False
         self.live_mode_just_stopped=False
-        self.live_mode_latency=300
+        self.live_mode_latency=400
         self.maximized=False
 
         self.auto_exposure_activated=False
