@@ -5,6 +5,7 @@ import datetime
 import numpy as np
 import time
 import pyqtgraph as pg
+import serial
 
 from PyQt5.QtWidgets import (
     QHBoxLayout,
@@ -130,15 +131,39 @@ class Status_update(QRunnable):
 
         try:
 
-            response = self.dmm.read().strip()
+            # Select Keithley 196 at GPIB address 7
+            self.dmm.write(
+                b"++addr 7\n"
+            )
 
-            # Example Keithley response:
-            #
-            # NACI+0.001023E+0
-            #
-            # The regex extracts:
-            #
-            # +0.001023E+0
+            # Request current measurement
+            self.dmm.write(
+                b"U7\n"
+            )
+
+            time.sleep(0.2)
+
+            # Tell Prologix to read the GPIB response
+            self.dmm.write(
+                b"++read eoi\n"
+            )
+
+            time.sleep(0.2)
+
+            response = (
+                self.dmm.read_all()
+                .decode(
+                    "ascii",
+                    errors="replace"
+                )
+                .strip()
+            )
+
+            #print("Keithley raw:", repr(response))
+
+            # -----------------------------------------------------
+            # Extract numerical value
+            # -----------------------------------------------------
 
             match = re.search(
                 r'([+-]?\d+(?:\.\d+)?E[+-]?\d+)',
@@ -147,7 +172,9 @@ class Status_update(QRunnable):
 
             if match:
 
-                currentA_actual = float(match.group(1))
+                currentA_actual = float(
+                    match.group(1)
+                )
 
             else:
 
@@ -157,7 +184,10 @@ class Status_update(QRunnable):
 
         except Exception as e:
 
-            #print("Keithley reading error:", e)
+            print(
+                "Keithley reading error:",
+                e
+            )
 
             currentA_actual = None
 
@@ -220,7 +250,8 @@ class Keysight:
         # KEITHLEY 196 CONFIGURATION
         # =========================================================
 
-        self.keithley_resource_str = "GPIB0::7::INSTR"
+        self.keithley_com_port = "COM22"
+        self.keithley_gpib_address = 7
 
         self.psu = None
         self.dmm = None
@@ -279,38 +310,54 @@ class Keysight:
             self.current = 0
             self.output_on = False
 
-        # =========================================================
-        # CONNECT TO KEITHLEY 196
-        # =========================================================
+            # =========================================================
+            # CONNECT TO KEITHLEY 196 THROUGH PROLOGIX
+            # =========================================================
 
         try:
 
-            # Reuse the same VISA ResourceManager if possible.
-            if 'rm' not in locals():
-                rm = pyvisa.ResourceManager()
+                self.dmm = serial.Serial(
+                    port=self.keithley_com_port,
+                    baudrate=9600,
+                    bytesize=serial.EIGHTBITS,
+                    parity=serial.PARITY_NONE,
+                    stopbits=serial.STOPBITS_ONE,
+                    timeout=2
+                )
 
-            self.dmm = rm.open_resource(
-                self.keithley_resource_str
-            )
+                # -----------------------------------------------------
+                # Configure Prologix adapter
+                # -----------------------------------------------------
 
-            self.dmm.timeout = 5000
+                self.dmm.write(b"++mode 1\n")
+                self.dmm.write(
+                    f"++addr {self.keithley_gpib_address}\n".encode()
+                )
+                self.dmm.write(b"++eoi 1\n")
+                self.dmm.write(b"++eos 0\n")
 
-            self.keithley_connected = True
+                time.sleep(0.5)
 
-            print("Keithley 196 connected")
+                self.keithley_connected = True
 
-            self.app.add_log("Keithley 196 connected")
+                print("Keithley 196 connected through Prologix")
+
+                self.app.add_log(
+                    "Keithley 196 connected through Prologix"
+                )
 
         except Exception as e:
 
-            self.keithley_connected = False
+                self.keithley_connected = False
 
-            self.dmm = None
+                self.dmm = None
 
-            print("Keithley 196 dummy mode")
-            print("Keithley connection error:", e)
+                print("Keithley 196 dummy mode")
+                print("Keithley connection error:", e)
 
-            self.app.add_log("Keithley 196 dummy mode")
+                self.app.add_log(
+                    "Keithley 196 dummy mode"
+                )
 
         # =========================================================
         # OTHER APPLICATION CONNECTION

@@ -403,7 +403,7 @@ class Scripting:
         self.object_keys["stage_mapping"]=set(["spectral_bool","spatial_bool","x_min_mm","x_max_mm",
                                           "x_num_int","y_min_mm","y_max_mm","y_num_int"])
         self.object_keys["measure_iv_curve_set_voltages"]=set(["spectral_bool","spatial_bool","start_voltage_V",
-                                             "end_voltage_V","step_voltage_V","settling_time_s"])
+                                             "end_voltage_V","step_voltage_V","settling_time_s","both_ways_bool"])
         self.object_keys["measure_iv_curve_set_currents"]=set(["spectral_bool","spatial_bool","start_current_mA",
                                              "end_current_mA","step_current_mA","settling_time_s"])
         self.object_keys["spectral_roi"]=set(["x_min_int","x_max_int","y_min_int","y_max_int"])
@@ -681,7 +681,7 @@ class Scripting:
                             for expr in expressions[1:]:
                                 key,value=expr.split(":")
 
-                                if key.strip() == "spectral_bool" or key.strip()=="spatial_bool":
+                                if key.strip() == "spectral_bool" or key.strip()=="spatial_bool" or key.strip()=="both_ways_bool":
                                     if value.strip()=="True" or value.strip()=="1":
                                         method_dict[key.strip()]=True
                                     elif value.strip()=="False" or value.strip()=="0":
@@ -691,11 +691,11 @@ class Scripting:
                                         error_found=True
                                 else:
                                     num_value=np.double(value)
-                                    if num_value<0:
-                                        self.app.add_log("Error (float) in line "+str(counter+1))
-                                        error_found=True
-                                    else:
-                                        method_dict[key.strip()]=num_value
+                                    #if num_value<0:
+                                    #    self.app.add_log("Error (float) in line "+str(counter+1))
+                                    #    error_found=True
+                                    #else:
+                                    method_dict[key.strip()]=num_value
 
                             if set(method_dict.keys()) == self.object_keys[method]:
                                 commands.append((method,method_dict))
@@ -817,6 +817,7 @@ class Scripting:
                         self.IV_settling_time=params["settling_time_s"]
                         self.IV_spatial=params["spatial_bool"]
                         self.IV_spectral=params["spectral_bool"]
+                        self.IV_both_ways=params["both_ways_bool"]
                         self.acquire_IV_voltages()
 
                 else:
@@ -935,7 +936,7 @@ class Scripting:
                 #if set_volt<0:
                 #    if 
                 #    if self.app.switcher.mode_state == "positive":
-                
+
                 #        self.app.switcher.set_negative()
                 #    elif self.app.switcher.mode_state == "negative":
                 #        self.app.switcher.set_positive()
