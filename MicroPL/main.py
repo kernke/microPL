@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtCore import QThreadPool,QStringListModel 
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget,QLabel
-from PyQt5.QtWidgets import QScrollArea,QListView,QSpacerItem,QSizePolicy
+from PyQt5.QtWidgets import QScrollArea,QListView,QSpacerItem,QSizePolicy, QMessageBox
 from PyQt5.QtGui import QIcon 
 #import os
 
@@ -219,22 +219,75 @@ class MainWindow(QMainWindow):
 
 
     def closeEvent(self, event):
-        if self.pixis.connected:
-            self.pixis.close()
-        if self.stage.connected:
-            self.stage.close()
-        if self.monochromator.connected:
-            self.monochromator.disconnect()
-        if self.orca.connected:
-            self.orca.disconnect()
-        if self.keysight.connected:
-            self.keysight.disconnect()    
-        if self.switcher.connected:
-            self.switcher.disconnect()
 
-        can_exit=True
-        if can_exit:
-            event.accept() # let the window close
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Close MicroPL")
+        msg.setText("Are you sure you want to close the software?")
+        msg.setIcon(QMessageBox.Question)
+
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.No)
+
+        # Style message box
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #1e1e1e;
+            }
+
+            QMessageBox QLabel {
+                color: white;
+                background-color: transparent;
+            }
+        """)
+
+        # Explicitly style the buttons
+        button_style = """
+            QPushButton {
+                color: white;
+                background-color: #606060;
+                border: 1px solid #909090;
+                border-radius: 4px;
+                min-width: 80px;
+                min-height: 28px;
+                padding: 4px 12px;
+            }
+
+            QPushButton:hover {
+                background-color: #808080;
+            }
+
+            QPushButton:pressed {
+                background-color: #505050;
+            }
+        """
+
+        msg.button(QMessageBox.Yes).setStyleSheet(button_style)
+        msg.button(QMessageBox.No).setStyleSheet(button_style)
+
+        reply = msg.exec_()
+
+        if reply == QMessageBox.Yes:
+
+            if self.pixis.connected:
+                self.pixis.close()
+
+            if self.stage.connected:
+                self.stage.close()
+
+            if self.monochromator.connected:
+                self.monochromator.disconnect()
+
+            if self.orca.connected:
+                self.orca.disconnect()
+
+            if self.keysight.connected:
+                self.keysight.disconnect()
+
+            if self.switcher.connected:
+                self.switcher.disconnect()
+
+            event.accept()
+
         else:
             event.ignore()
 
