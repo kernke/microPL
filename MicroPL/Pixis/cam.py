@@ -8,6 +8,11 @@ from PyQt5.QtCore import  QObject, pyqtSignal, pyqtSlot,QRunnable#,QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QWidget,QLabel,QCheckBox,QVBoxLayout
 
 import datetime
+import threading
+
+
+
+
 
 class CameraSignalspectral(QObject):
 
@@ -26,71 +31,112 @@ class CameraHandler_spectral(QRunnable):
 
     
     @pyqtSlot()
-    def run(self): # A slot takes no params
-        acq_s=self.pixis.acqtime_spectral
-        #print(self.pixis.auto_expose_start)
-        if self.pixis.auto_exposure_activated:
-            self.pixis.cam.set_exposure(self.pixis.auto_expose_start)
-            #time.sleep(0.01)
-            try:
-                self.pixis.cam.start_acquisition()
-            except:
-                print("Picam Timeout Exception triggered")
-                print(self.pixis.cam.get_status())
-                self.pixis.cam.start_acquisition()
-            self.pixis.cam.wait_for_frame()
-            img = self.pixis.cam.read_newest_image()
-            self.pixis.cam.stop_acquisition()
-
-            img_max=np.max(img).astype(np.double)
-            expose_time=np.copy(self.pixis.auto_expose_start)
-            while img_max>55000:
-                expose_time *= 0.5
-                self.pixis.cam.set_exposure(expose_time)
-                #time.sleep(0.01)
-                try:
-                    self.pixis.cam.start_acquisition()
-                except:
-                    print("Picam Timeout Exception triggered")
-                    print(self.pixis.cam.get_status())
-                    self.pixis.cam.start_acquisition()
-                self.pixis.cam.wait_for_frame()
-                img = self.pixis.cam.read_newest_image()
-                self.pixis.cam.stop_acquisition()
-
-                img_max=np.max(img).astype(np.double)
-
-            counts_per_s= img_max/expose_time#self.pixis.auto_expose_start
-
-            acq_s=np.round(55000./counts_per_s,2)
-            if acq_s>self.pixis.auto_expose_max:
-                acq_s=self.pixis.auto_expose_max
-            #elif acq_s==np.round(self.pixis.auto_expose_start,2):
-
-            elif acq_s<self.pixis.auto_expose_min:
-                acq_s=self.pixis.auto_expose_min
-
-            print(acq_s)
-            self.pixis.cam.set_exposure(acq_s)
+    def run(self):
 
         try:
-            self.pixis.cam.start_acquisition()
-        except:
-            print("Picam Timeout Exception triggered")
-            print(self.pixis.cam.get_status())
-            self.pixis.cam.start_acquisition()
-        self.pixis.cam.wait_for_frame(timeout=None)# maybe better acq_s+1
-        img = self.pixis.cam.read_newest_image()
-        self.pixis.cam.stop_acquisition()
+            with self.pixis.camera_lock:
 
-        #this line is a bit unclean, as it indirectly returns the acqtime
-        self.pixis.acqtime_spectral=acq_s
+                acq_s = self.pixis.acqtime_spectral
 
-        self.signals.camsignal.emit(img)
-        if self.event:
-            self.event.set()
-        #self.signals.complete_signal.emit(True)
+                # -------------------------------------------------
+                # Helper function: acquire exactly one image
+                # -------------------------------------------------
+                def acquire_image(exposure_time):
 
+                    self.pixis.cam.set_exposure(exposure_time)
+
+                    try:
+                        self.pixis.cam.start_acquisition()
+
+                        self.pixis.cam.wait_for_frame(
+                            timeout=None
+                        )
+
+                        img = self.pixis.cam.read_newest_image()
+
+                    finally:
+                        # Always try to stop acquisition
+                        try:
+                            self.pixis.cam.stop_acquisition()
+                        except Exception as e:
+                            print(
+                                "Error while stopping acquisition:",
+                                repr(e)
+                            )
+
+                    return img
+
+                # -------------------------------------------------
+                # Auto exposure
+                # -------------------------------------------------
+                if self.pixis.auto_exposure_activated:
+
+                    expose_time = self.pixis.auto_expose_start
+
+                    img = acquire_image(expose_time)
+
+                    img_max = float(np.max(img))
+
+                    # Reduce exposure if saturated
+                    while img_max > 55000:
+
+                        expose_time *= 0.5
+
+                        img = acquire_image(expose_time)
+
+                        img_max = float(np.max(img))
+
+                    # Determine optimal exposure
+                    if img_max > 0:
+
+                        counts_per_s = img_max / expose_time
+
+                        acq_s = np.round(
+                            55000.0 / counts_per_s,
+                            2
+                        )
+
+                        acq_s = np.clip(
+                            acq_s,
+                            self.pixis.auto_expose_min,
+                            self.pixis.auto_expose_max
+                        )
+
+                    else:
+                        # completely dark image
+                        acq_s = self.pixis.auto_expose_max
+
+                    print("Exposure time:", acq_s)
+
+                # -------------------------------------------------
+                # Actual spectral acquisition
+                # -------------------------------------------------
+                img = acquire_image(acq_s)
+
+                # Store actual acquisition time
+                self.pixis.acqtime_spectral = acq_s
+
+            # Emit image after releasing camera lock
+            self.signals.camsignal.emit(img)
+
+        except Exception as e:
+
+            print("Camera acquisition error:")
+            print(repr(e))
+
+            try:
+                print("Camera status:", self.pixis.cam.get_status())
+            except Exception:
+                pass
+
+            # Do not immediately restart the acquisition here.
+            # Propagate the original error instead.
+            raise
+
+        finally:
+
+            if self.event:
+                self.event.set()
 
 
 class Pixis():
@@ -106,6 +152,8 @@ class Pixis():
 
             self.connected=True
             self.app.add_log("Pixis connected")
+
+            self.camera_lock = threading.Lock()
 
         except:
             self.connected=False
