@@ -1,4 +1,3 @@
-
 import pyvisa
 import re
 import datetime
@@ -6,6 +5,8 @@ import numpy as np
 import time
 import pyqtgraph as pg
 import serial
+import threading
+from contextlib import nullcontext
 
 from PyQt5.QtWidgets import (
     QHBoxLayout,
@@ -14,8 +15,18 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QApplication
 )
-from PyQt5.QtCore import pyqtSignal, QRunnable, pyqtSlot, QObject
 
+from PyQt5.QtCore import (
+    pyqtSignal,
+    QRunnable,
+    pyqtSlot,
+    QObject
+)
+
+
+# =============================================================
+# SIGNALS
+# =============================================================
 
 class Update_Signal(QObject):
 
@@ -23,72 +34,148 @@ class Update_Signal(QObject):
     update = pyqtSignal()
 
 
+# =============================================================
+# PSU VOLTAGE
+# =============================================================
+
 class PSU_voltage(QRunnable):
 
     def __init__(self, psu, voltage, event=None):
+
         super().__init__()
+
         self.psu = psu
         self.voltage = voltage
+
         self.signals = Update_Signal()
+
         self.event = event
 
     @pyqtSlot()
     def run(self):
-        self.psu.write(f"SOUR:VOLT {self.voltage}")
+
+        try:
+
+            self.psu.write(
+                f"SOUR:VOLT {self.voltage}"
+            )
+
+        except Exception as e:
+
+            print("PSU voltage error:", e)
+
         self.signals.update.emit()
 
         if self.event:
+
             self.event.set()
 
+
+# =============================================================
+# PSU CURRENT
+# =============================================================
 
 class PSU_current(QRunnable):
 
     def __init__(self, psu, current, event=None):
+
         super().__init__()
+
         self.psu = psu
+
+        # GUI current is mA
         self.current = current
+
         self.signals = Update_Signal()
+
         self.event = event
 
     @pyqtSlot()
     def run(self):
-        # self.current is in mA
-        # Keysight expects A
-        self.psu.write(f"SOUR:CURR {self.current / 1000}")
+
+        try:
+
+            # Keysight expects A
+            self.psu.write(
+                f"SOUR:CURR {self.current / 1000}"
+            )
+
+        except Exception as e:
+
+            print("PSU current error:", e)
 
         self.signals.update.emit()
 
         if self.event:
+
             self.event.set()
 
 
+# =============================================================
+# PSU POWER
+# =============================================================
+
 class PSU_power(QRunnable):
 
-    def __init__(self, psu, on_bool, voltage, current, event=None):
+    def __init__(
+        self,
+        psu,
+        on_bool,
+        voltage,
+        current,
+        event=None
+    ):
+
         super().__init__()
+
         self.psu = psu
         self.on_bool = on_bool
         self.voltage = voltage
         self.current = current
+
         self.signals = Update_Signal()
+
         self.event = event
 
     @pyqtSlot()
     def run(self):
 
-        if self.on_bool:
-            self.psu.write(f"SOUR:VOLT {self.voltage}")
-            self.psu.write(f"SOUR:CURR {self.current / 1000}")
-            self.psu.write("OUTP ON")
+        try:
 
-        else:
-            self.psu.write("OUTP OFF")
+            if self.on_bool:
+
+                self.psu.write(
+                    f"SOUR:VOLT {self.voltage}"
+                )
+
+                self.psu.write(
+                    f"SOUR:CURR {self.current / 1000}"
+                )
+
+                self.psu.write(
+                    "OUTP ON"
+                )
+
+            else:
+
+                self.psu.write(
+                    "OUTP OFF"
+                )
+
+        except Exception as e:
+
+            print("PSU power error:", e)
 
         self.signals.update.emit()
 
         if self.event:
+
             self.event.set()
 
+
+# =============================================================
+# HP 34401A STATUS WORKER
+# =============================================================
 
 class Status_update(QRunnable):
 
@@ -96,139 +183,195 @@ class Status_update(QRunnable):
     Reads:
 
         Voltage -> Keysight E36105B
-        Current -> Keithley 196
+        Current -> HP 34401A through Prologix
 
-    The returned current is always stored in A.
+    Voltage is returned in V.
+
+    Current is returned in A.
     """
 
-    def __init__(self, psu, dmm, event=None):
-        super().__init__()
+    def __init__(
+            self,
+            psu,
+            dmm,
+            hp34401a_gpib_address,
+            dmm_lock=None,
+            event=None
+        ):
+            super().__init__()
+            self.psu = psu
+            self.dmm = dmm
+            self.hp34401a_gpib_address = hp34401a_gpib_address
+            self.dmm_lock = dmm_lock
+            self.signals = Update_Signal()
+            self.event = event
 
-        self.psu = psu
-        self.dmm = dmm
+    # =========================================================
+    # READ HP CURRENT (Optimized with READ?)
+    # =========================================================
 
-        self.signals = Update_Signal()
-        self.event = event
+    def read_hp_current(self):
+        if self.dmm is None:
+            raise RuntimeError("HP 34401A is not connected")
+
+        lock_to_use = self.dmm_lock
+        #print("DEBUG: lock_to_use is:", lock_to_use, type(lock_to_use)) # <--- Add this
+        if lock_to_use is None or not hasattr(lock_to_use, "__enter__"):
+            
+            lock_to_use = nullcontext()
+
+        with lock_to_use:
+            # Select HP GPIB address
+            self.dmm.write(
+                f"++addr {self.hp34401a_gpib_address}\n".encode("ascii")
+            )
+            
+            # Clear any stale serial data
+            self.dmm.reset_input_buffer()
+
+            # CHANGED: Use READ? instead of MEAS:CURR:DC? because it's already configured
+            self.dmm.write(b"READ?\n")
+
+            # Give a brief moment for data conversion
+            time.sleep(0.075)
+
+            # Tell Prologix to retrieve the GPIB response
+            self.dmm.write(b"++read eoi\n")
+
+            # Read the response from serial buffer
+            response_bytes = self.dmm.readline()
+            response = response_bytes.decode("ascii", errors="replace").strip()
+
+            if not response:
+                # Retry once if empty
+                print("HP not responding once")
+                self.dmm.write(b"++read eoi\n")
+                response = self.dmm.readline().decode("ascii", errors="replace").strip()
+
+            if not response:
+                raise ValueError("HP 34401A returned empty response")
+
+            # Validate numerical response
+            match = re.fullmatch(
+                r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?',
+                response
+            )
+
+            if match is None:
+                raise ValueError("Invalid HP 34401A response: " + repr(response))
+
+            return float(match.group(0))
+
+
+    # =========================================================
+    # WORKER
+    # =========================================================
 
     @pyqtSlot()
     def run(self):
 
-        # ---------------------------------------------------------
-        # READ ACTUAL VOLTAGE FROM KEYSIGHT
-        # ---------------------------------------------------------
+        # -----------------------------------------------------
+        # READ KEYSIGHT VOLTAGE
+        # -----------------------------------------------------
 
-        voltage_actual = float(
-            self.psu.query("MEAS:VOLT?").strip()
-        )
+        try:
 
-        currentA_actual_Keysight=float(self.psu.query("MEAS:CURR?").strip())
+            voltage_actual = float(
+                self.psu.query(
+                    "MEAS:VOLT?"
+                ).strip()
+            )
 
-        # ---------------------------------------------------------
-        # READ ACTUAL CURRENT FROM KEITHLEY 196
-        # ---------------------------------------------------------
+        except Exception as e:
+
+            print(
+                "Keysight voltage reading error:",
+                e
+            )
+
+            voltage_actual = 0.0
+
+
+        # -----------------------------------------------------
+        # READ HP CURRENT
+        # -----------------------------------------------------
 
         currentA_actual = None
 
         try:
 
-            # Select Keithley 196 at GPIB address 7
-            self.dmm.write(
-                b"++addr 7\n"
+            currentA_actual = (
+                self.read_hp_current()
             )
-
-            # Request current measurement
-            self.dmm.write(
-                b"U7\n"
-            )
-
-            time.sleep(0.2)
-
-            # Tell Prologix to read the GPIB response
-            self.dmm.write(
-                b"++read eoi\n"
-            )
-
-            time.sleep(0.2)
-
-            response = (
-                self.dmm.read_all()
-                .decode(
-                    "ascii",
-                    errors="replace"
-                )
-                .strip()
-            )
-
-            #print("Keithley raw:", repr(response))
-
-            # -----------------------------------------------------
-            # Extract numerical value
-            # -----------------------------------------------------
-
-            match = re.search(
-                r'([+-]?\d+(?:\.\d+)?E[+-]?\d+)',
-                response
-            )
-
-            if match:
-
-                currentA_actual = float(
-                    match.group(1)
-                )
-
-            else:
-
-                raise ValueError(
-                    f"Could not parse Keithley response: {response}"
-                )
 
         except Exception as e:
 
             print(
-                "Keithley reading error:",
+                "HP 34401A reading error:",
                 e
             )
 
             currentA_actual = None
 
-        # ---------------------------------------------------------
-        # CREATE STATUS STRING
-        # ---------------------------------------------------------
+
+        # -----------------------------------------------------
+        # STATUS STRING
+        # -----------------------------------------------------
 
         statusstring = (
             "Voltage: "
-            + str(np.round(voltage_actual, 3))
+            + str(
+                np.round(
+                    voltage_actual,
+                    3
+                )
+            )
             + " V\n"
         )
+
 
         if currentA_actual is not None:
 
             statusstring += (
                 "Current: "
-                + str(np.round(currentA_actual * 1000, 3))
+                + str(
+                    np.round(
+                        currentA_actual * 1000,
+                        3
+                    )
+                )
                 + " mA"
             )
 
         else:
 
-            statusstring += "Current: Keithley error"
+            statusstring += (
+                "Current: HP 34401A error"
+            )
 
-        # ---------------------------------------------------------
-        # SEND DATA BACK TO GUI
-        # ---------------------------------------------------------
+
+        # -----------------------------------------------------
+        # SEND RESULT TO GUI
+        # -----------------------------------------------------
 
         self.signals.string_update.emit(
             (
                 statusstring,
                 voltage_actual,
                 currentA_actual,
-                currentA_actual_Keysight
+                None
             )
         )
 
+
         if self.event:
+
             self.event.set()
 
+
+# =============================================================
+# MAIN KEYSIGHT CLASS
+# =============================================================
 
 class Keysight:
 
@@ -236,9 +379,32 @@ class Keysight:
 
         self.app = app
 
-        # =========================================================
+
+        # =====================================================
+        # INITIAL STATE
+        # =====================================================
+
+        self.psu = None
+        self.dmm = None
+
+        self.rm = None
+
+        self.connected = False
+        self.hp34401a_connected = False
+
+        self.communication_running = False
+
+        self.live_mode_running = False
+
+        self.expanded = False
+        self.expanded2 = False
+
+        self.maximized = False
+
+
+        # =====================================================
         # KEYSIGHT CONFIGURATION
-        # =========================================================
+        # =====================================================
 
         self.model_name = "E36105B"
 
@@ -246,152 +412,58 @@ class Keysight:
             "USB0::0x2A8D::0x1602::MY61003313::0::INSTR"
         )
 
-        # =========================================================
-        # KEITHLEY 196 CONFIGURATION
-        # =========================================================
 
-        self.keithley_com_port = "COM22"
-        self.keithley_gpib_address = 7
+        # =====================================================
+        # HP 34401A / PROLOGIX CONFIGURATION
+        # =====================================================
 
-        self.psu = None
-        self.dmm = None
+        self.hp34401a_com_port = "COM22"
 
-        self.connected = False
-        self.keithley_connected = False
+        self.hp34401a_gpib_address = 22
 
-        # =========================================================
-        # CONNECT TO KEYSIGHT
-        # =========================================================
+        # -----------------------------------------------------
+        # One lock for the entire Prologix connection.
+        # -----------------------------------------------------
 
-        try:
+        self.dmm_lock = threading.Lock()
 
-            rm = pyvisa.ResourceManager()
 
-            self.psu = rm.open_resource(self.resource_str)
-
-            print("Keysight connected")
-
-            self.connected = True
-
-            self.app.add_log("Keysight connected")
-
-            # -----------------------------------------------------
-            # READ INITIAL KEYSIGHT VALUES
-            # -----------------------------------------------------
-
-            self.output_on = bool(
-                np.double(
-                    self.psu.query("OUTP?").strip()
-                )
-            )
-
-            # Keysight returns current in A.
-            # Internally the GUI uses mA.
-            self.current = (
-                np.double(
-                    self.psu.query("SOUR:CURR?").strip()
-                ) * 1000
-            )
-
-            self.voltage = np.double(
-                self.psu.query("SOUR:VOLT?").strip()
-            )
-
-        except Exception as e:
-
-            self.connected = False
-
-            print("dummy mode for keysight")
-            print("Keysight connection error:", e)
-
-            self.app.add_log("Keysight dummy mode")
-
-            self.voltage = 0
-            self.current = 0
-            self.output_on = False
-
-            # =========================================================
-            # CONNECT TO KEITHLEY 196 THROUGH PROLOGIX
-            # =========================================================
-
-        try:
-
-                self.dmm = serial.Serial(
-                    port=self.keithley_com_port,
-                    baudrate=9600,
-                    bytesize=serial.EIGHTBITS,
-                    parity=serial.PARITY_NONE,
-                    stopbits=serial.STOPBITS_ONE,
-                    timeout=2
-                )
-
-                # -----------------------------------------------------
-                # Configure Prologix adapter
-                # -----------------------------------------------------
-
-                self.dmm.write(b"++mode 1\n")
-                self.dmm.write(
-                    f"++addr {self.keithley_gpib_address}\n".encode()
-                )
-                self.dmm.write(b"++eoi 1\n")
-                self.dmm.write(b"++eos 0\n")
-
-                time.sleep(0.5)
-
-                self.keithley_connected = True
-
-                print("Keithley 196 connected through Prologix")
-
-                self.app.add_log(
-                    "Keithley 196 connected through Prologix"
-                )
-
-        except Exception as e:
-
-                self.keithley_connected = False
-
-                self.dmm = None
-
-                print("Keithley 196 dummy mode")
-                print("Keithley connection error:", e)
-
-                self.app.add_log(
-                    "Keithley 196 dummy mode"
-                )
-
-        # =========================================================
-        # OTHER APPLICATION CONNECTION
-        # =========================================================
-
-        if self.app.switcher.connected:
-            pass
-
-        # =========================================================
+        # =====================================================
         # SAFETY LIMITS
-        # =========================================================
+        # =====================================================
 
         self.max_voltage = 20
+
         self.max_currentmA = 2000
+
         self.max_powermW = 20000
 
-        # =========================================================
+
+        # =====================================================
         # LIVE MEASUREMENT SETTINGS
-        # =========================================================
+        # =====================================================
 
         self.refresh_rate = 0.55
 
-        self.voltage_actual = 0
+        self.voltage_actual = 0.0
 
-        # Actual current is always stored in A.
-        self.currentA_actual = 0
+        # Actual current is stored in A.
 
-        # =========================================================
+        self.currentA_actual = 0.0
+
+        self.currentA_actual_Keysight = None
+
+
+        # =====================================================
         # TIMELINE
-        # =========================================================
+        # =====================================================
 
         self.voltage_list = []
+
         self.currentA_list = []
-        self.currentA_Keysight_list=[]
+
+        self.currentA_Keysight_list = []
+
         self.timeline_list = []
 
         self.timeline_time = 0
@@ -400,24 +472,426 @@ class Keysight:
 
         self.timeline_start_date = (
             datetime.datetime.now()
-            .strftime("%m/%d/%Y, %H:%M:%S.%f")
+            .strftime(
+                "%m/%d/%Y, %H:%M:%S.%f"
+            )
         )
 
         self.timeline_reset_pressed = False
 
-        self.maximized = False
 
-        # =========================================================
+        # =====================================================
         # COMMUNICATION
-        # =========================================================
+        # =====================================================
 
         self.latency_time = 0.3
 
-        self.communication_running = False
 
-    # =============================================================
+        # =====================================================
+        # CONNECT KEYSIGHT
+        # =====================================================
+
+        try:
+
+            self.rm = (
+                pyvisa.ResourceManager()
+            )
+
+            self.psu = (
+                self.rm.open_resource(
+                    self.resource_str
+                )
+            )
+
+            print(
+                "Keysight connected"
+            )
+
+            self.connected = True
+
+            self.app.add_log(
+                "Keysight connected"
+            )
+
+
+            # -------------------------------------------------
+            # INITIAL VALUES
+            # -------------------------------------------------
+
+            self.output_on = bool(
+                np.double(
+                    self.psu.query(
+                        "OUTP?"
+                    ).strip()
+                )
+            )
+
+
+            # Keysight reports current in A.
+            # GUI stores current in mA.
+
+            self.current = (
+                np.double(
+                    self.psu.query(
+                        "SOUR:CURR?"
+                    ).strip()
+                )
+                * 1000
+            )
+
+
+            self.voltage = np.double(
+                self.psu.query(
+                    "SOUR:VOLT?"
+                ).strip()
+            )
+
+
+        except Exception as e:
+
+            self.connected = False
+
+            print(
+                "dummy mode for keysight"
+            )
+
+            print(
+                "Keysight connection error:",
+                e
+            )
+
+            self.app.add_log(
+                "Keysight dummy mode"
+            )
+
+            self.voltage = 0
+
+            self.current = 0
+
+            self.output_on = False
+
+
+        # =====================================================
+        # CONNECT HP 34401A THROUGH PROLOGIX
+        # =====================================================
+
+        try:
+
+            print(
+                "Opening HP 34401A / Prologix..."
+            )
+
+
+            # -------------------------------------------------
+            # SERIAL CONFIGURATION
+            #
+            # These settings are based on the configuration
+            # that worked in the successful 60-second test.
+            # -------------------------------------------------
+
+            self.dmm = serial.Serial(
+
+                port=self.hp34401a_com_port,
+
+                baudrate=9600,
+
+                bytesize=serial.EIGHTBITS,
+
+                parity=serial.PARITY_NONE,
+
+                stopbits=serial.STOPBITS_TWO,
+
+                xonxoff=True,
+
+                rtscts=False,
+
+                dsrdtr=False,
+
+                timeout=5,
+
+                write_timeout=5
+            )
+
+
+            time.sleep(0.5)
+
+
+            # -------------------------------------------------
+            # Clear old data
+            # -------------------------------------------------
+
+            self.dmm.reset_input_buffer()
+
+            self.dmm.reset_output_buffer()
+
+
+            # -------------------------------------------------
+            # Put HP in remote mode
+            # -------------------------------------------------
+
+            self.dmm.write(
+                b"SYSTem:REMote\n"
+            )
+
+            time.sleep(0.1)
+
+
+            # =================================================
+            # PROLOGIX CONFIGURATION
+            # =================================================
+
+            self.dmm.write(b"++mode 1\n")
+            time.sleep(0.05)
+
+            self.dmm.write(
+                f"++addr {self.hp34401a_gpib_address}\n".encode("ascii")
+            )
+            time.sleep(0.05)
+
+            # GPIB EOI enabled
+            self.dmm.write(b"++eoi 1\n")
+            time.sleep(0.05)
+
+            # Prologix EOS = CR/LF behavior
+            self.dmm.write(b"++eos 3\n")
+            time.sleep(0.05)
+
+            # Do not automatically issue reads
+            self.dmm.write(b"++auto 0\n")
+            time.sleep(0.05)
+
+            # IMPORTANT: Set Prologix read timeout to 1000ms (1 second)
+            self.dmm.write(b"++read_tmo_ms 1000\n")
+            time.sleep(0.1)
+
+
+            # =================================================
+            # TEST HP
+            # =================================================
+
+            idn = self.hp_query(
+                "*IDN?"
+            )
+
+
+            print(
+                "HP 34401A ID:",
+                repr(idn)
+            )
+
+
+            if "34401A" not in idn:
+
+                raise RuntimeError(
+                    "Unexpected HP identification: "
+                    + repr(idn)
+                )
+
+
+            self.hp34401a_connected = True
+
+
+            print(
+                "HP 34401A connected through Prologix"
+            )
+
+            self.app.add_log(
+                "HP 34401A connected through Prologix"
+            )
+
+
+            # =================================================
+            # CONFIGURE CURRENT MEASUREMENT
+            # =================================================
+
+            self.hp_command(
+                "CONF:CURR:DC DEF"
+            )
+
+            self.hp_command(
+                "TRIG:SOUR IMM"
+            )
+
+
+            # -------------------------------------------------
+            # Clear any possible stale response
+            # -------------------------------------------------
+
+            self.dmm.reset_input_buffer()
+
+
+        except Exception as e:
+
+            self.hp34401a_connected = False
+
+            if self.dmm is not None:
+
+                try:
+
+                    self.dmm.close()
+
+                except Exception:
+
+                    pass
+
+            self.dmm = None
+
+
+            print(
+                "HP 34401A dummy mode"
+            )
+
+            print(
+                "HP 34401A connection error:",
+                e
+            )
+
+            self.app.add_log(
+                "HP 34401A dummy mode"
+            )
+
+
+        # =====================================================
+        # OTHER APPLICATION CONNECTION
+        # =====================================================
+
+        if self.app.switcher.connected:
+
+            pass
+
+
+    # =========================================================
+    # HP COMMAND
+    # =========================================================
+
+    def hp_command(self, command):
+
+        """
+        Send a command to the HP 34401A through Prologix.
+
+        This command does NOT expect a response.
+        """
+
+        if self.dmm is None:
+
+            raise RuntimeError(
+                "HP Prologix connection is not available"
+            )
+
+
+        with self.dmm_lock:
+
+            self.dmm.write(
+                f"++addr "
+                f"{self.hp34401a_gpib_address}\n"
+                .encode("ascii")
+            )
+
+            time.sleep(0.02)
+
+            self.dmm.write(
+                (
+                    command
+                    + "\n"
+                ).encode("ascii")
+            )
+
+            time.sleep(0.02)
+
+
+    # =========================================================
+    # HP QUERY
+    # =========================================================
+
+    def hp_query(self, command):
+
+        """
+        Send a query to the HP 34401A and retrieve the
+        complete GPIB response through Prologix.
+        """
+
+        if self.dmm is None:
+
+            raise RuntimeError(
+                "HP Prologix connection is not available"
+            )
+
+
+        with self.dmm_lock:
+
+            # -------------------------------------------------
+            # Address HP
+            # -------------------------------------------------
+
+            self.dmm.write(
+                f"++addr "
+                f"{self.hp34401a_gpib_address}\n"
+                .encode("ascii")
+            )
+
+            time.sleep(0.02)
+
+
+            # -------------------------------------------------
+            # Remove stale serial data
+            # -------------------------------------------------
+
+            self.dmm.reset_input_buffer()
+
+
+            # -------------------------------------------------
+            # Send query
+            # -------------------------------------------------
+
+            self.dmm.write(
+                (
+                    command
+                    + "\n"
+                ).encode("ascii")
+            )
+
+
+            # -------------------------------------------------
+            # Small delay before Prologix read command
+            # -------------------------------------------------
+
+            time.sleep(0.05)
+
+
+            # -------------------------------------------------
+            # Ask Prologix to read until GPIB EOI
+            # -------------------------------------------------
+
+            self.dmm.write(
+                b"++read eoi\n"
+            )
+
+
+            # -------------------------------------------------
+            # Read serial response
+            # -------------------------------------------------
+
+            response_bytes = (
+                self.dmm.readline()
+            )
+
+
+            response = (
+                response_bytes
+                .decode(
+                    "ascii",
+                    errors="replace"
+                )
+                .strip()
+            )
+
+
+            return response
+
+
+    # =========================================================
     # DISCONNECT
-    # =============================================================
+    # =========================================================
 
     def disconnect(self):
 
@@ -440,14 +914,11 @@ class Keysight:
             )
 
             self.app.add_log(
-                "wait shortly for keysight to finish"
+                "wait shortly for instruments to finish"
             )
 
-            print(
-                "wait shortly for keysight to finish"
-            )
+            return
 
-            return None
 
         if self.communication_running:
 
@@ -465,31 +936,22 @@ class Keysight:
                 self.psleep_worker
             )
 
-            self.app.add_log(
-                "wait shortly for keysight to finish"
-            )
+            return
 
-            print(
-                "wait shortly for keysight to finish"
-            )
 
-            return None
-
-        else:
-
-            # Leave output as it is.
-            pass
-
-        # =========================================================
+        # =====================================================
         # CLOSE KEYSIGHT
-        # =========================================================
+        # =====================================================
 
         try:
 
             if self.psu is not None:
+
                 self.psu.close()
 
-            print("Keysight disconnected")
+            print(
+                "Keysight disconnected"
+            )
 
         except Exception as e:
 
@@ -498,26 +960,39 @@ class Keysight:
                 e
             )
 
-        # =========================================================
-        # CLOSE KEITHLEY
-        # =========================================================
+
+        # =====================================================
+        # CLOSE HP
+        # =====================================================
 
         try:
 
             if self.dmm is not None:
-                self.dmm.close()
+
+                with self.dmm_lock:
+
+                    self.dmm.close()
+
+                self.dmm = None
+
+
+            self.hp34401a_connected = False
 
             self.app.add_log(
-                "Keithley 196 disconnected"
+                "HP 34401A disconnected"
             )
-            print("Keithley 196 disconnected")
+
+            print(
+                "HP 34401A disconnected"
+            )
 
         except Exception as e:
 
             print(
-                "Error closing Keithley:",
+                "Error closing HP 34401A:",
                 e
             )
+
 
     # =============================================================
     # LIVE MODE
@@ -571,7 +1046,9 @@ class Keysight:
 
             self.worker = Status_update(
                 self.psu,
-                self.dmm
+                self.dmm,
+                self.hp34401a_gpib_address,
+                dmm_lock=self.dmm_lock
             )
 
             self.worker.signals.string_update.connect(
@@ -599,7 +1076,9 @@ class Keysight:
         self.worker = Status_update(
             self.psu,
             self.dmm,
-            event
+            self.hp34401a_gpib_address,
+            dmm_lock=self.dmm_lock,
+            event=event
         )
 
         self.worker.signals.string_update.connect(
@@ -2222,16 +2701,17 @@ class Keysight:
 
         self.live_mode_running = False
 
-        if self.connected and self.keithley_connected:
+        if self.connected and self.hp34401a_connected:
 
             self.live_mode()
 
-        elif self.connected and not self.keithley_connected:
+        elif self.connected and not self.hp34401a_connected:
 
             self.app.add_log(
                 "Live current measurement unavailable: "
-                "Keithley 196 not connected"
+                "HP 34401A not connected"
             )
+
 
     # =============================================================
     # RESET TIMELINE
