@@ -335,6 +335,8 @@ class EntryMaskIV(Multi_entry):
         layout.addLayout(checkboxes1)
 
 
+        widgetnames=["widgeta","widgetb","widgetc","widgetd","widgete"]
+
         checkboxes2=QHBoxLayout()
 
         checkbox = QCheckBox('Both ways  ')
@@ -344,12 +346,11 @@ class EntryMaskIV(Multi_entry):
 
         checkboxes2.addWidget(checkbox)
         checkboxes2.addStretch()
+        self.entry_label_structure(checkboxes2,str(defaults[4]),labels[4],widgetnames[4]) 
+        checkboxes2.addStretch()
 
         layout.addLayout(checkboxes2)
 
-
-
-        widgetnames=["widgeta","widgetb","widgetc","widgetd"]
 
         entries1=QHBoxLayout()
             
@@ -373,6 +374,10 @@ class EntryMaskIV(Multi_entry):
                 lambda s: self.number_entry(widgetnames[2],"c",s))        
         getattr(self,widgetnames[3]).textEdited.connect(
                 lambda s: self.number_entry(widgetnames[3],"d",s))        
+        getattr(self,widgetnames[4]).textEdited.connect(
+                lambda s: self.number_entry(widgetnames[4],"e",s))        
+
+
 
 
         layout.addLayout(entries1)
@@ -421,6 +426,7 @@ class EntryMaskIV(Multi_entry):
             self.app.scripting.IV_step_current_mA=self.c
 
         self.app.scripting.IV_settling_time=self.d
+        self.app.scripting.IV_compliance_current_mA=self.e
         self.app.scripting.IV_spatial=self.spatial
         self.app.scripting.IV_spectral=self.spectral
         self.app.scripting.IV_both_ways=self.both_ways

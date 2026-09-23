@@ -367,6 +367,8 @@ class Scripting:
 
         self.IV_settling_time=0.05
 
+        self.IV_compliance_current_mA = 100
+
         self.IV_spatial=True
         self.IV_spectral=True
         self.IV_both_ways=False
@@ -855,8 +857,16 @@ class Scripting:
         heading_string="Acquire I-V-Curve by stepwise changing the voltage from the set start to end value"
         heading_string+=" and measuring the corresponding current after a given settling time. "
         #heading_string+="(Note: If 'Spectral image' is selected, the shutter is set to always open.)"
-        defaultlist=[self.IV_start_voltage,self.IV_end_voltage,self.IV_step_voltage,self.IV_settling_time]
-        labellist=["Voltage-Start (V)","Voltage-End (V)","Voltage-Step (V)","Settling Time (s)"]
+        defaultlist=[self.IV_start_voltage,
+                     self.IV_end_voltage,
+                     self.IV_step_voltage,
+                     self.IV_settling_time,
+                     self.IV_compliance_current_mA]
+        labellist=["Voltage-Start (V)",
+                   "Voltage-End (V)",
+                   "Voltage-Step (V)",
+                   "Settling Time (s)",
+                   "Compliance Current (mA)"]
         self.window = self.app.entrymaskiv(self.app,"set_voltages",defaultlist,labellist,heading_string)
         self.window.location_on_the_screen()
         self.window.show()
