@@ -1,12 +1,8 @@
 import pyvisa
-import re
 import datetime
 import numpy as np
 import time
 import pyqtgraph as pg
-import serial
-import threading
-from contextlib import nullcontext
 
 from PyQt5.QtWidgets import (
     QHBoxLayout,
@@ -193,74 +189,12 @@ class Status_update(QRunnable):
     def __init__(
             self,
             psu,
-            dmm,
-            hp34401a_gpib_address,
-            dmm_lock=None,
             event=None
         ):
             super().__init__()
             self.psu = psu
-            self.dmm = dmm
-            self.hp34401a_gpib_address = hp34401a_gpib_address
-            self.dmm_lock = dmm_lock
             self.signals = Update_Signal()
             self.event = event
-
-    # =========================================================
-    # READ HP CURRENT (Optimized with READ?)
-    # =========================================================
-
-    def read_hp_current(self):
-        if self.dmm is None:
-            raise RuntimeError("HP 34401A is not connected")
-
-        lock_to_use = self.dmm_lock
-        #print("DEBUG: lock_to_use is:", lock_to_use, type(lock_to_use)) # <--- Add this
-        if lock_to_use is None or not hasattr(lock_to_use, "__enter__"):
-            
-            lock_to_use = nullcontext()
-
-        with lock_to_use:
-            # Select HP GPIB address
-            self.dmm.write(
-                f"++addr {self.hp34401a_gpib_address}\n".encode("ascii")
-            )
-            
-            # Clear any stale serial data
-            self.dmm.reset_input_buffer()
-
-            # CHANGED: Use READ? instead of MEAS:CURR:DC? because it's already configured
-            self.dmm.write(b"READ?\n")
-
-            # Give a brief moment for data conversion
-            time.sleep(0.075)
-
-            # Tell Prologix to retrieve the GPIB response
-            self.dmm.write(b"++read eoi\n")
-
-            # Read the response from serial buffer
-            response_bytes = self.dmm.readline()
-            response = response_bytes.decode("ascii", errors="replace").strip()
-
-            if not response:
-                # Retry once if empty
-                print("HP not responding once")
-                self.dmm.write(b"++read eoi\n")
-                response = self.dmm.readline().decode("ascii", errors="replace").strip()
-
-            if not response:
-                raise ValueError("HP 34401A returned empty response")
-
-            # Validate numerical response
-            match = re.fullmatch(
-                r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?',
-                response
-            )
-
-            if match is None:
-                raise ValueError("Invalid HP 34401A response: " + repr(response))
-
-            return float(match.group(0))
 
 
     # =========================================================
@@ -291,27 +225,11 @@ class Status_update(QRunnable):
 
             voltage_actual = 0.0
 
-
         # -----------------------------------------------------
-        # READ HP CURRENT
+        # READ KEYSIGHT Current
         # -----------------------------------------------------
+        currentA_actual=float(self.psu.query("MEAS:CURR?").strip())
 
-        currentA_actual = None
-
-        try:
-
-            currentA_actual = (
-                self.read_hp_current()
-            )
-
-        except Exception as e:
-
-            print(
-                "HP 34401A reading error:",
-                e
-            )
-
-            currentA_actual = None
 
 
         # -----------------------------------------------------
@@ -359,7 +277,6 @@ class Status_update(QRunnable):
                 statusstring,
                 voltage_actual,
                 currentA_actual,
-                None
             )
         )
 
@@ -385,12 +302,10 @@ class Keysight:
         # =====================================================
 
         self.psu = None
-        self.dmm = None
 
         self.rm = None
 
         self.connected = False
-        self.hp34401a_connected = False
 
         self.communication_running = False
 
@@ -411,21 +326,6 @@ class Keysight:
         self.resource_str = (
             "USB0::0x2A8D::0x1602::MY61003313::0::INSTR"
         )
-
-
-        # =====================================================
-        # HP 34401A / PROLOGIX CONFIGURATION
-        # =====================================================
-
-        self.hp34401a_com_port = "COM22"
-
-        self.hp34401a_gpib_address = 22
-
-        # -----------------------------------------------------
-        # One lock for the entire Prologix connection.
-        # -----------------------------------------------------
-
-        self.dmm_lock = threading.Lock()
 
 
         # =====================================================
@@ -451,8 +351,6 @@ class Keysight:
 
         self.currentA_actual = 0.0
 
-        self.currentA_actual_Keysight = None
-
 
         # =====================================================
         # TIMELINE
@@ -461,8 +359,6 @@ class Keysight:
         self.voltage_list = []
 
         self.currentA_list = []
-
-        self.currentA_Keysight_list = []
 
         self.timeline_list = []
 
@@ -571,323 +467,6 @@ class Keysight:
             self.output_on = False
 
 
-        # =====================================================
-        # CONNECT HP 34401A THROUGH PROLOGIX
-        # =====================================================
-
-        try:
-
-            print(
-                "Opening HP 34401A / Prologix..."
-            )
-
-
-            # -------------------------------------------------
-            # SERIAL CONFIGURATION
-            #
-            # These settings are based on the configuration
-            # that worked in the successful 60-second test.
-            # -------------------------------------------------
-
-            self.dmm = serial.Serial(
-
-                port=self.hp34401a_com_port,
-
-                baudrate=9600,
-
-                bytesize=serial.EIGHTBITS,
-
-                parity=serial.PARITY_NONE,
-
-                stopbits=serial.STOPBITS_TWO,
-
-                xonxoff=True,
-
-                rtscts=False,
-
-                dsrdtr=False,
-
-                timeout=5,
-
-                write_timeout=5
-            )
-
-
-            time.sleep(0.5)
-
-
-            # -------------------------------------------------
-            # Clear old data
-            # -------------------------------------------------
-
-            self.dmm.reset_input_buffer()
-
-            self.dmm.reset_output_buffer()
-
-
-            # -------------------------------------------------
-            # Put HP in remote mode
-            # -------------------------------------------------
-
-            self.dmm.write(
-                b"SYSTem:REMote\n"
-            )
-
-            time.sleep(0.1)
-
-
-            # =================================================
-            # PROLOGIX CONFIGURATION
-            # =================================================
-
-            self.dmm.write(b"++mode 1\n")
-            time.sleep(0.05)
-
-            self.dmm.write(
-                f"++addr {self.hp34401a_gpib_address}\n".encode("ascii")
-            )
-            time.sleep(0.05)
-
-            # GPIB EOI enabled
-            self.dmm.write(b"++eoi 1\n")
-            time.sleep(0.05)
-
-            # Prologix EOS = CR/LF behavior
-            self.dmm.write(b"++eos 3\n")
-            time.sleep(0.05)
-
-            # Do not automatically issue reads
-            self.dmm.write(b"++auto 0\n")
-            time.sleep(0.05)
-
-            # IMPORTANT: Set Prologix read timeout to 1000ms (1 second)
-            self.dmm.write(b"++read_tmo_ms 1000\n")
-            time.sleep(0.1)
-
-
-            # =================================================
-            # TEST HP
-            # =================================================
-
-            idn = self.hp_query(
-                "*IDN?"
-            )
-
-
-            print(
-                "HP 34401A ID:",
-                repr(idn)
-            )
-
-
-            if "34401A" not in idn:
-
-                raise RuntimeError(
-                    "Unexpected HP identification: "
-                    + repr(idn)
-                )
-
-
-            self.hp34401a_connected = True
-
-
-            print(
-                "HP 34401A connected through Prologix"
-            )
-
-            self.app.add_log(
-                "HP 34401A connected through Prologix"
-            )
-
-
-            # =================================================
-            # CONFIGURE CURRENT MEASUREMENT
-            # =================================================
-
-            self.hp_command(
-                "CONF:CURR:DC DEF"
-            )
-
-            self.hp_command(
-                "TRIG:SOUR IMM"
-            )
-
-
-            # -------------------------------------------------
-            # Clear any possible stale response
-            # -------------------------------------------------
-
-            self.dmm.reset_input_buffer()
-
-
-        except Exception as e:
-
-            self.hp34401a_connected = False
-
-            if self.dmm is not None:
-
-                try:
-
-                    self.dmm.close()
-
-                except Exception:
-
-                    pass
-
-            self.dmm = None
-
-
-            print(
-                "HP 34401A dummy mode"
-            )
-
-            print(
-                "HP 34401A connection error:",
-                e
-            )
-
-            self.app.add_log(
-                "HP 34401A dummy mode"
-            )
-
-
-        # =====================================================
-        # OTHER APPLICATION CONNECTION
-        # =====================================================
-
-        if self.app.switcher.connected:
-
-            pass
-
-
-    # =========================================================
-    # HP COMMAND
-    # =========================================================
-
-    def hp_command(self, command):
-
-        """
-        Send a command to the HP 34401A through Prologix.
-
-        This command does NOT expect a response.
-        """
-
-        if self.dmm is None:
-
-            raise RuntimeError(
-                "HP Prologix connection is not available"
-            )
-
-
-        with self.dmm_lock:
-
-            self.dmm.write(
-                f"++addr "
-                f"{self.hp34401a_gpib_address}\n"
-                .encode("ascii")
-            )
-
-            time.sleep(0.02)
-
-            self.dmm.write(
-                (
-                    command
-                    + "\n"
-                ).encode("ascii")
-            )
-
-            time.sleep(0.02)
-
-
-    # =========================================================
-    # HP QUERY
-    # =========================================================
-
-    def hp_query(self, command):
-
-        """
-        Send a query to the HP 34401A and retrieve the
-        complete GPIB response through Prologix.
-        """
-
-        if self.dmm is None:
-
-            raise RuntimeError(
-                "HP Prologix connection is not available"
-            )
-
-
-        with self.dmm_lock:
-
-            # -------------------------------------------------
-            # Address HP
-            # -------------------------------------------------
-
-            self.dmm.write(
-                f"++addr "
-                f"{self.hp34401a_gpib_address}\n"
-                .encode("ascii")
-            )
-
-            time.sleep(0.02)
-
-
-            # -------------------------------------------------
-            # Remove stale serial data
-            # -------------------------------------------------
-
-            self.dmm.reset_input_buffer()
-
-
-            # -------------------------------------------------
-            # Send query
-            # -------------------------------------------------
-
-            self.dmm.write(
-                (
-                    command
-                    + "\n"
-                ).encode("ascii")
-            )
-
-
-            # -------------------------------------------------
-            # Small delay before Prologix read command
-            # -------------------------------------------------
-
-            time.sleep(0.05)
-
-
-            # -------------------------------------------------
-            # Ask Prologix to read until GPIB EOI
-            # -------------------------------------------------
-
-            self.dmm.write(
-                b"++read eoi\n"
-            )
-
-
-            # -------------------------------------------------
-            # Read serial response
-            # -------------------------------------------------
-
-            response_bytes = (
-                self.dmm.readline()
-            )
-
-
-            response = (
-                response_bytes
-                .decode(
-                    "ascii",
-                    errors="replace"
-                )
-                .strip()
-            )
-
-
-            return response
-
 
     # =========================================================
     # DISCONNECT
@@ -961,38 +540,6 @@ class Keysight:
             )
 
 
-        # =====================================================
-        # CLOSE HP
-        # =====================================================
-
-        try:
-
-            if self.dmm is not None:
-
-                with self.dmm_lock:
-
-                    self.dmm.close()
-
-                self.dmm = None
-
-
-            self.hp34401a_connected = False
-
-            self.app.add_log(
-                "HP 34401A disconnected"
-            )
-
-            print(
-                "HP 34401A disconnected"
-            )
-
-        except Exception as e:
-
-            print(
-                "Error closing HP 34401A:",
-                e
-            )
-
 
     # =============================================================
     # LIVE MODE
@@ -1046,9 +593,6 @@ class Keysight:
 
             self.worker = Status_update(
                 self.psu,
-                self.dmm,
-                self.hp34401a_gpib_address,
-                dmm_lock=self.dmm_lock
             )
 
             self.worker.signals.string_update.connect(
@@ -1075,9 +619,6 @@ class Keysight:
 
         self.worker = Status_update(
             self.psu,
-            self.dmm,
-            self.hp34401a_gpib_address,
-            dmm_lock=self.dmm_lock,
             event=event
         )
 
@@ -1461,8 +1002,6 @@ class Keysight:
 
         currentA_actual = string_volt_curr_tuple[2]
 
-        currentA_actual_Keysight = string_volt_curr_tuple[3]
-
         # ---------------------------------------------------------
         # UPDATE STATUS LABEL
         # ---------------------------------------------------------
@@ -1483,11 +1022,10 @@ class Keysight:
             self.voltage_actual = voltage_actual
             #print("error: switcher should be positive or negative to read out voltage")
 
-        if currentA_actual is not None:
+        #if currentA_actual is not None:
 
-            self.currentA_actual = currentA_actual
+        self.currentA_actual = currentA_actual
 
-        self.currentA_actual_Keysight=currentA_actual_Keysight
 
         # ---------------------------------------------------------
         # TIMELINE
@@ -1503,10 +1041,6 @@ class Keysight:
 
             self.currentA_list = [
                 self.currentA_actual
-            ]
-
-            self.currentA_Keysight_list = [
-                self.currentA_actual_Keysight
             ]
 
             self.timeline_time = 0
@@ -1533,11 +1067,6 @@ class Keysight:
             self.currentA_list.append(
                 self.currentA_actual
             )
-
-            self.currentA_Keysight_list.append(
-                self.currentA_actual_Keysight
-            )
-
 
             self.timeline_time = (
                 time.time()
