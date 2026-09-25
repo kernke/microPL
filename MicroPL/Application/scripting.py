@@ -906,7 +906,7 @@ class Scripting:
                     self.script_end()
                 else:
                     # turn off after
-                    self.app.smu.set_voltage_V(0)
+                    self.app.smu.set_voltage(0)
                     self.app.switcher.set_IVcurve_mode() 
                     self.app.switcher.set_positive() 
 
