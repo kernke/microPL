@@ -34,6 +34,7 @@ class Switcher:
 
         except serial.SerialException:
             print("switcher dummy mode")
+            self.app.add_log("Switcher dummy mode")
  
     def connect(self):
         """Open the serial connection."""
@@ -49,6 +50,7 @@ class Switcher:
         while self.ser.in_waiting:
             line_for_print=self.ser.readline().decode(errors="ignore").strip()
         #    print(line_for_print)
+        self.app.add_log("Switcher connected")
 
     def disconnect(self):
         """Close the serial connection."""
@@ -62,20 +64,17 @@ class Switcher:
         if not initialization:
             self.app.keysight.btn_IVmode.setStyleSheet("background-color: green") 
             self.app.keysight.btn_LCRmode.setStyleSheet("background-color: lightGray")   
-            self.app.keysight.btn_positive.setStyleSheet("background-color: lightGray")   
-            self.app.keysight.btn_negative.setStyleSheet("background-color: lightGray")   
-            self.app.keysight.btn_off.setStyleSheet("background-color: lightGray")   
+            self.app.add_log("Power supply mode")
         time.sleep(0.3)
 
     def set_LCR_mode(self):
+        #self.set_off()
         command="Impedanz"
         self.send_command(command)
         self.mode="LCR"
         self.app.keysight.btn_LCRmode.setStyleSheet("background-color: green")
         self.app.keysight.btn_IVmode.setStyleSheet("background-color: lightGray")   
-        self.app.keysight.btn_positive.setStyleSheet("background-color: grey")   
-        self.app.keysight.btn_negative.setStyleSheet("background-color: gray")   
-        self.app.keysight.btn_off.setStyleSheet("background-color: gray")   
+        self.app.add_log("SMU mode")
         time.sleep(0.3)
 
 

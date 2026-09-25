@@ -118,7 +118,6 @@ class Saving:
                 self.app.metadata_timeline["time_s"]=self.app.keysight.timeline_list
                 self.app.metadata_timeline["voltage_V"]=self.app.keysight.voltage_list
                 self.app.metadata_timeline["current_A"]=self.app.keysight.currentA_list
-                self.app.metadata_timeline["current_A_Keysight"]=self.app.keysight.currentA_Keysight_list
                 self.write_to_h5(self.app.metadata_timeline)
                 self.app.metadata_spatial["comment"]=""
                 self.app.metadata_spectral["comment"]=""

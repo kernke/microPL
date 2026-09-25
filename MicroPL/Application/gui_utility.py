@@ -296,6 +296,7 @@ class EntryMaskIV(Multi_entry):
         self.b=defaults[1]
         self.c=defaults[2]
         self.d=defaults[3]
+        self.e=defaults[4]
         self.spatial=True
         self.spectral=True
         self.both_ways=False

@@ -16,6 +16,7 @@ from .SCT320_Wrapper.mono import SCT320
 from .Hamamatsu.orca import Orca
 from .Keysight.power_supply import Keysight
 from .Switcher.relais_switcher import Switcher
+from .SMU.smu import SMU
 
 #color_text_on_dark="white"
 #color_text_on_bright="black"
@@ -63,6 +64,7 @@ class MainWindow(QMainWindow):
         self.orca = Orca(self)
         self.switcher=Switcher(self)
         self.keysight=Keysight(self)
+        self.smu = SMU(self)
 
         #        
         self.metadata_spatial=dict()

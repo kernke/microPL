@@ -92,12 +92,12 @@ class Grid_Mapping(QRunnable):
 
 class IV_Measurement(QRunnable):
 
-    def __init__(self,keyword, keysight,orca,pixis,spatial_bool,spectral_bool,set_value,settling_time):
+    def __init__(self,keyword, smu,orca,pixis,spatial_bool,spectral_bool,set_value,settling_time):
         super().__init__()
         self.keyword=keyword
         self.orca=orca
         self.pixis=pixis
-        self.keysight=keysight
+        self.smu=smu
         self.spectral_bool=spectral_bool
         self.spatial_bool=spatial_bool
         self.set_value=set_value
@@ -107,24 +107,23 @@ class IV_Measurement(QRunnable):
     @pyqtSlot()
     def run(self): # A slot takes no params
         if self.keyword == "set_voltages":
-            self.keysight.voltage=self.set_value
+            self.smu.set_voltage_V=self.set_value
 
-            done_event = threading.Event()
-            self.keysight.thread_set_voltage_script(done_event)
-            done_event.wait()
-        elif self.keyword == "set_currents":
-            self.keysight.current=self.set_value
-
-            done_event = threading.Event()
-            self.keysight.thread_set_current_script(done_event)
-            done_event.wait()
+            #done_event = threading.Event()
+            self.smu.set_voltage()
+            #done_event.wait()
+        #elif self.keyword == "set_currents":
+        #    self.smu.current=self.set_value
+        #    done_event = threading.Event()
+        #    self.smu.thread_set_current_script(done_event)
+        #    done_event.wait()
 
 
         time.sleep(self.settling_time)
 
-        done_event = threading.Event()
-        self.keysight.thread_task_script(done_event) #read out voltage and current
-        done_event.wait()
+        #done_event = threading.Event()
+        self.smu.readout() #read out voltage and current
+        #done_event.wait()
         QApplication.processEvents()
 
 
@@ -365,7 +364,7 @@ class Scripting:
         self.IV_start_voltage=0
         self.IV_step_voltage=0.25
 
-        self.IV_settling_time=0.05
+        self.IV_settling_time=0.5
 
         self.IV_compliance_current_mA = 100
 
@@ -405,7 +404,8 @@ class Scripting:
         self.object_keys["stage_mapping"]=set(["spectral_bool","spatial_bool","x_min_mm","x_max_mm",
                                           "x_num_int","y_min_mm","y_max_mm","y_num_int"])
         self.object_keys["measure_iv_curve_set_voltages"]=set(["spectral_bool","spatial_bool","start_voltage_V",
-                                             "end_voltage_V","step_voltage_V","settling_time_s","both_ways_bool"])
+                                             "end_voltage_V","step_voltage_V","settling_time_s","both_ways_bool",
+                                             "compliance_current_mA"])
         self.object_keys["measure_iv_curve_set_currents"]=set(["spectral_bool","spatial_bool","start_current_mA",
                                              "end_current_mA","step_current_mA","settling_time_s"])
         self.object_keys["spectral_roi"]=set(["x_min_int","x_max_int","y_min_int","y_max_int"])
@@ -799,16 +799,16 @@ class Scripting:
                         self.btnstart.setStyleSheet("background-color:cyan;")
                         self.grid_mapping_script()
 
-                    elif command[0]=="measure_iv_curve_set_currents":
+                    #elif command[0]=="measure_iv_curve_set_currents":
 
-                        self.IV_start_current_mA=params["start_current_mA"]
-                        self.IV_end_current_mA=params["end_current_mA"]
-                        self.IV_step_current_mA=params["step_current_mA"]
+                    #    self.IV_start_current_mA=params["start_current_mA"]
+                    #    self.IV_end_current_mA=params["end_current_mA"]
+                    #    self.IV_step_current_mA=params["step_current_mA"]
 
-                        self.IV_settling_time=params["settling_time_s"]
-                        self.IV_spatial=params["spatial_bool"]
-                        self.IV_spectral=params["spectral_bool"]
-                        self.acquire_IV_currents()
+                     #   self.IV_settling_time=params["settling_time_s"]
+                     #   self.IV_spatial=params["spatial_bool"]
+                     #   self.IV_spectral=params["spectral_bool"]
+                     #   self.acquire_IV_currents()
 
                     elif command[0]=="measure_iv_curve_set_voltages":
 
@@ -817,6 +817,7 @@ class Scripting:
                         self.IV_step_voltage=params["step_voltage_V"]
             
                         self.IV_settling_time=params["settling_time_s"]
+                        self.IV_compliance_current_mA=params["compliance_current_mA"]
                         self.IV_spatial=params["spatial_bool"]
                         self.IV_spectral=params["spectral_bool"]
                         self.IV_both_ways=params["both_ways_bool"]
@@ -870,7 +871,7 @@ class Scripting:
         self.window = self.app.entrymaskiv(self.app,"set_voltages",defaultlist,labellist,heading_string)
         self.window.location_on_the_screen()
         self.window.show()
-
+    """
     def acquire_IV_window_currents(self):
         heading_string="Acquire I-V-Curve by stepwise changing the current from the set start to end value"
         heading_string+=" and measuring the corresponding voltage after a given settling time. "
@@ -880,7 +881,7 @@ class Scripting:
         self.window = self.app.entrymaskiv(self.app,"set_currents",defaultlist,labellist,heading_string)
         self.window.location_on_the_screen()
         self.window.show()
-
+    """
 
     def iv_curve_on_thread_voltages(self,step_done):
         if step_done:
@@ -890,42 +891,24 @@ class Scripting:
             self.script_index +=1
             if self.script_index==self.number_of_points:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
-                self.IV_curve_currents.append(self.app.keysight.currentA_actual)
-                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)        
-                self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
+                self.IV_curve_currents.append(self.app.smu.currentA_actual)
+                self.IV_curve_voltages.append(self.app.smu.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
                 self.app.metadata_timeline["IV_current"]=self.IV_curve_currents
                 self.app.metadata_timeline["IV_voltage"]=self.IV_curve_voltages
-                self.app.metadata_timeline["IV_current_Keysight"]=self.IV_curve_currents_Keysight
-                #self.app.metadata_timeline["IV_curve"]=np.zeros([len(self.IV_curve_currents),2])
-                #self.app.metadata_timeline["IV_curve"][:,0]=self.IV_curve_voltages
-                #self.app.metadata_timeline["IV_curve"][:,1]=self.IV_curve_currents
                 self.app.h5saving.acq_name += "_IV_curve"#+str(self.script_index)
                 self.app.h5saving.save_to_h5_timeline()
                 self.app.metadata_timeline["unsaved"]=True
                 if self.master_script_index is None:
+                    self.app.smu.set_voltage(0)
+                    self.app.switcher.set_IVcurve_mode() 
+                    self.app.switcher.set_positive() 
                     self.script_end()
                 else:
                     # turn off after
-
-                    self.app.keysight.current=0       
-                    self.app.keysight.voltage=0
-                    self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-                    self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
-
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_current_script(done_event)
-                    done_event.wait()
-
-                    done_event = threading.Event()
-                    self.app.keysight.thread_set_voltage_script(done_event)
-                    done_event.wait()
-
-
-                    self.app.keysight.output_on=False
-                    done_event = threading.Event()
-                    self.app.keysight.thread_power_script(done_event)
-                    done_event.wait()
+                    self.app.smu.set_voltage_V(0)
+                    self.app.switcher.set_IVcurve_mode() 
+                    self.app.switcher.set_positive() 
 
                     self.script_index=0
                     self.master_script_thread(True)
@@ -935,25 +918,13 @@ class Scripting:
             else:
                 self.app.add_log(str(self.script_index)+" from "+str(self.number_of_points))
 
-                self.IV_curve_currents.append(self.app.keysight.currentA_actual)        
-                self.IV_curve_voltages.append(self.app.keysight.voltage_actual)
-                self.IV_curve_currents_Keysight.append(self.app.keysight.currentA_actual_Keysight)
-                #print(self.IV_curve_voltages)
+                self.IV_curve_currents.append(self.app.smu.currentA_actual)        
+                self.IV_curve_voltages.append(self.app.smu.voltage_actual)
                 self.app.keysight.IVcurveplot.setData(self.IV_curve_voltages,self.IV_curve_currents)
 
                 set_volt=self.IV_set_voltages[self.script_index]
-                #sign_change= np.sign(set_volt) != np.sign(self.IV_set_voltages[self.script_index-1])
-                #if set_volt<0:
-                #    if 
-                #    if self.app.switcher.mode_state == "positive":
 
-                #        self.app.switcher.set_negative()
-                #    elif self.app.switcher.mode_state == "negative":
-                #        self.app.switcher.set_positive()
-                #    else:
-                #        print("Error: Switcher is neither positive or negative, maybe off, maybe LCR")
-                self.app.keysight.voltwidget.setText(str(set_volt))
-                self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
+                self.iv_worker=IV_Measurement("set_voltages",self.app.smu,self.app.orca,self.app.pixis,
                                               self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
                 self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
                 if not self.IV_spatial and not self.IV_spectral:
@@ -963,6 +934,7 @@ class Scripting:
                     self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
 
+    """
     def iv_curve_on_thread_currents(self,step_done):
         if step_done:
             if self.script_canceled:
@@ -1034,7 +1006,7 @@ class Scripting:
                 else:
                     self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
                 self.app.threadpool.start(self.iv_worker)
-
+    """
 
 
     def acquire_IV_voltages(self):
@@ -1047,25 +1019,9 @@ class Scripting:
         self.IV_curve_currents=[]
         #if self.app.orca.connected:
         #    self.IV_optical_spatial=[]
-        
-        # unnecessary maybe (trun off and on power supply, before IV-curve)
-        if self.app.keysight.output_on:
-            self.app.keysight.output_on =False
-            done_event = threading.Event()
-            self.app.keysight.thread_power_script(done_event)
-            done_event.wait()
 
-        self.app.keysight.current=self.app.keysight.max_currentmA #-0.01       
-        self.app.keysight.voltage=0
-        self.app.keysight.currentwidget.setText(str(self.app.keysight.current))
-        self.app.keysight.voltwidget.setText(str(self.app.keysight.voltage))
-
-        self.app.keysight.powerbtn.setStyleSheet("background-color: green;color: black")
-        self.app.keysight.output_on =True
-
-        done_event = threading.Event()
-        self.app.keysight.thread_power_script(done_event)
-        done_event.wait()        
+        self.app.switcher.set_LCR_mode()     
+        self.app.switcher.set_positive()     
 
         self.number_of_points=int(abs(self.IV_end_voltage-self.IV_start_voltage)/self.IV_step_voltage)+1 
 
@@ -1083,8 +1039,8 @@ class Scripting:
             self.number_of_points=self.number_of_points*2 -1
 
         set_volt=self.IV_set_voltages[self.script_index]
-        self.app.keysight.voltwidget.setText(str(set_volt))
-        self.iv_worker=IV_Measurement("set_voltages",self.app.keysight,self.app.orca,self.app.pixis,
+        
+        self.iv_worker=IV_Measurement("set_voltages",self.app.smu,self.app.orca,self.app.pixis,
                                       self.IV_spatial,self.IV_spectral,set_volt,self.IV_settling_time)
         self.iv_worker.signals.update.connect(self.iv_curve_on_thread_voltages)
         if not self.IV_spatial and not self.IV_spectral:
@@ -1094,6 +1050,7 @@ class Scripting:
             self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
 
+    """
     def acquire_IV_currents(self):
 
         self.app.add_log("Acquiring I-V-Curve")
@@ -1149,3 +1106,4 @@ class Scripting:
         else:
             self.app.h5saving.acq_name += "_IV_"+str(self.script_index)
         self.app.threadpool.start(self.iv_worker)
+    """

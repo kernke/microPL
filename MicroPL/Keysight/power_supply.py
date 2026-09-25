@@ -169,9 +169,6 @@ class PSU_power(QRunnable):
             self.event.set()
 
 
-# =============================================================
-# HP 34401A STATUS WORKER
-# =============================================================
 
 class Status_update(QRunnable):
 
@@ -2230,15 +2227,14 @@ class Keysight:
 
         self.live_mode_running = False
 
-        if self.connected and self.hp34401a_connected:
+        if self.connected :
 
             self.live_mode()
 
-        elif self.connected and not self.hp34401a_connected:
+        elif self.connected:
 
             self.app.add_log(
                 "Live current measurement unavailable: "
-                "HP 34401A not connected"
             )
 
 
