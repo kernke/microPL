@@ -114,8 +114,8 @@ class SCT320():
         self.filter_list=["postion "+str(i) for i in range(1,7)]
 
         
-    def disconnect(self):
-        self.mono.disconnect()
+    def close_connection(self):
+        self.mono.close()#disconnect()
         print('SCT Disconnected')
 
     def gratings(self):
@@ -219,6 +219,29 @@ class SCT320():
         layoutfilter.addWidget(label)
 
         self.dropdown.addLayout(layoutfilter)
+
+        layoutshutter=QHBoxLayout()
+
+        if self.app.shutter.connected:
+            self.btn_shutter = (self.app.normal_button(
+                        layoutshutter,
+                        "Closed",
+                        self.app.shutter.change_state ))
+
+        else:
+            self.btn_shutter = (self.app.normal_button(
+                        layoutshutter,
+                        "Closed",
+                        self.dummy_func ))
+
+            self.btn_off.setStyleSheet("background-color: red")
+
+        label = QLabel("Laser Shutter")
+        label.setStyleSheet("color:white")
+        layoutshutter.addWidget(label)
+
+        self.dropdown.addLayout(layoutshutter)
+
         layoutright.addLayout(self.dropdown)
         self.app.set_layout_visible(self.dropdown,False)
         layoutright.addItem(self.app.vspace)

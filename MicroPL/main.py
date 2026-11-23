@@ -17,6 +17,7 @@ from .Hamamatsu.orca import Orca
 from .Keysight.power_supply import Keysight
 from .Switcher.relais_switcher import Switcher
 from .SMU.smu import SMU
+from .Shutter.sc10 import ThorlabsSC10
 
 #color_text_on_dark="white"
 #color_text_on_bright="black"
@@ -65,8 +66,8 @@ class MainWindow(QMainWindow):
         self.switcher=Switcher(self)
         self.keysight=Keysight(self)
         self.smu = SMU(self)
-
-        #        
+        self.shutter = ThorlabsSC10(self)
+    
         self.metadata_spatial=dict()
         self.metadata_spatial["unsaved"]=True
 
@@ -277,7 +278,7 @@ class MainWindow(QMainWindow):
                 self.stage.close()
 
             if self.monochromator.connected:
-                self.monochromator.disconnect()
+                self.monochromator.close_connection()#disconnect()
 
             if self.orca.connected:
                 self.orca.disconnect()
@@ -287,6 +288,9 @@ class MainWindow(QMainWindow):
 
             if self.switcher.connected:
                 self.switcher.disconnect()
+
+            if self.shutter.connected:
+                self.shutter.close_connection()
 
             event.accept()
 

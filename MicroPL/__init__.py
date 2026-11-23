@@ -10,3 +10,4 @@ from .Application.post_processing import *
 from .Application.script_preparation import *
 from .Switcher.relais_switcher import *
 from .SMU.smu import *
+from .Shutter.sc10 import *
