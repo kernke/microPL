@@ -115,7 +115,7 @@ class SCT320():
 
         
     def close_connection(self):
-        self.mono.close()#disconnect()
+        self.mono.disconnect()
         print('SCT Disconnected')
 
     def gratings(self):

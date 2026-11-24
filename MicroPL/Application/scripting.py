@@ -274,6 +274,16 @@ class Master_Script(QRunnable):
             self.app.monochromator.filter_change_script(int(self.command[1]),done_event)
             done_event.wait()
 
+        elif self.command[0]=="laser_shutter_open_bool":
+            if self.command[1] == True:
+                self.app.shutter.open()
+                self.app.monochromator.btn_shutter.setStyleSheet("background-color: green")   
+                self.app.monochromator.btn_shutter.setText("Open")
+            else:
+                self.app.shutter.close()
+                self.app.monochromator.btn_shutter.setStyleSheet("background-color: lightGray")
+                self.app.monochromator.btn_shutter.setText("Closed")
+
         elif self.command[0]=="spatial_resolution":
             if self.command[1]=="2048":
                 self.app.orca.binning=1  
@@ -386,7 +396,7 @@ class Scripting:
                             "sleep_s",
                             "voltage_V",
                             "current_mA"])
-        self.bool_keys=set(["save_spectral_image_bool","electric_output_bool"])
+        self.bool_keys=set(["save_spectral_image_bool","electric_output_bool","laser_shutter_open_bool"])
 
         self.string_keys_any=set(["comment","group_name","acquisition_name"])#,"add_to_acquisition_name"])
         self.string_keys=dict()
