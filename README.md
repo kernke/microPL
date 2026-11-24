@@ -83,7 +83,7 @@ When no errors are found, the script can be started and from top to bottom the c
     grating : 5
 
     group_name: IV-curve measurement
-    measure_iv_curve_set_currents, spectral_bool:0,spatial_bool:1,start_current_mA:0,end_current_mA:100,step_current_mA:5,settling_time_s:0.1
+    measure_iv_curve_set_voltages, spectral_bool:0,spatial_bool:1,start_voltage_V: -5 ,end_voltage_V:7,step_voltage_V:0.1,settling_time_s:0.1, both_ways_bool: True, compliance_current_mA :100
 
 As can be seen in the example, three different types of commands exist.  
 First, single keyword commands like "spectral_acquire",  
