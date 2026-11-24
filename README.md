@@ -114,7 +114,7 @@ commands that take any positive floating number:
 
 commands that take a boolean:
 
-    save_spectral_image_bool, electric_output_bool
+    save_spectral_image_bool, electric_output_bool, laser_shutter_open_bool
 
 commands that take any (except empty) string:
 
@@ -133,5 +133,4 @@ commands that take keyword-value pairs:
     spectral_auto_exposure ,      start_s, min_s, max_s
     stage_mapping ,      spectral_bool, spatial_bool, x_min_mm, x_max_mm, x_num_int, y_min_mm, y_max_mm, y_num_int
     spectral_roi ,      x_min_int, x_max_int, y_min_int, y_max_int
-    measure_iv_curve_set_currents ,      spectral_bool, spatial_bool, start_current_mA, end_current_mA, step_current_mA, settling_time_s
-    measure_iv_curve_set_voltages ,      spectral_bool, spatial_bool, start_voltage_V, end_voltage_V, step_voltage_V, settling_time_s
+    measure_iv_curve_set_voltages ,      spectral_bool, spatial_bool, start_voltage_V, end_voltage_V, step_voltage_V, settling_time_s, both_ways_bool, compliance_current_mA
